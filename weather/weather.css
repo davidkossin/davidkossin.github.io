@@ -1,0 +1,118 @@
+.weather-page {
+  min-height: 100vh;
+}
+
+.topbar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.75rem;
+  max-width: 72rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.topbar .brand {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.topbar nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.topbar nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.topbar nav a:hover,
+.topbar nav a.active {
+  color: var(--accent);
+}
+
+.weather-main {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1rem 1.75rem 3rem;
+}
+
+.weather-hero {
+  max-width: 40rem;
+  margin-bottom: 2rem;
+}
+
+.weather-hero h1 {
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+
+.weather-hero .zip {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.weather-hero .meta {
+  margin-top: 0.85rem;
+  font-size: 0.9rem;
+  color: rgba(154, 163, 199, 0.9);
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+.chart-card {
+  background: rgba(10, 14, 32, 0.72);
+  border: 1px solid rgba(232, 236, 255, 0.1);
+  border-radius: 1.1rem;
+  padding: 1.15rem 1.15rem 0.75rem;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 40px rgba(56, 189, 248, 0.06);
+}
+
+.chart-card h2 {
+  font-family: "Outfit", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.chart-note {
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.chart-wrap {
+  position: relative;
+  height: min(360px, 55vh);
+  margin-top: 0.75rem;
+}
+
+@media (min-width: 900px) {
+  .chart-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .chart-card:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .chart-card:first-child .chart-wrap {
+    height: min(420px, 50vh);
+  }
+}
+
