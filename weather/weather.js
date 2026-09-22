@@ -1,8 +1,11 @@
 (function () {
-  const LA = "#38bdf8";
-  const LO = "#c4b5fd";
-  const LA_SOFT = "rgba(56, 189, 248, 0.25)";
-  const LO_SOFT = "rgba(196, 181, 253, 0.25)";
+  // Colorblind-safe pair: orange = Los Angeles, blue = Lake Oswego
+  const LA = "#E06900";        // vivid orange
+  const LA_LOW = "#F4A261";    // lighter orange for LA low / secondary
+  const LO = "#0072B2";        // strong blue
+  const LO_LOW = "#56B4E9";    // lighter blue for LO low / secondary
+  const LA_SOFT = "rgba(224, 105, 0, 0.35)";
+  const LO_SOFT = "rgba(0, 114, 178, 0.35)";
 
   const metaEl = document.getElementById("meta");
 
@@ -112,9 +115,9 @@
         labels,
         datasets: [
           lineDataset("LA high", la.high, LA, false),
-          lineDataset("LA low", la.low, LA, true),
+          lineDataset("LA low", la.low, LA_LOW, true),
           lineDataset("Lake Oswego high", lo.high, LO, false),
-          lineDataset("Lake Oswego low", lo.low, LO, true),
+          lineDataset("Lake Oswego low", lo.low, LO_LOW, true),
         ],
       },
       options: baseOptions("°F"),
