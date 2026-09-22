@@ -186,6 +186,18 @@
         return o;
       })(),
     });
+
+    makeChart("chart-daylight", {
+      type: "line",
+      data: {
+        labels,
+        datasets: [
+          lineDataset("Los Angeles", la.daylight, LA, false),
+          lineDataset("Lake Oswego", lo.daylight, LO, false),
+        ],
+      },
+      options: baseOptions("hours"),
+    });
   }
 
   function boot() {

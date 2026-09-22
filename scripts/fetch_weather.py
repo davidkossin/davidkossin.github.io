@@ -39,6 +39,7 @@ DAILY = ",".join(
         "precipitation_sum",
         "rain_sum",
         "cloud_cover_mean",
+        "daylight_duration",
     ]
 )
 
@@ -100,6 +101,7 @@ def main() -> None:
             "humidity": "%",
             "rain": "in",
             "cloudCover": "%",
+            "daylight": "hours",
         },
         "source": "Open-Meteo Historical Weather API",
         "dates": la_times,
@@ -114,6 +116,10 @@ def main() -> None:
                 "humidity": series["la"]["daily"]["relative_humidity_2m_mean"],
                 "rain": series["la"]["daily"]["rain_sum"],
                 "cloudCover": series["la"]["daily"]["cloud_cover_mean"],
+                "daylight": [
+                    (None if v is None else round(v / 3600, 3))
+                    for v in series["la"]["daily"]["daylight_duration"]
+                ],
             },
             "lo": {
                 "high": series["lo"]["daily"]["temperature_2m_max"],
@@ -121,6 +127,10 @@ def main() -> None:
                 "humidity": series["lo"]["daily"]["relative_humidity_2m_mean"],
                 "rain": series["lo"]["daily"]["rain_sum"],
                 "cloudCover": series["lo"]["daily"]["cloud_cover_mean"],
+                "daylight": [
+                    (None if v is None else round(v / 3600, 3))
+                    for v in series["lo"]["daily"]["daylight_duration"]
+                ],
             },
         },
     }

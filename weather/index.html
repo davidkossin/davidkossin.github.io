@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Weather comparison: Los Angeles 90045 vs Lake Oswego 97034." />
-  <title>Weather · Macinapp</title>
+  <title>Weather Tracker · Macinapp</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
@@ -28,7 +28,7 @@
   <main class="weather-main">
     <header class="weather-hero">
       <p class="eyebrow">Daily comparison</p>
-      <h1>Weather tracker</h1>
+      <h1>Weather Tracker</h1>
       <p class="tagline">
         Los Angeles <span class="zip">90045</span> vs Lake Oswego <span class="zip">97034</span>,
         from the start of 2026 through today.
@@ -66,6 +66,14 @@
         <p class="chart-note">Daily mean cloud cover (%)</p>
         <div class="chart-wrap">
           <canvas id="chart-cloud"></canvas>
+        </div>
+      </article>
+
+      <article class="chart-card">
+        <h2>Daylight hours</h2>
+        <p class="chart-note">Total daylight duration (hours)</p>
+        <div class="chart-wrap">
+          <canvas id="chart-daylight"></canvas>
         </div>
       </article>
     </section>
