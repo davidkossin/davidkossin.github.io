@@ -141,31 +141,37 @@
     });
 
     makeChart("chart-rain", {
-      type: "bar",
+      type: "line",
       data: {
         labels,
         datasets: [
           {
             label: "Los Angeles",
             data: la.rain,
-            backgroundColor: LA_SOFT,
             borderColor: LA,
-            borderWidth: 1,
-            borderRadius: 2,
+            backgroundColor: LA_SOFT,
+            borderWidth: 1.75,
+            pointRadius: 0,
+            pointHoverRadius: 3,
+            tension: 0.15,
+            fill: true,
           },
           {
             label: "Lake Oswego",
             data: lo.rain,
-            backgroundColor: LO_SOFT,
             borderColor: LO,
-            borderWidth: 1,
-            borderRadius: 2,
+            backgroundColor: LO_SOFT,
+            borderWidth: 1.75,
+            pointRadius: 0,
+            pointHoverRadius: 3,
+            tension: 0.15,
+            fill: true,
           },
         ],
       },
       options: (() => {
         const o = baseOptions("inches");
-        o.scales.x.stacked = false;
+        o.scales.y.min = 0;
         return o;
       })(),
     });
