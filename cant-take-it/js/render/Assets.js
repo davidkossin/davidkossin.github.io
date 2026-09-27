@@ -237,6 +237,31 @@ export function makeLamp(frame = 0) {
   return c;
 }
 
+/** Blue-flame wall torch — frame 0..3 (cool cyan vs red lanterns). */
+export function makeBlueTorch(frame = 0) {
+  const f = frame % 4;
+  const key = `bluetorch-${f}`;
+  if (cache.has(key)) return cache.get(key);
+  const c = canvas(16, 16);
+  const ctx = c.getContext('2d');
+  // iron bracket / haft
+  px(ctx, 7, 11, '#2a2a38', 2, 5);
+  px(ctx, 5, 10, '#3a3a4a', 6, 2);
+  px(ctx, 4, 9, '#4a4a5a', 8, 1);
+  // cool flame
+  const flame = ['#66ccff', '#4488ff', '#88e0ff', '#3366ee'][f];
+  const core = ['#e8ffff', '#c0f0ff', '#ffffff', '#a0d8ff'][f];
+  const h = 5 + (f % 2);
+  px(ctx, 6, 4, flame, 4, h);
+  px(ctx, 7, 5, core, 2, Math.max(2, h - 2));
+  if (f === 1 || f === 3) px(ctx, 5, 3, flame, 1, 2);
+  if (f === 0 || f === 2) px(ctx, 10, 3, flame, 1, 2);
+  // tip spark
+  if (f % 2 === 0) px(ctx, 7, 2, '#ffffff', 2, 1);
+  cache.set(key, c);
+  return c;
+}
+
 /** Wall-embedded bank teller window (not freestanding desk). */
 export function makeTellerWindow() {
   if (cache.has('teller-wall')) return cache.get('teller-wall');
@@ -256,6 +281,74 @@ export function makeTellerWindow() {
   px(ctx, 2, 18, PALETTE.woodDark, 28, 4);
   px(ctx, 4, 19, PALETTE.gold, 24, 1);
   cache.set('teller-wall', c);
+  return c;
+}
+
+/**
+ * Clear 14×14 LTTP-scale icon for a teller action (drawn on the window pane).
+ * @param {'home'|'stock'|'kid'|'purchase'|'job'} action
+ */
+export function makeTellerIcon(action) {
+  const key = `teller-icon-${action}`;
+  if (cache.has(key)) return cache.get(key);
+  const c = canvas(14, 14);
+  const ctx = c.getContext('2d');
+  // subtle pane tint behind icon
+  px(ctx, 0, 0, 'rgba(20,24,36,0.35)', 14, 14);
+
+  if (action === 'home') {
+    // small house
+    px(ctx, 2, 7, '#6a5030', 10, 6);       // body
+    px(ctx, 3, 8, '#8b6914', 8, 4);
+    px(ctx, 1, 7, '#5c4510', 12, 1);        // eaves
+    px(ctx, 3, 4, '#a03828', 8, 3);         // roof
+    px(ctx, 4, 3, '#a03828', 6, 1);
+    px(ctx, 5, 2, '#882820', 4, 1);
+    px(ctx, 6, 9, '#3a2a18', 2, 4);         // door
+    px(ctx, 4, 9, '#87a0b8', 2, 2);         // window
+    px(ctx, 8, 9, '#87a0b8', 2, 2);
+  } else if (action === 'stock') {
+    // chart with up arrow / coin
+    px(ctx, 1, 12, PALETTE.goldDark, 12, 1); // axis
+    px(ctx, 2, 10, '#3868a0', 2, 2);
+    px(ctx, 4, 8, '#3868a0', 2, 4);
+    px(ctx, 6, 6, '#4880b0', 2, 6);
+    px(ctx, 8, 4, '#58a0c8', 2, 8);
+    px(ctx, 10, 2, PALETTE.gold, 2, 10);
+    // arrow tip
+    px(ctx, 9, 2, PALETTE.gold, 4, 1);
+    px(ctx, 11, 3, PALETTE.gold, 2, 1);
+    px(ctx, 12, 4, PALETTE.gold, 1, 1);
+  } else if (action === 'kid') {
+    // child silhouette (smaller person)
+    px(ctx, 5, 1, PALETTE.skin, 4, 3);      // head
+    px(ctx, 6, 0, '#d4b060', 2, 1);         // hair
+    px(ctx, 4, 4, '#c86878', 6, 5);         // shirt
+    px(ctx, 4, 9, '#2a3a58', 2, 4);         // legs
+    px(ctx, 8, 9, '#2a3a58', 2, 4);
+    px(ctx, 3, 5, PALETTE.skin, 1, 2);      // arms
+    px(ctx, 10, 5, PALETTE.skin, 1, 2);
+  } else if (action === 'purchase') {
+    // shopping bag
+    px(ctx, 3, 5, '#5a3a68', 8, 8);         // bag body
+    px(ctx, 4, 6, '#7a5088', 6, 6);
+    px(ctx, 5, 2, PALETTE.goldDark, 1, 4);  // handles
+    px(ctx, 8, 2, PALETTE.goldDark, 1, 4);
+    px(ctx, 5, 2, PALETTE.gold, 4, 1);
+    px(ctx, 6, 8, PALETTE.gold, 2, 2);      // emblem
+  } else if (action === 'job') {
+    // briefcase
+    px(ctx, 1, 5, '#2a3a58', 12, 7);
+    px(ctx, 2, 6, '#3a5a78', 10, 5);
+    px(ctx, 5, 3, '#2a3a58', 4, 2);         // handle
+    px(ctx, 6, 2, '#3a5a78', 2, 1);
+    px(ctx, 5, 8, PALETTE.gold, 4, 1);      // clasp
+    px(ctx, 6, 7, PALETTE.gold, 2, 1);
+  } else {
+    px(ctx, 5, 5, PALETTE.gold, 4, 4);
+  }
+
+  cache.set(key, c);
   return c;
 }
 

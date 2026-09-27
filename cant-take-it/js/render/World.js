@@ -3,10 +3,10 @@
  */
 
 import { TILE, VIEW_W, VIEW_H, PALETTE } from '../config.js';
-import { makeTile, makeDoor, makeLamp, makeTellerWindow } from './Assets.js';
+import { makeTile, makeDoor, makeLamp, makeBlueTorch, makeTellerWindow, makeTellerIcon } from './Assets.js';
 
 /**
- * Decision Room — teller windows embedded in the north & side walls.
+ * Decision Room — north wall is doorway only; tellers on E / S / W walls.
  */
 export function buildDecisionRoom() {
   const cols = 20;
@@ -25,8 +25,7 @@ export function buildDecisionRoom() {
   map[0][9] = 'floor';
   map[0][10] = 'floor';
 
-  // Wall-embedded windows sit ON the wall tiles (north wall y≈0, side walls)
-  // Labels match design: Buy/Sell Home, Buy/Sell Stock, Have A Kid, Large Purchase, Job
+  // Teller windows on east / south / west only (2 + 2 + 1). North = door alone.
   const interactables = [
     {
       id: 'door-hallway',
@@ -37,57 +36,63 @@ export function buildDecisionRoom() {
       label: 'Hallway of Time',
       kind: 'door',
     },
-    // North wall windows (left of door)
+    // West wall (2)
     {
       id: 'teller-home',
-      x: 2 * TILE,
-      y: 0 * TILE + 2,
-      w: 32,
-      h: 22,
+      x: 0 * TILE + 2,
+      y: 3 * TILE,
+      w: 20,
+      h: 32,
       label: 'Buy/Sell Home',
       kind: 'teller',
       action: 'home',
       wall: true,
+      sideways: true,
+      wallSide: 'west',
     },
     {
       id: 'teller-stock',
-      x: 5 * TILE,
-      y: 0 * TILE + 2,
-      w: 32,
-      h: 22,
+      x: 0 * TILE + 2,
+      y: 8 * TILE,
+      w: 20,
+      h: 32,
       label: 'Buy/Sell Stock',
       kind: 'teller',
       action: 'stock',
       wall: true,
+      sideways: true,
+      wallSide: 'west',
     },
-    // North wall windows (right of door)
+    // South wall (2)
     {
       id: 'teller-kid',
-      x: 12 * TILE,
-      y: 0 * TILE + 2,
+      x: 4 * TILE,
+      y: (rows - 1) * TILE - 4,
       w: 32,
       h: 22,
       label: 'Have A Kid',
       kind: 'teller',
       action: 'kid',
       wall: true,
+      wallSide: 'south',
     },
     {
       id: 'teller-buy',
-      x: 15 * TILE,
-      y: 0 * TILE + 2,
+      x: 13 * TILE,
+      y: (rows - 1) * TILE - 4,
       w: 32,
       h: 22,
-      label: 'Large Purchase',
+      label: 'Make Large Purchase',
       kind: 'teller',
       action: 'purchase',
       wall: true,
+      wallSide: 'south',
     },
-    // East wall — Job / Retire (5th window)
+    // East wall (1)
     {
       id: 'teller-job',
       x: (cols - 1) * TILE - 4,
-      y: 6 * TILE,
+      y: 5 * TILE,
       w: 20,
       h: 32,
       label: 'Job / Retire',
@@ -95,6 +100,7 @@ export function buildDecisionRoom() {
       action: 'job',
       wall: true,
       sideways: true,
+      wallSide: 'east',
     },
   ];
 
@@ -199,16 +205,7 @@ export function buildHallway(doorCount, firstDoorYear, firstDoorAge) {
       age,
     });
 
-    // Lanterns BESIDE the door (and a matching one on the left wall)
-    interactables.push({
-      id: `lamp-r-${year}`,
-      x: (walkRight + 1) * TILE - 2,
-      y: yTile * TILE + 20,
-      w: 16,
-      h: 16,
-      kind: 'lamp',
-      year,
-    });
+    // Red lanterns along timeline wall (left / year-marker side) — every year
     interactables.push({
       id: `lamp-l-${year}`,
       x: (walkLeft - 1) * TILE,
@@ -216,8 +213,23 @@ export function buildHallway(doorCount, firstDoorYear, firstDoorAge) {
       w: 16,
       h: 16,
       kind: 'lamp',
+      style: 'red',
       year,
     });
+
+    // Door wall (right): blue-flame torches only every 5 years from hallway start
+    if (i % 5 === 0) {
+      interactables.push({
+        id: `torch-r-${year}`,
+        x: (walkRight + 1) * TILE - 2,
+        y: yTile * TILE + 20,
+        w: 16,
+        h: 16,
+        kind: 'lamp',
+        style: 'blue',
+        year,
+      });
+    }
   }
 
   // End of the Line
@@ -314,33 +326,35 @@ export function drawWorld(ctx, world, camX, camY, animTime = 0) {
     if (sx < -40 || sy < -40 || sx > VIEW_W + 40 || sy > VIEW_H + 40) continue;
 
     if (obj.kind === 'teller') {
+      const icon = makeTellerIcon(obj.action || 'home');
       if (obj.sideways) {
-        // Draw rotated-ish tall window on side wall
+        // Tall window on side wall; icon upright (not rotated with frame)
         ctx.save();
         ctx.translate(sx + 10, sy + 16);
         ctx.rotate(-Math.PI / 2);
         ctx.drawImage(tellerSpr, -16, -12);
         ctx.restore();
+        // Icon centered on the tall pane, facing into the room
+        const ix = obj.wallSide === 'west' ? sx + 3 : sx + 1;
+        const iy = sy + 9;
+        ctx.drawImage(icon, ix, iy);
       } else {
         ctx.drawImage(tellerSpr, sx, sy);
+        // Icon centered on the glass pane (window is 32×24)
+        ctx.drawImage(icon, sx + 9, sy + 4);
       }
-      // Label near window
-      ctx.font = '5px "Press Start 2P", monospace';
-      ctx.fillStyle = PALETTE.gold;
-      const label = obj.label;
-      const short = label.length > 14 ? label.slice(0, 12) + '…' : label;
-      if (obj.sideways) {
-        ctx.fillText(short, sx - 20, sy + 40);
-      } else {
-        ctx.fillText(short, sx, sy + 24);
-      }
+      // No wall text — full name shows in [E] prompt only
     } else if (obj.kind === 'year-door' || obj.kind === 'door' || obj.kind === 'end-door') {
       ctx.drawImage(doorSpr, sx, sy - 4);
     } else if (obj.kind === 'lamp') {
-      ctx.drawImage(lampSpr, sx, sy);
-      // flickering glow
+      const isBlue = obj.style === 'blue';
+      const spr = isBlue ? makeBlueTorch(lampFrame) : lampSpr;
+      ctx.drawImage(spr, sx, sy);
+      // flickering glow — orange for red lanterns, cyan for blue torches
       const pulse = 0.1 + 0.06 * Math.sin(animTime / 5 + (obj.x || 0));
-      ctx.fillStyle = `rgba(255,180,40,${pulse})`;
+      ctx.fillStyle = isBlue
+        ? `rgba(80,180,255,${pulse})`
+        : `rgba(255,180,40,${pulse})`;
       ctx.beginPath();
       ctx.arc(sx + 8, sy + 6, 14 + (lampFrame % 2), 0, Math.PI * 2);
       ctx.fill();
