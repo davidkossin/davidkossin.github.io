@@ -2,7 +2,7 @@
  * Automatic life/finance events applied when projecting a year.
  */
 
-import { RETIREMENT_AGE } from '../config.js';
+import { RETIREMENT_AGE, COLLEGE_AGE_MIN } from '../config.js';
 import { resolveRng } from './rng.js';
 
 /**
@@ -25,7 +25,7 @@ export function applyAutoEvents(state, difficulty, opts = {}) {
     state.retired = true;
     state.employed = false;
     state.salary = 0;
-    log.push(`Retired at age ${state.age}. Salary set to $0.`);
+    log.push(`Retired`);
   }
 
   // Simplified Social Security stub: after 65 if retired, ~35% of peak salary
@@ -37,15 +37,10 @@ export function applyAutoEvents(state, difficulty, opts = {}) {
     state.socialSecurity = 0;
   }
 
-  // Kids college (ages 18–22 inclusive) — separate from USDA child-cost bands
-  // so we don't double-count young-adult support.
+  // First year of college — portal / banner one-shot (tuition charged in Engine outflow)
   for (const kid of state.kids || []) {
-    const kidAge = kid.age;
-    if (kidAge >= 18 && kidAge <= 22) {
-      const cost = difficulty.collegeCost || 25000;
-      const paid = Math.min(liquidTotal(state), cost);
-      drainLiquid(state, paid);
-      log.push(`College costs for ${kid.name || 'child'} (age ${kidAge}): −$${fmt(paid)}`);
+    if (kid.age === COLLEGE_AGE_MIN) {
+      log.push(`${kid.name || 'Child'} goes to college`);
     }
   }
 

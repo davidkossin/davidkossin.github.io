@@ -74,7 +74,7 @@ Vanilla ES modules + Canvas. No build step. GitHub Pages serves the folder as st
 ### Net worth & HUD
 
 - **Bank** (HUD) = `cash` only (cash on hand).
-- **Portfolio** (HUD) = net worth = `cash + savings + stocksTotal + homeEquity − otherDebt`.
+- **Portfolio** (HUD) = net worth = `cash + savings + stocksTotal + homeEquity − otherDebt − otherLoans.principal`.
 - Savings still earn interest; they are not shown as “Bank.”
 - `stocksCostBasis` tracks tax basis: **buy** increases basis by purchase amount; **sell** reduces basis proportionally to `proceeds / stocksTotal`.
 
@@ -89,14 +89,25 @@ Vanilla ES modules + Canvas. No build step. GitHub Pages serves the folder as st
    - Hallway / HUD projection uses **`deterministic: true`** (noise = 1, no shocks) so numbers don’t jitter.
 7. Home appreciation: `value *= (1 + inflation + 0.005)`.
 8. Mortgage: one year of P&I; interest = `owed * rate`; principal = payment − interest.
+8b. **Other loans** (financed large purchases): same P&I amortization on `otherLoans[]` (`principal`, `rate`, `remainingTerm`); annual payment added to outflow; payoff logged when principal clears.
 9. **Child costs** (USDA-style bands, every year, *not* a flat +$8k on birth):
    - Ages 0–5: ~$13,500 / yr  
    - Ages 6–12: ~$14,500 / yr  
    - Ages 13–17: ~$16,000 / yr  
    - Scaled by `expensePressure × childCostInflator`.
-10. **College (18–22):** separate `collegeCost` from difficulty in `Events.js` — **not** double-counted with child bands.
+10. **College tuition (ages 18–21):** `NATIONAL_AVG_COLLEGE_COST` ($11,610 — College Board 2024–25 public 4-year in-state average tuition & fees) × `expensePressure` × `childCostInflator`, added to annual outflow. One-shot log “{name} goes to college” at age 18; yearly “{name} — college tuition”. **Not** double-counted with USDA child bands (0–17 only).
 11. Income tax (federal brackets + ZIP state) + property tax.
 12. Cash flow: inflow = salary (or 0 if retired) + simplified SS; outflow = spending × pressure + mortgage + taxes + child costs. Surplus → savings; deficit drains cash → savings → stocks (basis adjusted).
+
+### Hallway life-event auras
+
+Deterministic projection logs mark major one-shots as soft cyan/violet/gold bands across the corridor (floor + E/W walls). Crossing a band shows a bottom banner: mortgage/loan paid off, Retired, “{child} goes to college”. Movement is never blocked.
+
+### Large purchase (cash or financed)
+
+1. Enter purchase amount.
+2. **Financed?** No → pay full amount from liquid (cash → savings → stocks); shortfall → `otherDebt`.
+3. Yes → down payment (from liquid), interest rate (%), loan term (years, default 5). Remaining principal becomes an `otherLoans` entry and amortizes each year like a mortgage.
 
 ### Capital gains on stock sale
 

@@ -8,7 +8,13 @@ import { getDifficulty } from './Difficulty.js';
 import { estimateAnnualTax, estimateCapitalGainsTax } from './Tax.js';
 import { applyAutoEvents, liquidTotal } from './Events.js';
 import { resolveRng } from './rng.js';
-import { HOME_TYPES, CHILD_COST_BANDS } from '../config.js';
+import {
+  HOME_TYPES,
+  CHILD_COST_BANDS,
+  NATIONAL_AVG_COLLEGE_COST,
+  COLLEGE_AGE_MIN,
+  COLLEGE_AGE_MAX,
+} from '../config.js';
 
 /** Deep-ish clone for portfolio snapshots. */
 export function cloneState(s) {
@@ -17,7 +23,7 @@ export function cloneState(s) {
 
 /**
  * USDA-style annual cost of raising one child (pre-college).
- * Ages 18–22 use college cost in Events only — not double-counted here.
+ * Ages 18–21 use NATIONAL_AVG_COLLEGE_COST tuition in projectOneYear — not double-counted here.
  * Scaled by difficulty.expensePressure and childCostInflator on state.
  */
 export function annualChildCost(age, difficulty, inflator = 1) {
@@ -205,6 +211,19 @@ export function projectOneYear(state, difficultyId, opts = {}) {
     }
   }
 
+  // Annual college tuition (NATIONAL_AVG × pressure × inflator) — ages 18–21; no double-count with child bands
+  let collegeTuition = 0;
+  for (const kid of next.kids || []) {
+    const a = kid.age || 0;
+    if (a < COLLEGE_AGE_MIN || a > COLLEGE_AGE_MAX) continue;
+    const cost = Math.round(
+      NATIONAL_AVG_COLLEGE_COST *
+        (difficulty.expensePressure || 1) *
+        (next.childCostInflator || 1)
+    );
+    collegeTuition += cost;
+    events.push(`${kid.name || 'Child'} — college tuition: −$${fmt(cost)}`);
+  }
 
   // Taxes
   const tax = estimateAnnualTax(next, difficulty);
@@ -222,7 +241,8 @@ export function projectOneYear(state, difficultyId, opts = {}) {
     otherLoanPaid +
     incomeTax +
     propertyTax +
-    childCosts;
+    childCosts +
+    collegeTuition;
 
   const net = inflow - outflow;
   if (net >= 0) {

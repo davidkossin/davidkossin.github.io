@@ -102,8 +102,19 @@ export const CHILD_COST_BANDS = [
   { maxAge: 5, annual: 13500 },
   { maxAge: 12, annual: 14500 },
   { maxAge: 17, annual: 16000 },
-  // 18–22: college handled separately in Events (avoid double-count)
+  // 18+: college tuition via NATIONAL_AVG_COLLEGE_COST (not double-counted here)
 ];
+
+/**
+ * College Board *Trends in College Pricing* 2024–25:
+ * average published tuition & fees for full-time in-state undergraduates
+ * at public four-year institutions ≈ $11,610 (sticker price; excludes room/board/aid).
+ * Scaled in-engine by difficulty.expensePressure and inflated with childCostInflator.
+ */
+export const NATIONAL_AVG_COLLEGE_COST = 11610;
+/** Inclusive undergrad window (typical 4 years). */
+export const COLLEGE_AGE_MIN = 18;
+export const COLLEGE_AGE_MAX = 21;
 
 export const HOME_TYPES = {
   primary: { label: 'Primary Residence', taxRate: 0.012 },

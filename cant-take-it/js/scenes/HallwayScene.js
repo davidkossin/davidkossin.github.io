@@ -1,4 +1,4 @@
-import { VIEW_W, VIEW_H, HUD_H, MAX_AGE } from '../config.js';
+import { VIEW_W, VIEW_H, HUD_H, MAX_AGE, TILE } from '../config.js';
 import { Player } from '../render/Player.js';
 import { Hud } from '../render/Hud.js';
 import {
@@ -18,8 +18,11 @@ export class HallwayScene {
     this.hud = new Hud();
     this.prompt = null;
     this.baseline = null;
-    /** @type {Array<{state:object, worth:object}>} */
+    /** @type {Array<{state:object, worth:object, events?:string[]}>} */
     this.snapshots = [];
+    /** @type {Array<{y:number, year:number, age:number, messages:string[]}>} */
+    this.eventAuras = [];
+    this.eventBanner = null;
     this.visual = null;
     this.animTime = 0;
     this.leaveYear = 0;
@@ -63,7 +66,7 @@ export class HallwayScene {
     // Deterministic projection — no noise so HUD doesn't jitter
     const yearsToProject = Math.max(0, MAX_AGE - this.leaveAge);
     this.snapshots = [
-      { state: cloneState(this.baseline), worth: computeWorth(this.baseline) },
+      { state: cloneState(this.baseline), worth: computeWorth(this.baseline), events: [] },
     ];
     if (yearsToProject > 0) {
       const snaps = projectYears(
@@ -73,9 +76,11 @@ export class HallwayScene {
         { deterministic: true }
       );
       for (const s of snaps) {
-        this.snapshots.push({ state: s.state, worth: s.worth });
+        this.snapshots.push({ state: s.state, worth: s.worth, events: s.events || [] });
       }
     }
+    this.eventAuras = buildEventAuras(this.world, this.snapshots);
+    this.eventBanner = null;
     this.visual = this.snapshots[0];
     autoSave(game, 'end');
   }
@@ -114,6 +119,18 @@ export class HallwayScene {
     const idx = Math.max(0, Math.min(maxIdx, Math.floor(progress * maxIdx)));
     this.visual = this.snapshots[idx];
 
+    // Aura portal banner when player crosses an event band
+    const py = this.player.y + this.player.h / 2;
+    let best = null;
+    let bestDist = 18;
+    for (const aura of this.eventAuras) {
+      const d = Math.abs(py - aura.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = aura;
+      }
+    }
+    this.eventBanner = best ? best.messages.join(' · ') : null;
   }
 
   stateAtDoor(yearIndex) {
@@ -180,6 +197,7 @@ export class HallwayScene {
     ctx.save();
     ctx.translate(0, HUD_H);
     drawWorld(ctx, this.world, camX, camY, this.animTime);
+    drawEventAuras(ctx, this.world, this.eventAuras, camX, camY, this.animTime);
     ctx.save();
     ctx.translate(-camX, -camY);
     const vis = this.visual?.state || game.portfolio;
@@ -191,6 +209,18 @@ export class HallwayScene {
     const worth = this.visual?.worth || computeWorth(portfolio);
     this.hud.draw(ctx, portfolio, worth);
 
+    // Life-event banner (playfield bottom); prompt sits just below if both active
+    if (this.eventBanner) {
+      ctx.font = '5px "Press Start 2P", monospace';
+      ctx.fillStyle = '#c8b0ff';
+      ctx.textAlign = 'center';
+      const by = this.prompt ? HUD_H + VIEW_H - 24 : HUD_H + VIEW_H - 12;
+      let msg = this.eventBanner;
+      while (msg.length > 1 && ctx.measureText(msg).width > VIEW_W - 16) msg = msg.slice(0, -1);
+      ctx.fillText(msg, VIEW_W / 2, by);
+      ctx.textAlign = 'left';
+    }
+
     if (this.prompt) {
       ctx.font = '6px "Press Start 2P", monospace';
       ctx.fillStyle = '#f0e8c8';
@@ -201,3 +231,65 @@ export class HallwayScene {
   }
 }
 
+/** Major one-shot life/finance events → hallway aura portals. */
+function portalMessages(events) {
+  const out = [];
+  for (const e of events || []) {
+    if (/Mortgage paid off/i.test(e)) out.push(e.replace(/\.$/, ''));
+    else if (/Loan paid off/i.test(e)) out.push(e.replace(/\.$/, ''));
+    else if (/^Retired/i.test(e)) out.push('Retired');
+    else if (/goes to college/i.test(e)) out.push(e);
+  }
+  return out;
+}
+
+function buildEventAuras(world, snapshots) {
+  const auras = [];
+  const foyer = world.foyer || 5;
+  const segment = world.segment || 3;
+  const rows = world.rows;
+  for (let k = 1; k < snapshots.length; k++) {
+    const msgs = portalMessages(snapshots[k].events);
+    if (!msgs.length) continue;
+    const i = k - 1; // door index / years from leave
+    const yTile = rows - 1 - foyer - i * segment - 1;
+    const y = yTile * TILE + TILE / 2;
+    const st = snapshots[k].state || {};
+    auras.push({
+      y,
+      year: st.year,
+      age: st.age,
+      messages: msgs,
+    });
+  }
+  return auras;
+}
+
+/**
+ * Soft ethereal band across walkable floor + onto E/W wall faces.
+ */
+function drawEventAuras(ctx, world, auras, camX, camY, animTime) {
+  if (!auras?.length) return;
+  const walkLeft = world.walkLeft ?? 5;
+  const walkRight = world.walkRight ?? 8;
+  const x0 = walkLeft * TILE - 10; // into west wall
+  const x1 = (walkRight + 1) * TILE + 10; // into east wall
+  const w = x1 - x0;
+
+  for (const aura of auras) {
+    const sy = aura.y - camY;
+    if (sy < -16 || sy > VIEW_H + 16) continue;
+    const pulse = 0.22 + 0.14 * Math.sin(animTime / 18 + aura.y * 0.02);
+    const sx = x0 - camX;
+
+    // Outer violet wash
+    ctx.fillStyle = `rgba(120,80,200,${pulse * 0.28})`;
+    ctx.fillRect(sx, sy - 3, w, 7);
+    // Cyan mid band
+    ctx.fillStyle = `rgba(100,200,255,${pulse * 0.35})`;
+    ctx.fillRect(sx, sy - 1, w, 3);
+    // Bright gold-white core line
+    ctx.fillStyle = `rgba(230,210,160,${pulse * 0.55})`;
+    ctx.fillRect(sx, sy, w, 1);
+  }
+}
