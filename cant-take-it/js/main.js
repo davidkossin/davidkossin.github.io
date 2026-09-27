@@ -2,7 +2,7 @@
  * You Can't Take It With You — bootstrap & scene loop.
  */
 
-import { VIEW_W, VIEW_H, CANVAS_H, SCALE, KEYS } from './config.js';
+import { VIEW_W, VIEW_H, CANVAS_H, SCALE, KEYS, GAME_VERSION } from './config.js';
 import { Dialog } from './render/Dialog.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { SetupScene } from './scenes/SetupScene.js';
@@ -179,6 +179,15 @@ function loop() {
 
   dialog.draw(ctx);
   if (pause.open && game) pause.draw(ctx, game);
+
+  // Build version — bottom-right, always visible for cache checks
+  ctx.save();
+  ctx.font = '5px "Press Start 2P", monospace';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  ctx.fillStyle = 'rgba(240, 232, 200, 0.45)';
+  ctx.fillText('v' + GAME_VERSION, VIEW_W - 4, CANVAS_H - 3);
+  ctx.restore();
 
   requestAnimationFrame(loop);
 }
