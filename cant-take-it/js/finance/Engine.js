@@ -196,7 +196,7 @@ export function projectOneYear(state, difficultyId, opts = {}) {
     if (loan.principal < 1) {
       loan.principal = 0;
       loan.remainingTerm = 0;
-      events.push(`Loan paid off: ${loan.label || 'financed purchase'}.`);
+      events.push(`Paid off: ${loan.label || 'financed purchase'}.`);
     }
   }
   next.otherLoans = (next.otherLoans || []).filter((l) => (l.principal || 0) > 0);
@@ -507,8 +507,16 @@ export function largePurchase(state, amount, opts = {}) {
   const price = Math.max(0, Math.round(amount || 0));
   if (price <= 0) return next;
 
+  const label = (opts.label && String(opts.label).trim()) || 'Large Purchase';
+
   if (!opts.financed) {
     payFromLiquid(next, price);
+    next.milestones = next.milestones || [];
+    next.milestones.push({
+      year: next.year,
+      age: next.age,
+      message: `Purchased ${label}`,
+    });
     return next;
   }
 
@@ -519,10 +527,17 @@ export function largePurchase(state, amount, opts = {}) {
 
   payFromLiquid(next, down);
 
+  next.milestones = next.milestones || [];
+  next.milestones.push({
+    year: next.year,
+    age: next.age,
+    message: `Purchased ${label}`,
+  });
+
   if (principal > 0) {
     next.otherLoans = next.otherLoans || [];
     next.otherLoans.push({
-      label: opts.label || 'Large Purchase',
+      label,
       principal,
       rate,
       remainingTerm: term,

@@ -79,7 +79,7 @@ export class HallwayScene {
         this.snapshots.push({ state: s.state, worth: s.worth, events: s.events || [] });
       }
     }
-    this.eventAuras = buildEventAuras(this.world, this.snapshots);
+    this.eventAuras = buildEventAuras(this.world, this.snapshots, this.leaveYear);
     this.eventBanner = null;
     this.visual = this.snapshots[0];
     autoSave(game, 'end');
@@ -122,7 +122,7 @@ export class HallwayScene {
     // Aura portal banner when player crosses an event band
     const py = this.player.y + this.player.h / 2;
     let best = null;
-    let bestDist = 18;
+    let bestDist = 28;
     for (const aura of this.eventAuras) {
       const d = Math.abs(py - aura.y);
       if (d < bestDist) {
@@ -211,12 +211,16 @@ export class HallwayScene {
 
     // Life-event banner (playfield bottom); prompt sits just below if both active
     if (this.eventBanner) {
-      ctx.font = '5px "Press Start 2P", monospace';
-      ctx.fillStyle = '#c8b0ff';
+      ctx.font = '6px "Press Start 2P", monospace';
       ctx.textAlign = 'center';
       const by = this.prompt ? HUD_H + VIEW_H - 24 : HUD_H + VIEW_H - 12;
       let msg = this.eventBanner;
-      while (msg.length > 1 && ctx.measureText(msg).width > VIEW_W - 16) msg = msg.slice(0, -1);
+      while (msg.length > 1 && ctx.measureText(msg).width > VIEW_W - 20) msg = msg.slice(0, -1);
+      // dark plate behind text for readability
+      const tw = ctx.measureText(msg).width;
+      ctx.fillStyle = 'rgba(10,8,24,0.72)';
+      ctx.fillRect(VIEW_W / 2 - tw / 2 - 6, by - 2, tw + 12, 12);
+      ctx.fillStyle = '#e8d8ff';
       ctx.fillText(msg, VIEW_W / 2, by);
       ctx.textAlign = 'left';
     }
@@ -237,29 +241,60 @@ function portalMessages(events) {
   for (const e of events || []) {
     if (/Mortgage paid off/i.test(e)) out.push(e.replace(/\.$/, ''));
     else if (/Loan paid off/i.test(e)) out.push(e.replace(/\.$/, ''));
+    else if (/^Paid off:/i.test(e)) out.push(e.replace(/\.$/, ''));
+    else if (/^Purchased /i.test(e)) out.push(e.replace(/\.$/, ''));
     else if (/^Retired/i.test(e)) out.push('Retired');
     else if (/goes to college/i.test(e)) out.push(e);
   }
   return out;
 }
 
-function buildEventAuras(world, snapshots) {
+function buildEventAuras(world, snapshots, leaveYear) {
   const auras = [];
   const foyer = world.foyer || 5;
   const segment = world.segment || 3;
   const rows = world.rows;
+  const byYear = new Map();
+
+  const addMsgs = (yearOffset, year, age, msgs) => {
+    if (!msgs?.length) return;
+    const key = yearOffset;
+    if (!byYear.has(key)) byYear.set(key, { year, age, messages: [] });
+    const slot = byYear.get(key);
+    for (const m of msgs) {
+      if (!slot.messages.includes(m)) slot.messages.push(m);
+    }
+  };
+
   for (let k = 1; k < snapshots.length; k++) {
     const msgs = portalMessages(snapshots[k].events);
-    if (!msgs.length) continue;
-    const i = k - 1; // door index / years from leave
+    const st = snapshots[k].state || {};
+    addMsgs(k - 1, st.year, st.age, msgs);
+  }
+
+  // Named purchases recorded on the leave-year baseline
+  const baseline = snapshots[0]?.state || {};
+  for (const m of baseline.milestones || []) {
+    const msg = m.message || m;
+    const y = m.year ?? leaveYear;
+    if (typeof msg !== 'string') continue;
+    if (y === leaveYear) {
+      // Just past the foyer — player sees it as they enter the corridor
+      addMsgs(0, leaveYear, baseline.age, portalMessages([msg]));
+    } else if (y > leaveYear) {
+      const offset = y - leaveYear - 1;
+      if (offset >= 0) addMsgs(offset, y, (baseline.age || 0) + (y - leaveYear), portalMessages([msg]));
+    }
+  }
+
+  for (const [i, slot] of byYear.entries()) {
     const yTile = rows - 1 - foyer - i * segment - 1;
     const y = yTile * TILE + TILE / 2;
-    const st = snapshots[k].state || {};
     auras.push({
       y,
-      year: st.year,
-      age: st.age,
-      messages: msgs,
+      year: slot.year,
+      age: slot.age,
+      messages: slot.messages,
     });
   }
   return auras;
@@ -272,24 +307,33 @@ function drawEventAuras(ctx, world, auras, camX, camY, animTime) {
   if (!auras?.length) return;
   const walkLeft = world.walkLeft ?? 5;
   const walkRight = world.walkRight ?? 8;
-  const x0 = walkLeft * TILE - 10; // into west wall
-  const x1 = (walkRight + 1) * TILE + 10; // into east wall
+  // Span deep into E/W walls so the portal reads as a slice through the corridor
+  const x0 = walkLeft * TILE - 18;
+  const x1 = (walkRight + 1) * TILE + 18;
   const w = x1 - x0;
 
   for (const aura of auras) {
     const sy = aura.y - camY;
-    if (sy < -16 || sy > VIEW_H + 16) continue;
-    const pulse = 0.22 + 0.14 * Math.sin(animTime / 18 + aura.y * 0.02);
+    if (sy < -24 || sy > VIEW_H + 24) continue;
+    const pulse = 0.55 + 0.35 * Math.sin(animTime / 12 + aura.y * 0.03);
     const sx = x0 - camX;
 
-    // Outer violet wash
-    ctx.fillStyle = `rgba(120,80,200,${pulse * 0.28})`;
-    ctx.fillRect(sx, sy - 3, w, 7);
-    // Cyan mid band
-    ctx.fillStyle = `rgba(100,200,255,${pulse * 0.35})`;
-    ctx.fillRect(sx, sy - 1, w, 3);
-    // Bright gold-white core line
-    ctx.fillStyle = `rgba(230,210,160,${pulse * 0.55})`;
-    ctx.fillRect(sx, sy, w, 1);
+    // Soft bloom
+    ctx.fillStyle = `rgba(160,100,255,${0.2 + pulse * 0.25})`;
+    ctx.fillRect(sx, sy - 8, w, 17);
+    // Violet outer band
+    ctx.fillStyle = `rgba(140,90,255,${0.35 + pulse * 0.35})`;
+    ctx.fillRect(sx, sy - 5, w, 11);
+    // Cyan mid
+    ctx.fillStyle = `rgba(80,220,255,${0.45 + pulse * 0.4})`;
+    ctx.fillRect(sx, sy - 2, w, 5);
+    // Hot white-gold core
+    ctx.fillStyle = `rgba(255,245,200,${0.75 + pulse * 0.2})`;
+    ctx.fillRect(sx, sy, w, 2);
+    // Vertical wall streaks (west + east edges of band)
+    const streakH = 14;
+    ctx.fillStyle = `rgba(180,220,255,${0.35 + pulse * 0.3})`;
+    ctx.fillRect(sx, sy - streakH / 2, 3, streakH);
+    ctx.fillRect(sx + w - 3, sy - streakH / 2, 3, streakH);
   }
 }

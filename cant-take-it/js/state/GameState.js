@@ -34,6 +34,7 @@ export function createDefaultSetup() {
     retired: false,
     otherDebt: 0,
     otherLoans: [],
+    milestones: [],
   };
 }
 
@@ -77,6 +78,7 @@ export function createGameFromSetup(setup) {
     retired: !!setup.retired,
     otherDebt: Number(setup.otherDebt) || 0,
     otherLoans: Array.isArray(setup.otherLoans) ? setup.otherLoans : [],
+    milestones: Array.isArray(setup.milestones) ? setup.milestones : [],
     socialSecurity: 0,
     childCostInflator: 1,
   };

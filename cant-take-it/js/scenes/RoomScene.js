@@ -254,8 +254,15 @@ export class RoomScene {
         { title: 'Have A Kid' }
       );
     } else if (action === 'purchase') {
-      const amt = await dialog.prompt('Large purchase amount ($)?', {
+      const itemName = await dialog.prompt('What are you buying? (name)', {
         title: 'Make Large Purchase',
+        defaultValue: 'New car',
+      });
+      if (itemName == null) return;
+      const label = String(itemName).trim() || 'Large Purchase';
+
+      const amt = await dialog.prompt('Purchase amount ($)?', {
+        title: label,
         defaultValue: '5000',
         type: 'money',
       });
@@ -263,37 +270,37 @@ export class RoomScene {
       const price = Math.max(0, amt);
 
       const financed = await dialog.confirm('Is this purchase being financed?', {
-        title: 'Make Large Purchase',
+        title: label,
         yes: 'Yes — finance it',
         no: 'No — pay in full',
       });
       if (financed == null) return;
 
       if (!financed) {
-        game.portfolio = largePurchase(game.portfolio, price);
+        game.portfolio = largePurchase(game.portfolio, price, { label });
         await dialog.show(
-          'Paid in full from liquid assets (cash → savings → stocks). Shortfall becomes other debt.',
+          `Purchased ${label} — paid in full from liquid assets.`,
           { title: 'Make Large Purchase' }
         );
         return;
       }
 
       const down = await dialog.prompt('Down payment ($)?', {
-        title: 'Make Large Purchase',
+        title: label,
         defaultValue: String(Math.round(price * 0.2)),
         type: 'money',
       });
       if (down == null) return;
 
       const ratePct = await dialog.prompt('Interest rate (%)?', {
-        title: 'Make Large Purchase',
+        title: label,
         defaultValue: '6.9',
         type: 'percent',
       });
       if (ratePct == null) return;
 
       const term = await dialog.prompt('Loan term (years)?', {
-        title: 'Make Large Purchase',
+        title: label,
         defaultValue: '5',
         type: 'number',
       });
@@ -306,12 +313,12 @@ export class RoomScene {
         downPayment: downCap,
         rate: (ratePct || 0) / 100,
         term: term ?? 5,
-        label: 'Large Purchase',
+        label,
       });
       await dialog.show(
-        `Down payment ${formatMoneyDisplay(downCap)} paid from liquid.\n` +
-          `Financed ${formatMoneyDisplay(principal)} at ${ratePct}% for ${Math.max(1, Math.round(term ?? 5))} yr.\n` +
-          `Loan amortizes each year like a mortgage.`,
+        `Purchased ${label}.\n` +
+          `Down ${formatMoneyDisplay(downCap)}; financed ${formatMoneyDisplay(principal)} ` +
+          `at ${ratePct}% for ${Math.max(1, Math.round(term ?? 5))} yr.`,
         { title: 'Make Large Purchase' }
       );
     }
