@@ -2,7 +2,7 @@
  * Esc pause — Map (timeline graph + jump) and Charts tabs.
  */
 
-import { PALETTE, VIEW_W, VIEW_H, KEYS } from '../config.js';
+import { PALETTE, VIEW_W, VIEW_H, CANVAS_H, KEYS } from '../config.js';
 import { listTimelineNodes, jumpToHallwayNode } from '../state/GameState.js';
 import { drawWorthChart } from '../render/Charts.js';
 import { makeDialogChrome } from '../render/Assets.js';
@@ -86,12 +86,12 @@ export class PauseMenu {
     if (!this.open) return;
 
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillRect(0, 0, VIEW_W, CANVAS_H);
 
     const boxW = 300;
     const boxH = 200;
     const x = Math.floor((VIEW_W - boxW) / 2);
-    const y = Math.floor((VIEW_H - boxH) / 2);
+    const y = Math.floor((CANVAS_H - boxH) / 2);
     if (!this.chrome || this.chrome.width !== boxW || this.chrome.height !== boxH) {
       this.chrome = makeDialogChrome(boxW, boxH);
     }

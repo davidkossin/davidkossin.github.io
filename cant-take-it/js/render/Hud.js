@@ -1,4 +1,4 @@
-import { PALETTE, VIEW_W } from '../config.js';
+import { PALETTE, VIEW_W, HUD_H } from '../config.js';
 import { computeWorth } from '../finance/Engine.js';
 import { makeHudIcon, makeHudBox } from './Assets.js';
 
@@ -9,8 +9,8 @@ function money(n) {
 }
 
 /**
- * Floating LTTP-style HUD — icon + number clusters across the top,
- * not a solid full-width bar. Gold thin frames like item boxes.
+ * HUD band above the playfield (not overlaid on the world).
+ * Opaque dark strip 0..HUD_H with icon clusters + kids line inside.
  */
 export class Hud {
   constructor() {}
@@ -22,6 +22,13 @@ export class Hud {
    */
   draw(ctx, portfolio, worthOverride = null) {
     const worth = worthOverride || computeWorth(portfolio);
+
+    // Opaque LTTP-ish dark band — full width, HUD only
+    ctx.fillStyle = '#141018';
+    ctx.fillRect(0, 0, VIEW_W, HUD_H);
+    ctx.fillStyle = '#2a2430';
+    ctx.fillRect(0, HUD_H - 1, VIEW_W, 1);
+
     const y = 4;
     const boxH = 18;
 
@@ -41,7 +48,6 @@ export class Hud {
       ctx.font = '6px "Press Start 2P", monospace';
       ctx.textBaseline = 'top';
       ctx.fillStyle = PALETTE.uiText;
-      // truncate if needed
       let text = c.label;
       while (text.length > 1 && ctx.measureText(text).width > c.w - 14) {
         text = text.slice(0, -1);
@@ -49,7 +55,7 @@ export class Hud {
       ctx.fillText(text, c.x + 12, y + 6);
     }
 
-    // Kids list under Age cluster
+    // Kids list under Age cluster — still inside HUD band
     const kids = portfolio.kids || [];
     if (kids.length) {
       ctx.font = '5px "Press Start 2P", monospace';

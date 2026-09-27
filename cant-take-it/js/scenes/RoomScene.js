@@ -1,4 +1,4 @@
-import { VIEW_W, VIEW_H, HOME_TYPES } from '../config.js';
+import { VIEW_W, VIEW_H, HUD_H, HOME_TYPES } from '../config.js';
 import { Player } from '../render/Player.js';
 import { Hud } from '../render/Hud.js';
 import {
@@ -48,9 +48,28 @@ export class RoomScene {
     this.player?.unbindInput();
   }
 
+  setInputBlocked(blocked) {
+    if (!this.player) return;
+    if (blocked) {
+      if (this.player.inputEnabled) this.player.clearKeys();
+      this.player.inputEnabled = false;
+    } else {
+      this.player.clearKeys();
+      this.player.inputEnabled = true;
+    }
+  }
+
   update(game, dialog) {
     this.animTime += 1;
-    if (dialog.active || this.locked) return null;
+    const blocked = !!(dialog?.active || this.locked);
+    if (blocked) {
+      this.setInputBlocked(true);
+      return null;
+    }
+    if (!this.player.inputEnabled) {
+      this.player.clearKeys();
+      this.player.inputEnabled = true;
+    }
     this.player.update((x, y, w, h) => isSolid(this.world, x, y, w, h));
     this.prompt = findFacingInteractable(this.player, this.world);
     return null;
@@ -58,6 +77,8 @@ export class RoomScene {
 
   async tryInteract(game, dialog) {
     if (dialog.active || this.locked) return null;
+    this.player?.clearKeys();
+    this.setInputBlocked(true);
     const obj = findFacingInteractable(this.player, this.world);
     if (!obj) return null;
 
@@ -72,14 +93,18 @@ export class RoomScene {
         this.leave();
         return { goto: 'hallway' };
       }
+      this.setInputBlocked(false);
       return null;
     }
 
     if (obj.kind === 'teller') {
       await this.handleTeller(game, dialog, obj.action);
       game.lastWorth = computeWorth(game.portfolio);
+      this.player?.clearKeys();
+      this.setInputBlocked(false);
       return null;
     }
+    this.setInputBlocked(false);
     return null;
   }
 
@@ -310,8 +335,11 @@ export class RoomScene {
     const camX = Math.max(0, Math.min(this.world.width - VIEW_W, this.player.x + 6 - VIEW_W / 2));
     const camY = Math.max(0, Math.min(this.world.height - VIEW_H, this.player.y - VIEW_H / 2));
 
+    // Playfield below HUD band
     ctx.save();
+    ctx.translate(0, HUD_H);
     drawWorld(ctx, this.world, camX, camY, this.animTime);
+    ctx.save();
     ctx.translate(-camX, -camY);
     this.player.draw(
       ctx,
@@ -320,6 +348,7 @@ export class RoomScene {
       game.portfolio.age
     );
     ctx.restore();
+    ctx.restore();
 
     this.hud.draw(ctx, game.portfolio);
 
@@ -327,7 +356,7 @@ export class RoomScene {
       ctx.font = '6px "Press Start 2P", monospace';
       ctx.fillStyle = '#f0e8c8';
       ctx.textAlign = 'center';
-      ctx.fillText(`[E] ${this.prompt.label}`, VIEW_W / 2, VIEW_H - 12);
+      ctx.fillText(`[E] ${this.prompt.label}`, VIEW_W / 2, HUD_H + VIEW_H - 12);
       ctx.textAlign = 'left';
     }
   }

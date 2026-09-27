@@ -2,7 +2,7 @@
  * You Can't Take It With You — bootstrap & scene loop.
  */
 
-import { VIEW_W, VIEW_H, SCALE, KEYS } from './config.js';
+import { VIEW_W, VIEW_H, CANVAS_H, SCALE, KEYS } from './config.js';
 import { Dialog } from './render/Dialog.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { SetupScene } from './scenes/SetupScene.js';
@@ -18,9 +18,9 @@ function fitCanvas() {
   const maxW = Math.min(window.innerWidth - 16, VIEW_W * SCALE * 2);
   const scale = Math.max(2, Math.floor(maxW / VIEW_W));
   canvas.width = VIEW_W;
-  canvas.height = VIEW_H;
+  canvas.height = CANVAS_H;
   canvas.style.width = `${VIEW_W * scale}px`;
-  canvas.style.height = `${VIEW_H * scale}px`;
+  canvas.style.height = `${CANVAS_H * scale}px`;
   ctx.imageSmoothingEnabled = false;
 }
 
@@ -87,6 +87,10 @@ window.addEventListener('keydown', async (e) => {
 
   if (pause.open) {
     const result = pause.handleKey(e, game);
+    if (result === 'close') {
+      if (mode === 'room') room.setInputBlocked(false);
+      else if (mode === 'hallway') hallway.setInputBlocked(false);
+    }
     if (result && typeof result === 'object' && result.jump) {
       // Restored hallway branch — re-enter hallway scene
       room.leave();
@@ -113,6 +117,8 @@ window.addEventListener('keydown', async (e) => {
   // Esc opens pause map/charts during play
   if (KEYS.cancel.includes(e.key) && (mode === 'room' || mode === 'hallway') && game) {
     e.preventDefault();
+    if (mode === 'room') room.setInputBlocked(true);
+    else hallway.setInputBlocked(true);
     pause.show(game);
     return;
   }
@@ -152,7 +158,7 @@ async function transition(to) {
 
 function loop() {
   ctx.fillStyle = '#0a0810';
-  ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  ctx.fillRect(0, 0, VIEW_W, CANVAS_H);
   ctx.imageSmoothingEnabled = false;
 
   if (mode === 'title') {
@@ -164,7 +170,7 @@ function loop() {
     if (!pause.open) room.update(game, dialog);
     room.render(ctx, game);
   } else if (mode === 'hallway' && game) {
-    if (!pause.open) hallway.update(game);
+    if (!pause.open) hallway.update(game, dialog);
     hallway.render(ctx, game);
   } else if (mode === 'ending') {
     ending.update();

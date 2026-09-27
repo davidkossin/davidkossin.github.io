@@ -2,8 +2,11 @@
 
 export const TILE = 16;
 export const SCALE = 3;
-export const VIEW_W = 320; // logical pixels
+export const VIEW_W = 320; // logical pixels (playfield)
 export const VIEW_H = 240;
+/** HUD band above the playfield — not overlaid on the world. */
+export const HUD_H = 40;
+export const CANVAS_H = HUD_H + VIEW_H;
 
 export const PALETTE = {
   bg: '#1a1420',

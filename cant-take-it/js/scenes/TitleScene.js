@@ -1,4 +1,4 @@
-import { PALETTE, VIEW_W, VIEW_H } from '../config.js';
+import { PALETTE, VIEW_W, VIEW_H, CANVAS_H } from '../config.js';
 import { hasSaves, listSaves, loadSave } from '../state/SaveSystem.js';
 import { makeTile } from '../render/Assets.js';
 
@@ -65,29 +65,29 @@ export class TitleScene {
   }
 
   draw(ctx) {
-    // dithered title backdrop
+    // dithered title backdrop (full canvas incl. HUD band)
     const floor = makeTile('floor');
-    for (let y = 0; y < VIEW_H; y += 16) {
+    for (let y = 0; y < CANVAS_H; y += 16) {
       for (let x = 0; x < VIEW_W; x += 16) {
         ctx.drawImage(floor, x, y);
       }
     }
     ctx.fillStyle = 'rgba(10,8,16,0.55)';
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillRect(0, 0, VIEW_W, CANVAS_H);
 
     ctx.textAlign = 'center';
     ctx.font = '10px "Press Start 2P", monospace';
     ctx.fillStyle = PALETTE.gold;
-    ctx.fillText("YOU CAN'T TAKE", VIEW_W / 2, 70);
-    ctx.fillText('IT WITH YOU', VIEW_W / 2, 88);
+    ctx.fillText("YOU CAN'T TAKE", VIEW_W / 2, 90);
+    ctx.fillText('IT WITH YOU', VIEW_W / 2, 108);
 
     ctx.font = '7px "Press Start 2P", monospace';
     ctx.fillStyle = PALETTE.uiText;
-    ctx.fillText('A 16-bit life ledger', VIEW_W / 2, 120);
+    ctx.fillText('A 16-bit life ledger', VIEW_W / 2, 140);
 
     if (Math.floor(this.blink / 30) % 2 === 0) {
       ctx.fillStyle = PALETTE.accent;
-      ctx.fillText('Press Enter', VIEW_W / 2, 180);
+      ctx.fillText('Press Enter', VIEW_W / 2, 200);
     }
     ctx.textAlign = 'left';
   }

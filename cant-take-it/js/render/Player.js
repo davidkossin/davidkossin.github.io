@@ -1,6 +1,14 @@
 import { KEYS, TILE } from '../config.js';
 import { makePlayerSprite } from './Assets.js';
 
+/** Movement keys only — typing never pollutes the pressed set. */
+const MOVE_KEYS = new Set([
+  ...KEYS.up,
+  ...KEYS.down,
+  ...KEYS.left,
+  ...KEYS.right,
+]);
+
 export class Player {
   constructor(x, y, { speed = 1.35 } = {}) {
     this.x = x;
@@ -13,14 +21,23 @@ export class Player {
     this.frame = 0;
     this.animTimer = 0;
     this.keys = new Set();
+    /** When false, keydown does not add keys (dialogs / locked / pause). */
+    this.inputEnabled = true;
   }
 
   bindInput(target = window) {
     this._kd = (e) => {
+      if (!this.inputEnabled) return;
+      if (!MOVE_KEYS.has(e.key)) return;
       this.keys.add(e.key);
     };
     this._ku = (e) => {
+      // Always process keyup so held keys don't stick after re-enable
       this.keys.delete(e.key);
+      if (e.key.length === 1) {
+        this.keys.delete(e.key.toLowerCase());
+        this.keys.delete(e.key.toUpperCase());
+      }
     };
     target.addEventListener('keydown', this._kd);
     target.addEventListener('keyup', this._ku);
@@ -29,6 +46,10 @@ export class Player {
   unbindInput(target = window) {
     if (this._kd) target.removeEventListener('keydown', this._kd);
     if (this._ku) target.removeEventListener('keyup', this._ku);
+  }
+
+  clearKeys() {
+    this.keys.clear();
   }
 
   pressed(dirs) {

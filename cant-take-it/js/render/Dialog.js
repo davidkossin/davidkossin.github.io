@@ -2,7 +2,7 @@
  * SNES / LTTP-styled dialog & menu boxes (logical canvas space).
  */
 
-import { PALETTE, VIEW_W, VIEW_H, KEYS } from '../config.js';
+import { PALETTE, VIEW_W, VIEW_H, CANVAS_H, KEYS } from '../config.js';
 import { makeDialogChrome } from './Assets.js';
 
 export function formatMoneyInput(raw) {
@@ -206,7 +206,7 @@ export class Dialog {
     const titleH = this.title ? 16 : 0;
     const boxH = Math.min(210, pad * 2 + titleH + textH + promptH + optsH + 8);
     const x = Math.floor((VIEW_W - boxW) / 2);
-    const y = VIEW_H - boxH - 8;
+    const y = CANVAS_H - boxH - 8;
 
     if (!this.chrome || this.chrome.width !== boxW || this.chrome.height !== boxH) {
       this.chrome = makeDialogChrome(boxW, boxH);

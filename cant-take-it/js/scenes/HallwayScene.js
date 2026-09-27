@@ -1,4 +1,4 @@
-import { VIEW_W, VIEW_H, MAX_AGE } from '../config.js';
+import { VIEW_W, VIEW_H, HUD_H, MAX_AGE } from '../config.js';
 import { Player } from '../render/Player.js';
 import { Hud } from '../render/Hud.js';
 import {
@@ -84,15 +84,36 @@ export class HallwayScene {
     this.player?.unbindInput();
   }
 
-  update(game) {
+  setInputBlocked(blocked) {
+    if (!this.player) return;
+    if (blocked) {
+      if (this.player.inputEnabled) this.player.clearKeys();
+      this.player.inputEnabled = false;
+    } else {
+      this.player.clearKeys();
+      this.player.inputEnabled = true;
+    }
+  }
+
+  update(game, dialog) {
     this.animTime += 1;
-    this.player.update((x, y, w, h) => isSolid(this.world, x, y, w, h));
-    this.prompt = findFacingInteractable(this.player, this.world, 22);
+    const blocked = !!dialog?.active;
+    if (blocked) {
+      this.setInputBlocked(true);
+    } else {
+      if (!this.player.inputEnabled) {
+        this.player.clearKeys();
+        this.player.inputEnabled = true;
+      }
+      this.player.update((x, y, w, h) => isSolid(this.world, x, y, w, h));
+      this.prompt = findFacingInteractable(this.player, this.world, 22);
+    }
 
     const progress = this.world.progressAtY(this.player.y);
     const maxIdx = this.snapshots.length - 1;
     const idx = Math.max(0, Math.min(maxIdx, Math.floor(progress * maxIdx)));
     this.visual = this.snapshots[idx];
+
   }
 
   stateAtDoor(yearIndex) {
@@ -104,6 +125,8 @@ export class HallwayScene {
   async tryInteract(game, dialog) {
     const obj = findFacingInteractable(this.player, this.world, 22);
     if (!obj) return null;
+    this.player?.clearKeys();
+    this.setInputBlocked(true);
 
     if (obj.kind === 'year-door') {
       const snap = this.stateAtDoor(obj.yearIndex);
@@ -115,7 +138,10 @@ export class HallwayScene {
         `Enter Decision Room for ${obj.year} (age ${obj.age})?\nBranches a new timeline from projected finances.`,
         { title: 'Year Door', yes: 'Enter', no: 'Stay' }
       );
-      if (!ok) return null;
+      if (!ok) {
+        this.setInputBlocked(false);
+        return null;
+      }
       enterYearRoom(game, state);
       autoSave(game, 'begin');
       this.leave();
@@ -130,12 +156,14 @@ export class HallwayScene {
       });
       if (!ok) {
         await dialog.show('The hallway waits.', { title: 'End of the Line' });
+        this.setInputBlocked(false);
         return null;
       }
       this.leave();
       return { goto: 'ending' };
     }
 
+    this.setInputBlocked(false);
     return null;
   }
 
@@ -149,11 +177,14 @@ export class HallwayScene {
       Math.min(this.world.height - VIEW_H, this.player.y - VIEW_H / 2)
     );
 
+    ctx.save();
+    ctx.translate(0, HUD_H);
     drawWorld(ctx, this.world, camX, camY, this.animTime);
     ctx.save();
     ctx.translate(-camX, -camY);
     const vis = this.visual?.state || game.portfolio;
     this.player.draw(ctx, vis.hairColor, vis.hairLength, vis.age);
+    ctx.restore();
     ctx.restore();
 
     const portfolio = this.visual?.state || game.portfolio;
@@ -164,8 +195,9 @@ export class HallwayScene {
       ctx.font = '6px "Press Start 2P", monospace';
       ctx.fillStyle = '#f0e8c8';
       ctx.textAlign = 'center';
-      ctx.fillText(`[E] ${this.prompt.label}`, VIEW_W / 2, VIEW_H - 12);
+      ctx.fillText(`[E] ${this.prompt.label}`, VIEW_W / 2, HUD_H + VIEW_H - 12);
       ctx.textAlign = 'left';
     }
   }
 }
+

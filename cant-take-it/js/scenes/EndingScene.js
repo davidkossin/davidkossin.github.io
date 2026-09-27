@@ -1,4 +1,4 @@
-import { VIEW_W, VIEW_H, PALETTE, KEYS } from '../config.js';
+import { VIEW_W, VIEW_H, CANVAS_H, PALETTE, KEYS } from '../config.js';
 import { drawWorthChart } from '../render/Charts.js';
 import { computeWorth } from '../finance/Engine.js';
 import { formatMoneyDisplay } from '../render/Dialog.js';
@@ -82,7 +82,7 @@ export class EndingScene {
 
   render(ctx) {
     ctx.fillStyle = `rgba(0,0,0,${this.alpha})`;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillRect(0, 0, VIEW_W, CANVAS_H);
 
     if (this.phase >= 1 && this.phase < 3) {
       ctx.textAlign = 'center';
@@ -90,24 +90,24 @@ export class EndingScene {
       ctx.font = '7px "Press Start 2P", monospace';
       ctx.fillStyle = '#666';
       if (worth) {
-        ctx.fillText(`Net Worth  ${formatMoneyDisplay(worth.netWorth)}`, VIEW_W / 2, 70);
-        ctx.fillText(`Bank       ${formatMoneyDisplay(worth.bank)}`, VIEW_W / 2, 86);
+        ctx.fillText(`Net Worth  ${formatMoneyDisplay(worth.netWorth)}`, VIEW_W / 2, 90);
+        ctx.fillText(`Bank       ${formatMoneyDisplay(worth.bank)}`, VIEW_W / 2, 106);
       } else {
-        ctx.fillText('Net Worth  - - -', VIEW_W / 2, 70);
-        ctx.fillText('Assets    - - -', VIEW_W / 2, 86);
+        ctx.fillText('Net Worth  - - -', VIEW_W / 2, 90);
+        ctx.fillText('Assets    - - -', VIEW_W / 2, 106);
       }
 
       ctx.fillStyle = PALETTE.gold;
       ctx.font = '9px "Press Start 2P", monospace';
-      ctx.fillText("You can't take", VIEW_W / 2, 120);
-      ctx.fillText('it with you…', VIEW_W / 2, 138);
+      ctx.fillText("You can't take", VIEW_W / 2, 140);
+      ctx.fillText('it with you…', VIEW_W / 2, 158);
 
       if (this.phase >= 2) {
         ctx.font = '7px "Press Start 2P", monospace';
         this.menu.forEach((m, i) => {
           const sel = i === this.menuIndex;
           ctx.fillStyle = sel ? PALETTE.gold : PALETTE.uiText;
-          ctx.fillText(`${sel ? '▶ ' : '  '}${m.label}`, VIEW_W / 2, 170 + i * 16);
+          ctx.fillText(`${sel ? '▶ ' : '  '}${m.label}`, VIEW_W / 2, 190 + i * 16);
         });
       }
       ctx.textAlign = 'left';
@@ -115,23 +115,23 @@ export class EndingScene {
 
     if (this.phase === 3) {
       ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+      ctx.fillRect(0, 0, VIEW_W, CANVAS_H);
       ctx.font = '8px "Press Start 2P", monospace';
       ctx.fillStyle = PALETTE.gold;
       ctx.textAlign = 'center';
-      ctx.fillText('Your life ledger', VIEW_W / 2, 18);
+      ctx.fillText('Your life ledger', VIEW_W / 2, 22);
       ctx.textAlign = 'left';
       drawWorthChart(ctx, this.game?.worthHistory || [], {
         x: 16,
         y: 32,
         w: VIEW_W - 32,
-        h: VIEW_H - 60,
+        h: CANVAS_H - 80,
         series: ['netWorth', 'bank', 'salary'],
       });
       ctx.font = '6px "Press Start 2P", monospace';
       ctx.fillStyle = PALETTE.uiText;
       ctx.textAlign = 'center';
-      ctx.fillText('Enter / Esc — back', VIEW_W / 2, VIEW_H - 12);
+      ctx.fillText('Enter / Esc — back', VIEW_W / 2, CANVAS_H - 12);
       ctx.textAlign = 'left';
     }
   }

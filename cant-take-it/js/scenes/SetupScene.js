@@ -2,7 +2,7 @@
  * Contextual LTTP-styled setup questionnaires with Back on every step.
  */
 
-import { CURRENT_YEAR, HOME_TYPES, VIEW_W, VIEW_H, PALETTE } from '../config.js';
+import { CURRENT_YEAR, HOME_TYPES, VIEW_W, VIEW_H, CANVAS_H, PALETTE } from '../config.js';
 import { createDefaultSetup, createGameFromSetup } from '../state/GameState.js';
 import { listDifficulties } from '../finance/Difficulty.js';
 import { makeTile } from '../render/Assets.js';
@@ -16,11 +16,11 @@ export class SetupScene {
 
   draw(ctx) {
     const floor = makeTile('wood');
-    for (let y = 0; y < VIEW_H; y += 16) {
+    for (let y = 0; y < CANVAS_H; y += 16) {
       for (let x = 0; x < VIEW_W; x += 16) ctx.drawImage(floor, x, y);
     }
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillRect(0, 0, VIEW_W, CANVAS_H);
     ctx.font = '8px "Press Start 2P", monospace';
     ctx.fillStyle = PALETTE.gold;
     ctx.textAlign = 'center';
