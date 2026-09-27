@@ -27,7 +27,7 @@ export class TitleScene {
       if (choice === 'new') return { action: 'new' };
       if (choice === 'help') {
         await dialog.show(
-          'WASD / Arrows move. Enter / Z / E talk. Escape backs out. Walk the Hallway of Time to age forward. Bank windows change your portfolio. Auto-saves when you enter rooms.',
+          'WASD / Arrows move. Enter / Z / E talk. Esc opens Map/Charts (jump timelines). Walk the Hallway of Time — doors start the year after you leave. Wall windows change your portfolio. Auto-saves in localStorage.',
           { title: 'How to Play' }
         );
         continue;

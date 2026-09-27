@@ -1,0 +1,118 @@
+/**
+ * Simple canvas line charts for net worth / bank / portfolio series.
+ */
+
+import { PALETTE, VIEW_W, VIEW_H } from '../config.js';
+
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Array<{year:number, netWorth:number, bank?:number, portfolio?:number}>} history
+ * @param {object} [opts]
+ */
+export function drawWorthChart(ctx, history, opts = {}) {
+  const x = opts.x ?? 16;
+  const y = opts.y ?? 36;
+  const w = opts.w ?? VIEW_W - 32;
+  const h = opts.h ?? VIEW_H - 80;
+  const series = opts.series || ['netWorth', 'bank'];
+
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
+  ctx.strokeStyle = PALETTE.uiBorder;
+  ctx.strokeRect(x - 4.5, y - 4.5, w + 8, h + 8);
+
+  if (!history?.length) {
+    ctx.fillStyle = PALETTE.uiText;
+    ctx.font = '7px "Press Start 2P", monospace';
+    ctx.fillText('No data yet', x + 8, y + h / 2);
+    return;
+  }
+
+  const colors = {
+    netWorth: PALETTE.gold,
+    bank: '#80c0e0',
+    portfolio: PALETTE.gold,
+    salary: '#80e0a0',
+  };
+  const labels = {
+    netWorth: 'Net Worth',
+    bank: 'Bank',
+    portfolio: 'Portfolio',
+    salary: 'Salary',
+  };
+
+  let minV = Infinity;
+  let maxV = -Infinity;
+  for (const row of history) {
+    for (const key of series) {
+      const v = row[key];
+      if (v == null) continue;
+      minV = Math.min(minV, v);
+      maxV = Math.max(maxV, v);
+    }
+  }
+  if (!Number.isFinite(minV)) minV = 0;
+  if (!Number.isFinite(maxV)) maxV = 1;
+  if (minV === maxV) {
+    minV -= 1;
+    maxV += 1;
+  }
+
+  // axes
+  ctx.strokeStyle = '#444';
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x + w, y + h);
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y + h);
+  ctx.stroke();
+
+  const n = history.length;
+  for (const key of series) {
+    ctx.strokeStyle = colors[key] || '#fff';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < n; i++) {
+      const v = history[i][key];
+      if (v == null) continue;
+      const px = x + (n === 1 ? w / 2 : (i / (n - 1)) * w);
+      const py = y + h - ((v - minV) / (maxV - minV)) * h;
+      if (!started) {
+        ctx.moveTo(px, py);
+        started = true;
+      } else ctx.lineTo(px, py);
+    }
+    if (started) ctx.stroke();
+  }
+
+  // legend
+  ctx.font = '5px "Press Start 2P", monospace';
+  let lx = x + 4;
+  const ly = y + 4;
+  for (const key of series) {
+    ctx.fillStyle = colors[key] || '#fff';
+    ctx.fillRect(lx, ly, 6, 4);
+    ctx.fillStyle = PALETTE.uiText;
+    ctx.fillText(labels[key] || key, lx + 8, ly - 1);
+    lx += 8 + ctx.measureText(labels[key] || key).width + 10;
+  }
+
+  // year range
+  ctx.fillStyle = '#888';
+  ctx.fillText(String(history[0].year), x, y + h + 6);
+  ctx.fillText(String(history[n - 1].year), x + w - 28, y + h + 6);
+
+  // min/max
+  ctx.fillStyle = '#666';
+  ctx.fillText(compact(maxV), x + 2, y + 2);
+  ctx.fillText(compact(minV), x + 2, y + h - 8);
+}
+
+function compact(n) {
+  const v = Math.round(n);
+  const a = Math.abs(v);
+  if (a >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+  if (a >= 1e3) return (v / 1e3).toFixed(0) + 'k';
+  return String(v);
+}

@@ -9,6 +9,7 @@ import { SetupScene } from './scenes/SetupScene.js';
 import { RoomScene } from './scenes/RoomScene.js';
 import { HallwayScene } from './scenes/HallwayScene.js';
 import { EndingScene } from './scenes/EndingScene.js';
+import { PauseMenu } from './scenes/PauseMenu.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -27,11 +28,12 @@ fitCanvas();
 window.addEventListener('resize', fitCanvas);
 
 const dialog = new Dialog();
-const title = new TitleScene({ });
+const title = new TitleScene({});
 const setup = new SetupScene();
 const room = new RoomScene();
 const hallway = new HallwayScene();
 const ending = new EndingScene();
+const pause = new PauseMenu();
 
 /** @type {'title'|'setup'|'room'|'hallway'|'ending'} */
 let mode = 'title';
@@ -57,10 +59,14 @@ async function startTitle() {
   mode = 'title';
   game = null;
   booting = true;
+  pause.hide();
   await waitForConfirm();
   const result = await title.runMenu(dialog);
   if (result.action === 'load') {
     game = result.game;
+    // migrate old saves lightly
+    if (!game.worthHistory) game.worthHistory = [];
+    if (!game.timeline.snapshots) game.timeline.snapshots = {};
     mode = game.scene === 'hallway' ? 'hallway' : 'room';
     if (mode === 'room') room.enter(game, false);
     else hallway.enter(game);
@@ -73,15 +79,25 @@ async function startTitle() {
   booting = false;
 }
 
-function wait(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
 window.addEventListener('keydown', async (e) => {
   if (dialog.active) {
     dialog.handleKeyDown(e);
     return;
   }
+
+  if (pause.open) {
+    const result = pause.handleKey(e, game);
+    if (result && typeof result === 'object' && result.jump) {
+      // Restored hallway branch — re-enter hallway scene
+      room.leave();
+      hallway.leave();
+      mode = 'hallway';
+      hallway.enter(game);
+      game.scene = 'hallway';
+    }
+    return;
+  }
+
   if (mode === 'ending') {
     ending.handleKey(e);
     if (ending.done) {
@@ -91,7 +107,15 @@ window.addEventListener('keydown', async (e) => {
     }
     return;
   }
+
   if (booting || interacting) return;
+
+  // Esc opens pause map/charts during play
+  if (KEYS.cancel.includes(e.key) && (mode === 'room' || mode === 'hallway') && game) {
+    e.preventDefault();
+    pause.show(game);
+    return;
+  }
 
   if (KEYS.confirm.includes(e.key)) {
     e.preventDefault();
@@ -121,7 +145,7 @@ async function transition(to) {
   } else if (to === 'ending') {
     hallway.leave();
     mode = 'ending';
-    ending.enter();
+    ending.enter(game);
     game.scene = 'ending';
   }
 }
@@ -137,10 +161,10 @@ function loop() {
   } else if (mode === 'setup') {
     setup.draw(ctx);
   } else if (mode === 'room' && game) {
-    room.update(game, dialog);
+    if (!pause.open) room.update(game, dialog);
     room.render(ctx, game);
   } else if (mode === 'hallway' && game) {
-    hallway.update(game);
+    if (!pause.open) hallway.update(game);
     hallway.render(ctx, game);
   } else if (mode === 'ending') {
     ending.update();
@@ -148,6 +172,8 @@ function loop() {
   }
 
   dialog.draw(ctx);
+  if (pause.open && game) pause.draw(ctx, game);
+
   requestAnimationFrame(loop);
 }
 

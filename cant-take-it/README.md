@@ -7,17 +7,18 @@ A 16-bit, top-down life & finance RPG (A Link to the Past vibe) playable in the 
 ## How to play
 
 1. **Title** — New Game or Load Game (localStorage).
-2. **Setup** — Answer LTTP-styled prompts: name, year, age, appearance, cash, salary, savings, homes, stocks, family, spending, ZIP, difficulty.
-3. **Decision Room** — Walk with WASD / arrows. Talk to bank-teller windows (`Enter` / `Z` / `E`):
-   - Buy / Sell home
-   - Sell stock
-   - Leave / start job / retire
-   - Have a kid
-   - Large purchase
+2. **Setup** — LTTP-styled prompts with **Back** on every step: name, year, age, appearance, cash, annual household gross salary, savings (+ interest %), homes (rate as %), stocks (total only), family (kid **name** + age), spending, ZIP, difficulty.
+3. **Decision Room** — Walk with WASD / arrows. Wall-embedded bank windows (`Enter` / `Z` / `E`):
+   - Buy / Sell Home
+   - Buy / Sell Stock (capital gains tax on sell)
+   - Have A Kid (name only → age 0)
+   - Large Purchase
+   - Job / Retire (side wall)
 4. **North door** — “Hallway of Time.” Confirm leaving the year.
-5. **Hallway** — Walk north; HUD age / year / net worth project forward. Left markers = years; right doors = enter that year’s Decision Room (new timeline branch). Oil lamps every 5 years.
-6. **Age 100** — “End of the Line.” Choose fear or courage. Ending → any key → new game.
-7. **Saves** — Auto-save on entering a year’s room (“Begin of YEAR”) and when entering the hallway from a room (“End of YEAR”).
+5. **Hallway** — Narrow corridor through a dark purple stippled void. First door = **leave year + 1**. HUD age / year / bank / portfolio project forward (deterministic). Lanterns flicker beside doors.
+6. **Esc** — Pause: **Map** (timeline graph; jump back to a prior Hallway node) and **Charts** (net worth over years).
+7. **Age 100** — “End of the Line.” Ending → See your charts / New Game.
+8. **Saves** — Auto-save on entering a year’s room and when entering the hallway (`ycitwy_saves_v2`).
 
 ## Controls
 
@@ -25,7 +26,8 @@ A 16-bit, top-down life & finance RPG (A Link to the Past vibe) playable in the 
 |--------|------|
 | Move | WASD / Arrow keys |
 | Confirm / Talk | Enter, Space, Z, E |
-| Cancel | Escape, X |
+| Cancel / Pause | Escape, X |
+| Pause tabs | Tab |
 
 ## Architecture
 
@@ -35,54 +37,109 @@ cant-take-it/
   css/game.css
   README.md
   js/
-    main.js           # scene loop, input, transitions
+    main.js           # scene loop, input, pause, transitions
     config.js         # palette, difficulty presets, constants
     state/
-      GameState.js    # setup → game, timeline nodes
+      GameState.js    # setup → game, timeline graph + snapshots
       SaveSystem.js   # localStorage begin/end slots
     finance/          # pure JS — no DOM
-      Engine.js       # projectOneYear, worth, decisions
-      Tax.js          # federal brackets + ZIP→state (offline)
+      Engine.js       # projectOneYear, worth, decisions, CGT sells
+      Tax.js          # federal brackets, ZIP→state, capital gains
       Difficulty.js
-      Events.js       # college, retirement, shocks
+      Events.js       # college, retirement, SS stub, shocks
+      rng.js          # seeded / deterministic PRNG
     scenes/
       TitleScene.js
       SetupScene.js
       RoomScene.js
       HallwayScene.js
       EndingScene.js
+      PauseMenu.js    # Map + Charts
     render/
-      Assets.js       # procedural pixel sprites
-      Dialog.js       # SNES-style boxes
-      Hud.js
-      Player.js
-      World.js        # tilemaps, interactables
+      Assets.js       # procedural pixel sprites (walk cycle, void, lamps)
+      Dialog.js       # SNES-style boxes (money commas, %)
+      Hud.js          # floating LTTP icon clusters
+      Player.js       # 4-dir walk animation
+      World.js        # tilemaps, wall windows, hallway void
+      Charts.js       # net-worth line charts
     data/
-      tax-brackets.js # curated federal tables + inflation fallback
+      tax-brackets.js
       state-from-zip.js
 ```
 
 Vanilla ES modules + Canvas. No build step. GitHub Pages serves the folder as static files.
 
-### Financial engine
+## Financial engine — formulas
 
-- `projectOneYear(state, difficulty)` advances age/year, salary growth, savings interest, equity returns (with noise), home appreciation, mortgage amortization, taxes, spending cash-flow.
-- Net worth = liquid (cash + savings + stocks) + home equity − other debt.
-- Difficulty presets scale inflation, equity return, salary growth, expense pressure, tax multiplier, college cost.
-- Timeline: each Decision Room visit stores a **baseline** node; the hallway projects from that node.
+### Net worth & HUD
 
-### Tax hooks (offline first)
+- **Bank** (HUD) = `cash` only (cash on hand).
+- **Portfolio** (HUD) = net worth = `cash + savings + stocksTotal + homeEquity − otherDebt`.
+- Savings still earn interest; they are not shown as “Bank.”
+- `stocksCostBasis` tracks tax basis: **buy** increases basis by purchase amount; **sell** reduces basis proportionally to `proceeds / stocksTotal`.
 
-- Static federal brackets in `data/tax-brackets.js` (inflate when year missing).
-- ZIP → approximate state + flat-ish state income tax in `data/state-from-zip.js`.
-- `Tax.fetchLiveTaxHint(year)` is a stub for future IRS / Tax Foundation `fetch`. Game must work offline with defaults.
+### Annual projection (`projectOneYear`)
+
+1. Age player + kids; year++.
+2. Inflate `childCostInflator *= (1 + inflation)`.
+3. Auto events: retirement at 65, college 18–22, optional SS, random shock (skipped if `deterministic`).
+4. Salary growth if employed: `salary *= (1 + salaryGrowth)`.
+5. Savings interest: `savings += savings * savingsRate`.
+6. Equity return: `stocksTotal += stocksTotal * equityReturn * noise`  
+   - Hallway / HUD projection uses **`deterministic: true`** (noise = 1, no shocks) so numbers don’t jitter.
+7. Home appreciation: `value *= (1 + inflation + 0.005)`.
+8. Mortgage: one year of P&I; interest = `owed * rate`; principal = payment − interest.
+9. **Child costs** (USDA-style bands, every year, *not* a flat +$8k on birth):
+   - Ages 0–5: ~$13,500 / yr  
+   - Ages 6–12: ~$14,500 / yr  
+   - Ages 13–17: ~$16,000 / yr  
+   - Scaled by `expensePressure × childCostInflator`.
+10. **College (18–22):** separate `collegeCost` from difficulty in `Events.js` — **not** double-counted with child bands.
+11. Income tax (federal brackets + ZIP state) + property tax.
+12. Cash flow: inflow = salary (or 0 if retired) + simplified SS; outflow = spending × pressure + mortgage + taxes + child costs. Surplus → savings; deficit drains cash → savings → stocks (basis adjusted).
+
+### Capital gains on stock sale
+
+Player enters **sale amount** (or % of portfolio), **realized gains $**, and **years held**.
+
+- `yearsHeld ≥ 1` → long-term federal CGT ≈ **15%** of gains (`LTCG_FEDERAL_RATE`).
+- `yearsHeld < 1` → short-term: tax gains as ordinary income (difference in federal tax with/without gains).
+- State CGT ≈ ZIP state income-tax rate × gains.
+- Net cash to Bank = `proceeds − (federal + state CGT)`.
+- `stocksTotal` reduced by proceeds; basis reduced proportionally.
+
+*Illustrative gameplay model — not tax advice.*
+
+### Social Security stub
+
+If retired and age ≥ 65: `socialSecurity ≈ 0.35 × peakSalary` (simplified; not an SSA formula). Added to annual inflow.
+
+### Random shocks
+
+Chance and max amount scale with difficulty (`shockChance`, `shockMax`). Disabled when `deterministic` (hallway projection).
+
+### Difficulty presets
+
+| | Easy | Standard (default) | Difficult |
+|--|--|--|--|
+| Subtext | World becomes better for all | Relatively stable | Grim — harder for everyone |
+| Inflation | 2% | 2.5% | 3.5% |
+| Equity | 9% | 7% | 4.5% |
+| Expense pressure | 0.9 | 1.0 | 1.2 |
+
+### Rates in the UI
+
+Interest / mortgage rates are **entered as percent** (e.g. `3.2` means 3.2%). Stored internally as decimals (`0.032`). Money fields format with **commas** while typing.
+
+### Timeline / pause map
+
+Each Decision Room and Hallway visit appends a node with a portfolio snapshot. Esc → Map lists Hallway nodes; selecting one **restores that branch** so you can spin alternate futures. Charts tab plots `worthHistory`.
 
 ## Extending
 
 - **New teller action:** add interactable in `World.buildDecisionRoom`, handle in `RoomScene.handleTeller`, mutate via `finance/Engine.js`.
-- **Richer art:** replace procedural canvases in `render/Assets.js` with PNGs under `assets/`.
+- **Richer art:** replace procedural canvases in `render/Assets.js` with PNGs under `assets/` (optional `lttp-walk.*` walk sheets).
 - **Live tax:** implement `fetchLiveTaxHint` and merge into `estimateAnnualTax`.
-- **Phaser:** optional later; current Canvas stack keeps Pages deploy trivial.
 
 ## Local dev
 

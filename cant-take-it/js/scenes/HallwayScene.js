@@ -8,7 +8,7 @@ import {
   findFacingInteractable,
 } from '../render/World.js';
 import { projectYears, computeWorth, cloneState } from '../finance/Engine.js';
-import { currentNode, enterYearRoom } from '../state/GameState.js';
+import { currentNode, enterYearRoom, commitHallwayNode } from '../state/GameState.js';
 import { autoSave } from '../state/SaveSystem.js';
 
 export class HallwayScene {
@@ -19,25 +19,59 @@ export class HallwayScene {
     this.prompt = null;
     this.baseline = null;
     /** @type {Array<{state:object, worth:object}>} */
-    this.snapshots = []; // index 0 = baseline, i = after i years
+    this.snapshots = [];
     this.visual = null;
+    this.animTime = 0;
+    this.leaveYear = 0;
+    this.leaveAge = 0;
   }
 
   enter(game) {
     const node = currentNode(game);
-    this.baseline = node.baseline;
-    const startAge = game.timeline.startAge;
-    const startYear = game.timeline.startYear;
-    const doorCount = Math.max(0, MAX_AGE - startAge);
-    this.world = buildHallway(doorCount, startYear, startAge);
-    this.player = new Player(this.world.spawn.x, this.world.spawn.y);
+    // Prefer committed end-of-room baseline; fall back to live portfolio
+    this.baseline = node?.baseline
+      ? node.baseline
+      : node?.snapshotId
+        ? game.timeline.snapshots[node.snapshotId]
+        : cloneState(game.portfolio);
+    if (!this.baseline) this.baseline = cloneState(game.portfolio);
+
+    // Sync portfolio to baseline when entering hallway
+    game.portfolio = cloneState(this.baseline);
+
+    this.leaveYear = this.baseline.year;
+    this.leaveAge = this.baseline.age;
+
+    // Doors always start at last Decision Room year + 1
+    const firstDoorYear = this.leaveYear + 1;
+    const firstDoorAge = this.leaveAge + 1;
+    const doorCount = Math.max(0, MAX_AGE - this.leaveAge - 1); // ages firstDoorAge .. 99
+
+    this.world = buildHallway(doorCount, firstDoorYear, firstDoorAge);
+    // Faster movement in hallway
+    this.player = new Player(this.world.spawn.x, this.world.spawn.y, { speed: 2.4 });
     this.player.bindInput();
     this.prompt = null;
+    this.animTime = 0;
 
-    // Precompute full lifetime projection once for smooth HUD while walking
-    this.snapshots = [{ state: cloneState(this.baseline), worth: computeWorth(this.baseline) }];
-    if (doorCount > 0) {
-      const snaps = projectYears(this.baseline, doorCount, game.portfolio.difficulty || this.baseline.difficulty);
+    // Timeline node for pause-map jump-back (skip if already on this hallway node)
+    const cur = currentNode(game);
+    if (!(cur && cur.type === 'hallway' && cur.year === this.leaveYear && cur.age === this.leaveAge)) {
+      commitHallwayNode(game);
+    }
+
+    // Deterministic projection — no noise so HUD doesn't jitter
+    const yearsToProject = Math.max(0, MAX_AGE - this.leaveAge);
+    this.snapshots = [
+      { state: cloneState(this.baseline), worth: computeWorth(this.baseline) },
+    ];
+    if (yearsToProject > 0) {
+      const snaps = projectYears(
+        this.baseline,
+        yearsToProject,
+        game.portfolio.difficulty || this.baseline.difficulty,
+        { deterministic: true }
+      );
       for (const s of snaps) {
         this.snapshots.push({ state: s.state, worth: s.worth });
       }
@@ -51,6 +85,7 @@ export class HallwayScene {
   }
 
   update(game) {
+    this.animTime += 1;
     this.player.update((x, y, w, h) => isSolid(this.world, x, y, w, h));
     this.prompt = findFacingInteractable(this.player, this.world, 22);
 
@@ -61,6 +96,7 @@ export class HallwayScene {
   }
 
   stateAtDoor(yearIndex) {
+    // yearIndex is 1-based years from leave (see World.buildHallway)
     const idx = Math.max(0, Math.min(this.snapshots.length - 1, yearIndex));
     return this.snapshots[idx];
   }
@@ -113,7 +149,7 @@ export class HallwayScene {
       Math.min(this.world.height - VIEW_H, this.player.y - VIEW_H / 2)
     );
 
-    drawWorld(ctx, this.world, camX, camY);
+    drawWorld(ctx, this.world, camX, camY, this.animTime);
     ctx.save();
     ctx.translate(-camX, -camY);
     const vis = this.visual?.state || game.portfolio;

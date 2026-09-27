@@ -1,6 +1,6 @@
 import { PALETTE, VIEW_W } from '../config.js';
 import { computeWorth } from '../finance/Engine.js';
-import { makeDialogChrome } from './Assets.js';
+import { makeHudIcon, makeHudBox } from './Assets.js';
 
 function money(n) {
   const v = Math.round(n || 0);
@@ -8,10 +8,12 @@ function money(n) {
   return sign + '$' + Math.abs(v).toLocaleString('en-US');
 }
 
+/**
+ * Floating LTTP-style HUD — icon + number clusters across the top,
+ * not a solid full-width bar. Gold thin frames like item boxes.
+ */
 export class Hud {
-  constructor() {
-    this.chrome = null;
-  }
+  constructor() {}
 
   /**
    * @param {CanvasRenderingContext2D} ctx
@@ -20,30 +22,43 @@ export class Hud {
    */
   draw(ctx, portfolio, worthOverride = null) {
     const worth = worthOverride || computeWorth(portfolio);
-    const h = 42;
-    const w = VIEW_W - 8;
-    const x = 4;
     const y = 4;
+    const boxH = 18;
 
-    if (!this.chrome || this.chrome.width !== w || this.chrome.height !== h) {
-      this.chrome = makeDialogChrome(w, h);
+    const clusters = [
+      { icon: 'age', label: String(portfolio.age), x: 6, w: 36 },
+      { icon: 'year', label: String(portfolio.year), x: 46, w: 52 },
+      { icon: 'bank', label: money(worth.bank), x: 102, w: 70 },
+      { icon: 'portfolio', label: money(worth.portfolio), x: 176, w: 78 },
+      { icon: 'salary', label: money(portfolio.salary || 0), x: 258, w: 58 },
+    ];
+
+    for (const c of clusters) {
+      const box = makeHudBox(c.w, boxH);
+      ctx.drawImage(box, c.x, y);
+      const icon = makeHudIcon(c.icon);
+      ctx.drawImage(icon, c.x + 3, y + 5);
+      ctx.font = '6px "Press Start 2P", monospace';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = PALETTE.uiText;
+      // truncate if needed
+      let text = c.label;
+      while (text.length > 1 && ctx.measureText(text).width > c.w - 14) {
+        text = text.slice(0, -1);
+      }
+      ctx.fillText(text, c.x + 12, y + 6);
     }
-    ctx.drawImage(this.chrome, x, y);
 
-    ctx.font = '7px "Press Start 2P", monospace';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = PALETTE.gold;
-    ctx.fillText(`Age ${portfolio.age}`, x + 8, y + 8);
-    ctx.fillText(`Year ${portfolio.year}`, x + 72, y + 8);
-
-    ctx.fillStyle = PALETTE.uiText;
-    ctx.fillText(`Net ${money(worth.netWorth)}`, x + 160, y + 8);
-
-    ctx.fillStyle = '#b0c8a0';
-    ctx.fillText(`Sal ${money(portfolio.salary)}`, x + 8, y + 22);
-    ctx.fillStyle = '#a0c0e0';
-    ctx.fillText(`Liq ${money(worth.liquid)}`, x + 110, y + 22);
-    ctx.fillStyle = '#d0b090';
-    ctx.fillText(`Illiq ${money(worth.illiquid)}`, x + 210, y + 22);
+    // Kids list under Age cluster
+    const kids = portfolio.kids || [];
+    if (kids.length) {
+      ctx.font = '5px "Press Start 2P", monospace';
+      ctx.fillStyle = '#a89878';
+      const names = kids
+        .slice(0, 4)
+        .map((k) => `${(k.name || '?').slice(0, 6)} ${k.age}`)
+        .join(' · ');
+      ctx.fillText(names, 6, y + boxH + 3);
+    }
   }
 }

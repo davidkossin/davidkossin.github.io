@@ -37,6 +37,13 @@ export const PALETTE = {
   hairBlonde: '#d4b060',
   hairRed: '#a03828',
   hairGray: '#a0a0a8',
+  /** Dark purple stippled void (LTTP dungeon exterior) */
+  void: '#2a1840',
+  voidDot: '#1a0e28',
+  voidDeep: '#140818',
+  wallPurple: '#3a2a48',
+  wallPurpleEdge: '#1e1428',
+  wallPurpleLite: '#4a3a58',
 };
 
 export const HAIR_COLORS = {
@@ -49,34 +56,51 @@ export const DIFFICULTIES = {
   easy: {
     id: 'easy',
     label: 'Easy',
+    subtext: 'The world becomes a better place for all',
     inflation: 0.02,
     equityReturn: 0.09,
     salaryGrowth: 0.04,
     expensePressure: 0.9,
     taxMult: 0.9,
     collegeCost: 18000,
+    shockChance: 0.02,
+    shockMax: 5000,
   },
   standard: {
     id: 'standard',
     label: 'Standard',
+    subtext: 'The world stays relatively stable',
     inflation: 0.025,
     equityReturn: 0.07,
     salaryGrowth: 0.03,
     expensePressure: 1.0,
     taxMult: 1.0,
     collegeCost: 25000,
+    shockChance: 0.04,
+    shockMax: 8000,
   },
   difficult: {
     id: 'difficult',
     label: 'Difficult',
+    subtext: 'A grim outlook — life gets harder for everyone',
     inflation: 0.035,
     equityReturn: 0.045,
     salaryGrowth: 0.02,
     expensePressure: 1.2,
     taxMult: 1.1,
     collegeCost: 35000,
+    shockChance: 0.07,
+    shockMax: 12000,
   },
 };
+
+/** USDA-style annual child cost bands (2020s USD, pre-pressure / pre-inflation). */
+export const CHILD_COST_BANDS = [
+  { maxAge: 5, annual: 13500 },
+  { maxAge: 12, annual: 14500 },
+  { maxAge: 17, annual: 16000 },
+  // 18–22: college handled separately in Events (avoid double-count)
+];
 
 export const HOME_TYPES = {
   primary: { label: 'Primary Residence', taxRate: 0.012 },
@@ -84,9 +108,11 @@ export const HOME_TYPES = {
   investment: { label: 'Investment Property', taxRate: 0.015 },
 };
 
-export const SAVE_KEY = 'ycitwy_saves_v1';
+export const SAVE_KEY = 'ycitwy_saves_v2';
 export const MAX_AGE = 100;
 export const RETIREMENT_AGE = 65;
+/** Simplified long-term federal capital gains rate (illustrative). */
+export const LTCG_FEDERAL_RATE = 0.15;
 
 export const CURRENT_YEAR = new Date().getFullYear();
 

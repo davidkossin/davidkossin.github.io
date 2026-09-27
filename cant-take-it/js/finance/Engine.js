@@ -5,9 +5,10 @@
  */
 
 import { getDifficulty } from './Difficulty.js';
-import { estimateAnnualTax } from './Tax.js';
+import { estimateAnnualTax, estimateCapitalGainsTax } from './Tax.js';
 import { applyAutoEvents, liquidTotal } from './Events.js';
-import { HOME_TYPES } from '../config.js';
+import { resolveRng } from './rng.js';
+import { HOME_TYPES, CHILD_COST_BANDS } from '../config.js';
 
 /** Deep-ish clone for portfolio snapshots. */
 export function cloneState(s) {
@@ -15,7 +16,24 @@ export function cloneState(s) {
 }
 
 /**
- * Compute liquid, illiquid, debts, net worth from a portfolio state.
+ * USDA-style annual cost of raising one child (pre-college).
+ * Ages 18–22 use college cost in Events only — not double-counted here.
+ * Scaled by difficulty.expensePressure and childCostInflator on state.
+ */
+export function annualChildCost(age, difficulty, inflator = 1) {
+  let base = 0;
+  for (const band of CHILD_COST_BANDS) {
+    if (age <= band.maxAge) {
+      base = band.annual;
+      break;
+    }
+  }
+  return Math.round(base * (difficulty.expensePressure || 1) * (inflator || 1));
+}
+
+/**
+ * Compute bank (cash), portfolio (net worth), and legacy liquid/illiquid.
+ * HUD: Bank = cash on hand only; Portfolio = net worth.
  */
 export function computeWorth(state) {
   const cash = state.cash || 0;
@@ -29,12 +47,13 @@ export function computeWorth(state) {
     homeValue += h.value || 0;
     mortgage += h.mortgageOwed || 0;
   }
-  const illiquid = homeValue; // equity tracked separately below
   const homeEquity = homeValue - mortgage;
   const debts = mortgage + (state.otherDebt || 0);
   const netWorth = Math.round(liquid + homeEquity - (state.otherDebt || 0));
 
   return {
+    bank: Math.round(cash),
+    portfolio: netWorth,
     liquid: Math.round(liquid),
     illiquid: Math.round(homeValue),
     homeEquity: Math.round(homeEquity),
@@ -43,6 +62,7 @@ export function computeWorth(state) {
     cash,
     savings,
     stocks,
+    stocksCostBasis: Math.round(state.stocksCostBasis || 0),
   };
 }
 
@@ -63,12 +83,14 @@ export function annualMortgagePayment(home) {
  * Apply one year of growth / costs to a cloned state.
  * @param {object} state
  * @param {string|object} difficultyId
+ * @param {object} [opts] - { deterministic, seed, rng }
  * @returns {{ state: object, events: string[], tax: object, worth: object }}
  */
-export function projectOneYear(state, difficultyId) {
+export function projectOneYear(state, difficultyId, opts = {}) {
   const difficulty = typeof difficultyId === 'string' ? getDifficulty(difficultyId) : difficultyId;
   const next = cloneState(state);
   const events = [];
+  const rng = resolveRng(opts);
 
   // Age everyone
   next.age = (next.age || 0) + 1;
@@ -77,12 +99,16 @@ export function projectOneYear(state, difficultyId) {
     kid.age = (kid.age || 0) + 1;
   }
 
-  // Auto life events (retirement, college early check, etc.)
-  events.push(...applyAutoEvents(next, difficulty));
+  // Inflate child-cost schedule once per year
+  next.childCostInflator = (next.childCostInflator || 1) * (1 + (difficulty.inflation || 0));
+
+  // Auto life events (retirement, college, shocks, SS stub)
+  events.push(...applyAutoEvents(next, difficulty, opts));
 
   // Salary growth if employed
   if (next.employed && !next.retired && next.salary > 0) {
     next.salary = Math.round(next.salary * (1 + difficulty.salaryGrowth));
+    next.peakSalary = Math.max(next.peakSalary || 0, next.salary);
   }
 
   // Savings interest
@@ -93,21 +119,13 @@ export function projectOneYear(state, difficultyId) {
     if (interest > 0) events.push(`Savings interest: +$${fmt(interest)}`);
   }
 
-  // Equity returns
+  // Equity returns — deterministic (no noise) when projecting hallway HUD
   if (next.stocksTotal > 0) {
     const ret = difficulty.equityReturn;
-    // mild noise ±2%
-    const noise = 1 + (Math.random() * 0.04 - 0.02);
+    const noise = opts.deterministic ? 1 : 1 + (rng() * 0.04 - 0.02);
     const gain = Math.round(next.stocksTotal * ret * noise);
+    // Cost basis unchanged on mark-to-market (unrealized)
     next.stocksTotal = Math.max(0, next.stocksTotal + gain);
-    if (next.tickers?.length) {
-      const totalBefore = next.stocksTotal - gain;
-      if (totalBefore > 0) {
-        for (const t of next.tickers) {
-          t.amount = Math.round((t.amount || 0) * (next.stocksTotal / totalBefore));
-        }
-      }
-    }
     events.push(`Market return: ${gain >= 0 ? '+' : ''}$${fmt(gain)}`);
   }
 
@@ -134,33 +152,38 @@ export function projectOneYear(state, difficultyId) {
     }
   }
 
+  // Annual USDA-style child costs (every year, age-banded)
+  let childCosts = 0;
+  for (const kid of next.kids || []) {
+    const c = annualChildCost(kid.age, difficulty, next.childCostInflator);
+    if (c > 0) {
+      childCosts += c;
+      events.push(`Child cost (${kid.name || 'child'}, age ${kid.age}): −$${fmt(c)}`);
+    }
+  }
+
   // Taxes
   const tax = estimateAnnualTax(next, difficulty);
-  const spending = (next.annualSpending || 0) * difficulty.expensePressure;
-  // Spending breakdown may include mortgage/tax that we also compute —
-  // use explicit annualSpending as discretionary+fixed household outlay,
-  // and add computed mortgage + property tax + income tax on top of "other" if not already baked in.
   const incomeTax = tax.federal + tax.state;
   const propertyTax = tax.property;
 
-  // Cash flow: salary in, spending + taxes + mortgage out
-  const inflow = next.retired ? 0 : (next.salary || 0);
-  // Prefer player's stated spending; ensure mortgage & taxes are covered
+  // Cash flow: salary + SS in; spending + taxes + mortgage + child costs out
+  const inflow =
+    (next.retired ? 0 : next.salary || 0) + (next.socialSecurity || 0);
   const stated = next.annualSpending || 0;
   const statedHasMortgage = !!(next.spendingBreakdown?.mortgage);
   const outflow =
     stated * difficulty.expensePressure +
     (statedHasMortgage ? 0 : mortgagePaid) +
     incomeTax +
-    propertyTax;
+    propertyTax +
+    childCosts;
 
   const net = inflow - outflow;
   if (net >= 0) {
-    // Surplus → savings
     next.savings = (next.savings || 0) + Math.round(net);
     events.push(`Year surplus → savings: +$${fmt(net)}`);
   } else {
-    // Deficit → drain liquid
     const need = Math.round(-net);
     let left = need;
     const order = ['cash', 'savings', 'stocksTotal'];
@@ -168,6 +191,13 @@ export function projectOneYear(state, difficultyId) {
       if (left <= 0) break;
       const have = next[key] || 0;
       const take = Math.min(have, left);
+      if (key === 'stocksTotal' && take > 0 && have > 0) {
+        const ratio = take / have;
+        next.stocksCostBasis = Math.max(
+          0,
+          Math.round((next.stocksCostBasis || 0) * (1 - ratio))
+        );
+      }
       next[key] = have - take;
       left -= take;
     }
@@ -195,14 +225,14 @@ export function projectOneYear(state, difficultyId) {
 
 /**
  * Project from baseline state forward `years` steps.
- * Returns array of yearly snapshots (length = years).
+ * Hallway HUD should pass { deterministic: true } so numbers don't jitter.
  */
-export function projectYears(baseline, years, difficultyId) {
+export function projectYears(baseline, years, difficultyId, opts = {}) {
   const difficulty = typeof difficultyId === 'string' ? getDifficulty(difficultyId) : difficultyId;
   let current = cloneState(baseline);
   const snapshots = [];
   for (let i = 0; i < years; i++) {
-    const result = projectOneYear(current, difficulty);
+    const result = projectOneYear(current, difficulty, opts);
     current = result.state;
     snapshots.push(result);
   }
@@ -211,17 +241,18 @@ export function projectYears(baseline, years, difficultyId) {
 
 /**
  * Interpolate projected HUD stats for hallway walking.
- * `progress` 0..1 across the full hallway (startAge → 100).
- * Returns a projected state for the visual year underfoot.
  */
-export function projectAtProgress(baseline, progress, difficultyId) {
+export function projectAtProgress(baseline, progress, difficultyId, opts = {}) {
   const startAge = baseline.age;
   const yearsLeft = Math.max(0, 100 - startAge);
   const yearOffset = Math.min(yearsLeft, Math.floor(progress * yearsLeft));
   if (yearOffset <= 0) {
     return { state: cloneState(baseline), yearOffset: 0, events: [], worth: computeWorth(baseline) };
   }
-  const snaps = projectYears(baseline, yearOffset, difficultyId);
+  const snaps = projectYears(baseline, yearOffset, difficultyId, {
+    deterministic: true,
+    ...opts,
+  });
   const last = snaps[snaps.length - 1];
   return { state: last.state, yearOffset, events: last.events, worth: last.worth };
 }
@@ -233,11 +264,17 @@ export function buyHome(state, homeSpec) {
   const down = homeSpec.downPayment || 0;
   const value = homeSpec.value || 0;
   const mortgage = Math.max(0, value - down);
-  // Pay down payment from liquid
   let left = down;
   for (const key of ['cash', 'savings', 'stocksTotal']) {
     if (left <= 0) break;
     const take = Math.min(next[key] || 0, left);
+    if (key === 'stocksTotal' && take > 0 && (next[key] || 0) > 0) {
+      const ratio = take / next[key];
+      next.stocksCostBasis = Math.max(
+        0,
+        Math.round((next.stocksCostBasis || 0) * (1 - ratio))
+      );
+    }
     next[key] = (next[key] || 0) - take;
     left -= take;
   }
@@ -264,21 +301,76 @@ export function sellHome(state, index) {
   return next;
 }
 
-export function sellStock(state, amount) {
+/**
+ * Buy stock: pay from cash/savings, increase total + cost basis.
+ */
+export function buyStock(state, amount) {
   const next = cloneState(state);
-  const sell = Math.min(amount, next.stocksTotal || 0);
-  next.stocksTotal = (next.stocksTotal || 0) - sell;
-  next.cash = (next.cash || 0) + sell;
-  if (next.tickers?.length && sell > 0) {
-    const old = next.stocksTotal + sell;
-    const ratio = old > 0 ? next.stocksTotal / old : 0;
-    for (const t of next.tickers) t.amount = Math.round((t.amount || 0) * ratio);
+  let left = Math.max(0, amount);
+  const paid = Math.min(left, (next.cash || 0) + (next.savings || 0));
+  let remain = paid;
+  const fromCash = Math.min(next.cash || 0, remain);
+  next.cash = (next.cash || 0) - fromCash;
+  remain -= fromCash;
+  if (remain > 0) {
+    next.savings = (next.savings || 0) - remain;
   }
+  next.stocksTotal = (next.stocksTotal || 0) + paid;
+  next.stocksCostBasis = (next.stocksCostBasis || 0) + paid;
   return next;
 }
 
+/**
+ * Sell stock with capital gains tax.
+ * @param {object} state
+ * @param {object} opts
+ * @param {number} opts.proceeds - gross sale amount ($)
+ * @param {number} [opts.gains] - realized gains $ (player-entered; used for tax)
+ * @param {number} [opts.yearsHeld]
+ * @param {object} [difficulty]
+ * @returns {{ state: object, tax: object, netCash: number, proceeds: number }}
+ */
+export function sellStock(state, opts = {}, difficulty = null) {
+  const next = cloneState(state);
+  const held = next.stocksTotal || 0;
+  let proceeds = Math.max(0, Number(opts.proceeds) || 0);
+  if (opts.percent != null) {
+    proceeds = Math.round(held * (Number(opts.percent) / 100));
+  }
+  proceeds = Math.min(proceeds, held);
+
+  const gains = Math.max(0, Number(opts.gains) || 0);
+  const yearsHeld = Number(opts.yearsHeld) || 0;
+  const diff = difficulty || getDifficulty(next.difficulty || 'standard');
+  const tax = estimateCapitalGainsTax({
+    gains,
+    yearsHeld,
+    state: next,
+    difficulty: diff,
+  });
+
+  // Reduce cost basis proportionally to proceeds / holdings
+  if (held > 0 && proceeds > 0) {
+    const ratio = proceeds / held;
+    next.stocksCostBasis = Math.max(
+      0,
+      Math.round((next.stocksCostBasis || 0) * (1 - ratio))
+    );
+  }
+  next.stocksTotal = held - proceeds;
+  const netCash = Math.max(0, proceeds - tax.total);
+  next.cash = (next.cash || 0) + netCash;
+
+  return { state: next, tax, netCash, proceeds };
+}
+
+/** @deprecated use sellStock with opts — kept for simple cash sells without tax UI */
+export function sellStockSimple(state, amount) {
+  const result = sellStock(state, { proceeds: amount, gains: 0, yearsHeld: 1 });
+  return result.state;
+}
+
 export function setEmployment(state, mode) {
-  // mode: 'leave' | 'start' | 'retire'
   const next = cloneState(state);
   if (mode === 'leave') {
     next.employed = false;
@@ -295,13 +387,18 @@ export function setEmployment(state, mode) {
   return next;
 }
 
+/**
+ * Have a kid — name only; age starts at 0.
+ * Annual costs come from the USDA schedule in projectOneYear (no flat +8000).
+ */
 export function addKid(state, kid = {}) {
   const next = cloneState(state);
   next.kids = next.kids || [];
   if (next.kids.length >= 4) return next;
-  next.kids.push({ name: kid.name || `Child ${next.kids.length + 1}`, age: kid.age ?? 0 });
-  // bump spending a bit
-  next.annualSpending = Math.round((next.annualSpending || 0) + 8000);
+  next.kids.push({
+    name: kid.name || `Child ${next.kids.length + 1}`,
+    age: kid.age ?? 0,
+  });
   return next;
 }
 
@@ -310,8 +407,16 @@ export function largePurchase(state, amount) {
   let left = Math.max(0, amount);
   for (const key of ['cash', 'savings', 'stocksTotal']) {
     if (left <= 0) break;
-    const take = Math.min(next[key] || 0, left);
-    next[key] = (next[key] || 0) - take;
+    const have = next[key] || 0;
+    const take = Math.min(have, left);
+    if (key === 'stocksTotal' && take > 0 && have > 0) {
+      const ratio = take / have;
+      next.stocksCostBasis = Math.max(
+        0,
+        Math.round((next.stocksCostBasis || 0) * (1 - ratio))
+      );
+    }
+    next[key] = have - take;
     left -= take;
   }
   if (left > 0) next.otherDebt = (next.otherDebt || 0) + left;
@@ -322,4 +427,4 @@ function fmt(n) {
   return Math.round(n).toLocaleString('en-US');
 }
 
-export { liquidTotal };
+export { liquidTotal, estimateCapitalGainsTax };

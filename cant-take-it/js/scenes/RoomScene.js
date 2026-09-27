@@ -1,4 +1,4 @@
-import { VIEW_W, VIEW_H, KEYS } from '../config.js';
+import { VIEW_W, VIEW_H, HOME_TYPES } from '../config.js';
 import { Player } from '../render/Player.js';
 import { Hud } from '../render/Hud.js';
 import {
@@ -10,15 +10,17 @@ import {
 import {
   buyHome,
   sellHome,
+  buyStock,
   sellStock,
   setEmployment,
   addKid,
   largePurchase,
   computeWorth,
 } from '../finance/Engine.js';
+import { getDifficulty } from '../finance/Difficulty.js';
 import { commitRoomDecisions } from '../state/GameState.js';
 import { autoSave } from '../state/SaveSystem.js';
-import { HOME_TYPES } from '../config.js';
+import { formatMoneyDisplay } from '../render/Dialog.js';
 
 export class RoomScene {
   constructor() {
@@ -27,16 +29,17 @@ export class RoomScene {
     this.hud = new Hud();
     this.prompt = null;
     this.locked = false;
+    this.animTime = 0;
   }
 
   enter(game, spawnNearDoor = false) {
     this.world = buildDecisionRoom();
     const sp = this.world.spawn;
-    this.player = new Player(sp.x, spawnNearDoor ? 2 * 16 : sp.y);
+    this.player = new Player(sp.x, spawnNearDoor ? 2 * 16 : sp.y, { speed: 1.5 });
     this.player.bindInput();
     this.prompt = null;
     this.locked = false;
-    // Auto-save begin of year on entering room
+    this.animTime = 0;
     commitRoomDecisions(game, 'begin');
     autoSave(game, 'begin');
   }
@@ -46,14 +49,10 @@ export class RoomScene {
   }
 
   update(game, dialog) {
+    this.animTime += 1;
     if (dialog.active || this.locked) return null;
-
     this.player.update((x, y, w, h) => isSolid(this.world, x, y, w, h));
-
-    const obj = findFacingInteractable(this.player, this.world);
-    this.prompt = obj;
-
-    // Interaction is handled via key in main → tryInteract
+    this.prompt = findFacingInteractable(this.player, this.world);
     return null;
   }
 
@@ -86,49 +85,62 @@ export class RoomScene {
 
   async handleTeller(game, dialog, action) {
     const p = game.portfolio;
+    const diff = getDifficulty(p.difficulty || 'standard');
+
     if (action === 'home') {
-      const mode = await dialog.menu('Real estate desk', [
-        { label: 'Buy a home', value: 'buy' },
-        { label: 'Sell a home', value: 'sell' },
-        { label: 'Never mind', value: null },
-      ], { title: 'Buy / Sell Home' });
+      const mode = await dialog.menu(
+        'Real estate window',
+        [
+          { label: 'Buy a home', value: 'buy' },
+          { label: 'Sell a home', value: 'sell' },
+          { label: 'Never mind', value: null },
+        ],
+        { title: 'Buy/Sell Home' }
+      );
       if (mode === 'buy') {
         if ((p.homes || []).length >= 5) {
-          await dialog.show('You already hold 5 properties.', { title: 'Buy / Sell Home' });
+          await dialog.show('You already hold 5 properties.', { title: 'Buy/Sell Home' });
           return;
         }
-        const type = await dialog.menu('Property type?', [
-          { label: 'Primary', value: 'primary' },
-          { label: 'Secondary', value: 'secondary' },
-          { label: 'Investment', value: 'investment' },
-        ], { title: 'Buy Home' });
+        const type = await dialog.menu(
+          'Property type?',
+          [
+            { label: 'Primary', value: 'primary' },
+            { label: 'Secondary', value: 'secondary' },
+            { label: 'Investment', value: 'investment' },
+          ],
+          { title: 'Buy Home' }
+        );
+        if (type == null) return;
         const value = await dialog.prompt('Purchase price ($)?', {
           title: 'Buy Home',
           defaultValue: '400000',
-          type: 'number',
+          type: 'money',
         });
         if (value == null) return;
         const down = await dialog.prompt('Down payment ($)?', {
           title: 'Buy Home',
           defaultValue: String(Math.round(value * 0.2)),
-          type: 'number',
+          type: 'money',
         });
         if (down == null) return;
-        const rate = await dialog.prompt('Mortgage rate?', {
+        const ratePct = await dialog.prompt('Mortgage rate (%)?', {
           title: 'Buy Home',
-          defaultValue: '0.065',
-          type: 'number',
+          defaultValue: '6.5',
+          type: 'percent',
         });
+        if (ratePct == null) return;
         const term = await dialog.prompt('Term (years)?', {
           title: 'Buy Home',
           defaultValue: '30',
           type: 'number',
         });
+        if (term == null) return;
         game.portfolio = buyHome(p, {
           type,
           value,
           downPayment: down || 0,
-          rate: rate ?? 0.065,
+          rate: (ratePct || 0) / 100,
           term: term ?? 30,
           label: HOME_TYPES[type]?.label,
         });
@@ -142,7 +154,7 @@ export class RoomScene {
           'Sell which home?',
           [
             ...p.homes.map((h, i) => ({
-              label: `${h.label || h.type} — $${Math.round(h.value).toLocaleString()}`,
+              label: `${h.label || h.type} — ${formatMoneyDisplay(h.value)}`,
               value: i,
             })),
             { label: 'Cancel', value: null },
@@ -154,52 +166,73 @@ export class RoomScene {
         await dialog.show('Sold. Equity moved to cash.', { title: 'Sell Home' });
       }
     } else if (action === 'stock') {
-      const amt = await dialog.prompt(
-        `Sell how much stock? (held: $${Math.round(p.stocksTotal || 0).toLocaleString()})`,
-        { title: 'Sell Stock', defaultValue: '1000', type: 'number' }
+      const mode = await dialog.menu(
+        `Portfolio: ${formatMoneyDisplay(p.stocksTotal || 0)}`,
+        [
+          { label: 'Buy stock', value: 'buy' },
+          { label: 'Sell stock', value: 'sell' },
+          { label: 'Never mind', value: null },
+        ],
+        { title: 'Buy/Sell Stock' }
       );
-      if (amt == null) return;
-      game.portfolio = sellStock(game.portfolio, Math.max(0, amt));
-      await dialog.show('Shares sold to cash.', { title: 'Sell Stock' });
+      if (mode === 'buy') {
+        const amt = await dialog.prompt('Buy how much ($)?', {
+          title: 'Buy Stock',
+          defaultValue: '1000',
+          type: 'money',
+        });
+        if (amt == null) return;
+        game.portfolio = buyStock(game.portfolio, Math.max(0, amt));
+        await dialog.show('Shares purchased. Cost basis updated.', { title: 'Buy Stock' });
+      } else if (mode === 'sell') {
+        await this.handleSellStock(game, dialog, diff);
+      }
     } else if (action === 'job') {
-      const mode = await dialog.menu('Career desk', [
-        { label: 'Leave job (salary → $0)', value: 'leave' },
-        { label: 'Start / resume job', value: 'start' },
-        { label: 'Retire', value: 'retire' },
-        { label: 'Never mind', value: null },
-      ], { title: 'Job / Retire' });
+      const mode = await dialog.menu(
+        'Career window',
+        [
+          { label: 'Leave job (salary → $0)', value: 'leave' },
+          { label: 'Start / resume job', value: 'start' },
+          { label: 'Retire', value: 'retire' },
+          { label: 'Never mind', value: null },
+        ],
+        { title: 'Job / Retire' }
+      );
       if (!mode) return;
       if (mode === 'start') {
-        const sal = await dialog.prompt('New annual salary ($)?', {
+        const sal = await dialog.prompt('New annual household gross salary ($)?', {
           title: 'Start Job',
           defaultValue: String(p.salary || 50000),
-          type: 'number',
+          type: 'money',
         });
+        if (sal == null) return;
         game.portfolio = setEmployment(game.portfolio, 'start');
-        if (sal != null) game.portfolio.salary = Math.max(0, sal);
+        game.portfolio.salary = Math.max(0, sal);
+        game.portfolio.peakSalary = Math.max(game.portfolio.peakSalary || 0, sal);
       } else {
         game.portfolio = setEmployment(game.portfolio, mode);
       }
       await dialog.show('Employment updated.', { title: 'Job / Retire' });
     } else if (action === 'kid') {
       if ((p.kids || []).length >= 4) {
-        await dialog.show('Four kids is the max for this ledger.', { title: 'Family' });
+        await dialog.show('Four kids is the max for this ledger.', { title: 'Have A Kid' });
         return;
       }
-      const ok = await dialog.confirm('Add a child? Spending will rise.', { title: 'Have a Kid' });
-      if (!ok) return;
-      const age = await dialog.prompt('Child age?', {
-        title: 'Have a Kid',
-        defaultValue: '0',
-        type: 'number',
+      const name = await dialog.prompt("Child's name?", {
+        title: 'Have A Kid',
+        defaultValue: `Child ${(p.kids || []).length + 1}`,
       });
-      game.portfolio = addKid(game.portfolio, { age: age ?? 0 });
-      await dialog.show('A new dependent joins the timeline.', { title: 'Have a Kid' });
+      if (name == null) return;
+      game.portfolio = addKid(game.portfolio, { name: name || 'Child', age: 0 });
+      await dialog.show(
+        `${name} joins the timeline at age 0. Annual costs follow the age schedule.`,
+        { title: 'Have A Kid' }
+      );
     } else if (action === 'purchase') {
       const amt = await dialog.prompt('Large purchase amount ($)?', {
         title: 'Large Purchase',
         defaultValue: '5000',
-        type: 'number',
+        type: 'money',
       });
       if (amt == null) return;
       game.portfolio = largePurchase(game.portfolio, Math.max(0, amt));
@@ -207,16 +240,78 @@ export class RoomScene {
     }
   }
 
+  async handleSellStock(game, dialog, diff) {
+    const p = game.portfolio;
+    const held = p.stocksTotal || 0;
+    if (held <= 0) {
+      await dialog.show('No stock to sell.', { title: 'Sell Stock' });
+      return;
+    }
+    const mode = await dialog.menu(
+      `Held: ${formatMoneyDisplay(held)}`,
+      [
+        { label: 'Sell $ amount', value: 'amount' },
+        { label: 'Sell % of portfolio', value: 'percent' },
+        { label: 'Cancel', value: null },
+      ],
+      { title: 'Sell Stock' }
+    );
+    if (!mode) return;
 
-  /**
-   * Draw with camera applied via ctx transform from main, OR we handle here.
-   */
+    let proceeds = 0;
+    if (mode === 'amount') {
+      const amt = await dialog.prompt('Sale amount ($)?', {
+        title: 'Sell Stock',
+        defaultValue: String(Math.min(held, 1000)),
+        type: 'money',
+      });
+      if (amt == null) return;
+      proceeds = Math.min(held, Math.max(0, amt));
+    } else {
+      const pct = await dialog.prompt('% of portfolio to sell?', {
+        title: 'Sell Stock',
+        defaultValue: '10',
+        type: 'percent',
+      });
+      if (pct == null) return;
+      proceeds = Math.round(held * (Math.max(0, Math.min(100, pct)) / 100));
+    }
+
+    const gains = await dialog.prompt('Realized gains on this sale ($)?', {
+      title: 'Capital Gains',
+      defaultValue: '0',
+      type: 'money',
+    });
+    if (gains == null) return;
+
+    const yearsHeld = await dialog.prompt('Years held?', {
+      title: 'Capital Gains',
+      defaultValue: '1',
+      type: 'number',
+    });
+    if (yearsHeld == null) return;
+
+    const result = sellStock(
+      game.portfolio,
+      { proceeds, gains: Math.max(0, gains), yearsHeld: Math.max(0, yearsHeld) },
+      diff
+    );
+    game.portfolio = result.state;
+    await dialog.show(
+      `Sold ${formatMoneyDisplay(result.proceeds)}.\n` +
+        `CGT ${result.tax.longTerm ? 'LT' : 'ST'}: ${formatMoneyDisplay(result.tax.total)}\n` +
+        `(${result.tax.rateNote})\n` +
+        `Net to bank: ${formatMoneyDisplay(result.netCash)}`,
+      { title: 'Sell Stock' }
+    );
+  }
+
   render(ctx, game) {
     const camX = Math.max(0, Math.min(this.world.width - VIEW_W, this.player.x + 6 - VIEW_W / 2));
     const camY = Math.max(0, Math.min(this.world.height - VIEW_H, this.player.y - VIEW_H / 2));
 
     ctx.save();
-    drawWorld(ctx, this.world, camX, camY);
+    drawWorld(ctx, this.world, camX, camY, this.animTime);
     ctx.translate(-camX, -camY);
     this.player.draw(
       ctx,
