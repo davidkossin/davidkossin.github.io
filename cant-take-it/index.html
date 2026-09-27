@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="You Can't Take It With You — a 16-bit life & finance RPG." />
+  <title>You Can't Take It With You</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/game.css" />
+</head>
+<body>
+  <div class="topbar">
+    <a href="../">← Macinapp</a>
+    <span>You Can't Take It With You</span>
+  </div>
+
+  <div class="frame">
+    <canvas id="game" width="320" height="240" aria-label="Game canvas"></canvas>
+  </div>
+  <p class="hint">
+    Move with WASD / arrows · Talk with Enter / Z / E · Esc cancels · Auto-saves in localStorage
+  </p>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

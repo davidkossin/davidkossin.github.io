@@ -1,0 +1,86 @@
+:root {
+  --bg: #0a0810;
+  --frame: #2a2218;
+  --gold: #d4a84b;
+  --text: #f0e8c8;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Outfit", system-ui, sans-serif;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 0%, rgba(80, 60, 40, 0.35), transparent 70%),
+    var(--bg);
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.65rem 1.25rem;
+  z-index: 5;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  color: rgba(240, 232, 200, 0.7);
+}
+
+.topbar a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.topbar a:hover {
+  text-decoration: underline;
+}
+
+.frame {
+  border: 4px solid #5c4510;
+  box-shadow:
+    0 0 0 2px #d4a84b,
+    0 0 40px rgba(212, 168, 75, 0.15),
+    inset 0 0 0 2px #1a1420;
+  background: #000;
+  line-height: 0;
+}
+
+#game {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #000;
+}
+
+.hint {
+  margin-top: 0.85rem;
+  font-size: 0.75rem;
+  color: rgba(240, 232, 200, 0.45);
+  letter-spacing: 0.04em;
+  text-align: center;
+  max-width: 36rem;
+  padding: 0 1rem;
+}
+
+@media (max-width: 520px) {
+  .hint { display: none; }
+}
