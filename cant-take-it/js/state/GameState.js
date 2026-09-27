@@ -33,6 +33,7 @@ export function createDefaultSetup() {
     employed: true,
     retired: false,
     otherDebt: 0,
+    otherLoans: [],
   };
 }
 
@@ -75,6 +76,7 @@ export function createGameFromSetup(setup) {
     employed: setup.employed !== false && (Number(setup.salary) || 0) > 0,
     retired: !!setup.retired,
     otherDebt: Number(setup.otherDebt) || 0,
+    otherLoans: Array.isArray(setup.otherLoans) ? setup.otherLoans : [],
     socialSecurity: 0,
     childCostInflator: 1,
   };

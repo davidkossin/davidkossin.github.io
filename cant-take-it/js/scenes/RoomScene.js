@@ -255,13 +255,65 @@ export class RoomScene {
       );
     } else if (action === 'purchase') {
       const amt = await dialog.prompt('Large purchase amount ($)?', {
-        title: 'Large Purchase',
+        title: 'Make Large Purchase',
         defaultValue: '5000',
         type: 'money',
       });
       if (amt == null) return;
-      game.portfolio = largePurchase(game.portfolio, Math.max(0, amt));
-      await dialog.show('Purchase recorded against liquid assets.', { title: 'Large Purchase' });
+      const price = Math.max(0, amt);
+
+      const financed = await dialog.confirm('Is this purchase being financed?', {
+        title: 'Make Large Purchase',
+        yes: 'Yes — finance it',
+        no: 'No — pay in full',
+      });
+      if (financed == null) return;
+
+      if (!financed) {
+        game.portfolio = largePurchase(game.portfolio, price);
+        await dialog.show(
+          'Paid in full from liquid assets (cash → savings → stocks). Shortfall becomes other debt.',
+          { title: 'Make Large Purchase' }
+        );
+        return;
+      }
+
+      const down = await dialog.prompt('Down payment ($)?', {
+        title: 'Make Large Purchase',
+        defaultValue: String(Math.round(price * 0.2)),
+        type: 'money',
+      });
+      if (down == null) return;
+
+      const ratePct = await dialog.prompt('Interest rate (%)?', {
+        title: 'Make Large Purchase',
+        defaultValue: '6.9',
+        type: 'percent',
+      });
+      if (ratePct == null) return;
+
+      const term = await dialog.prompt('Loan term (years)?', {
+        title: 'Make Large Purchase',
+        defaultValue: '5',
+        type: 'number',
+      });
+      if (term == null) return;
+
+      const downCap = Math.max(0, Math.min(price, down || 0));
+      const principal = price - downCap;
+      game.portfolio = largePurchase(game.portfolio, price, {
+        financed: true,
+        downPayment: downCap,
+        rate: (ratePct || 0) / 100,
+        term: term ?? 5,
+        label: 'Large Purchase',
+      });
+      await dialog.show(
+        `Down payment ${formatMoneyDisplay(downCap)} paid from liquid.\n` +
+          `Financed ${formatMoneyDisplay(principal)} at ${ratePct}% for ${Math.max(1, Math.round(term ?? 5))} yr.\n` +
+          `Loan amortizes each year like a mortgage.`,
+        { title: 'Make Large Purchase' }
+      );
     }
   }
 

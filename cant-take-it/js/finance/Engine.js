@@ -48,8 +48,13 @@ export function computeWorth(state) {
     mortgage += h.mortgageOwed || 0;
   }
   const homeEquity = homeValue - mortgage;
-  const debts = mortgage + (state.otherDebt || 0);
-  const netWorth = Math.round(liquid + homeEquity - (state.otherDebt || 0));
+  let otherLoansOwed = 0;
+  for (const loan of state.otherLoans || []) {
+    otherLoansOwed += loan.principal || 0;
+  }
+  const unsecured = (state.otherDebt || 0) + otherLoansOwed;
+  const debts = mortgage + unsecured;
+  const netWorth = Math.round(liquid + homeEquity - unsecured);
 
   return {
     bank: Math.round(cash),
@@ -67,16 +72,31 @@ export function computeWorth(state) {
 }
 
 /**
+ * Annual P&I payment for an amortizing loan (mortgage or other).
+ * @param {number} principal
+ * @param {number} annualRate decimal (e.g. 0.069)
+ * @param {number} remainingTermYears
+ */
+export function annualAmortizingPayment(principal, annualRate, remainingTermYears) {
+  const P = principal || 0;
+  const n = (remainingTermYears || 0) * 12;
+  if (P <= 0 || n <= 0) return 0;
+  const r = (annualRate || 0) / 12;
+  if (r === 0) return P / (remainingTermYears || 1);
+  const monthly = (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  return monthly * 12;
+}
+
+/**
  * Annual mortgage payment (principal + interest) for a home.
  */
 export function annualMortgagePayment(home) {
-  const P = home.mortgageOwed || 0;
-  const r = (home.rate || 0) / 12;
-  const n = (home.remainingTerm || 0) * 12;
-  if (P <= 0 || n <= 0) return 0;
-  if (r === 0) return P / (home.remainingTerm || 1);
-  const monthly = (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-  return monthly * 12;
+  return annualAmortizingPayment(home.mortgageOwed || 0, home.rate || 0, home.remainingTerm || 0);
+}
+
+/** Annual payment for a financed other-loan entry. */
+export function annualLoanPayment(loan) {
+  return annualAmortizingPayment(loan.principal || 0, loan.rate || 0, loan.remainingTerm || 0);
 }
 
 /**
@@ -152,7 +172,30 @@ export function projectOneYear(state, difficultyId, opts = {}) {
     }
   }
 
-  // Annual USDA-style child costs (every year, age-banded)
+  // Financed large-purchase / other loans (amortize like mortgages)
+  let otherLoanPaid = 0;
+  for (const loan of next.otherLoans || []) {
+    if ((loan.principal || 0) <= 0 || (loan.remainingTerm || 0) <= 0) continue;
+    const interest = (loan.principal || 0) * (loan.rate || 0);
+    let annual = annualLoanPayment(loan);
+    let principalPay = Math.min(loan.principal, Math.max(0, annual - interest));
+    // Final year: clear residual principal so the loan doesn't stick
+    if ((loan.remainingTerm || 0) <= 1) {
+      principalPay = loan.principal;
+      annual = principalPay + interest;
+    }
+    loan.principal = Math.max(0, loan.principal - principalPay);
+    loan.remainingTerm = Math.max(0, (loan.remainingTerm || 0) - 1);
+    otherLoanPaid += annual;
+    if (loan.principal < 1) {
+      loan.principal = 0;
+      loan.remainingTerm = 0;
+      events.push(`Loan paid off: ${loan.label || 'financed purchase'}.`);
+    }
+  }
+  next.otherLoans = (next.otherLoans || []).filter((l) => (l.principal || 0) > 0);
+
+  // Annual USDA-style child costs (every year, age-banded; stops before college ages)
   let childCosts = 0;
   for (const kid of next.kids || []) {
     const c = annualChildCost(kid.age, difficulty, next.childCostInflator);
@@ -161,6 +204,7 @@ export function projectOneYear(state, difficultyId, opts = {}) {
       events.push(`Child cost (${kid.name || 'child'}, age ${kid.age}): −$${fmt(c)}`);
     }
   }
+
 
   // Taxes
   const tax = estimateAnnualTax(next, difficulty);
@@ -175,6 +219,7 @@ export function projectOneYear(state, difficultyId, opts = {}) {
   const outflow =
     stated * difficulty.expensePressure +
     (statedHasMortgage ? 0 : mortgagePaid) +
+    otherLoanPaid +
     incomeTax +
     propertyTax +
     childCosts;
@@ -402,9 +447,12 @@ export function addKid(state, kid = {}) {
   return next;
 }
 
-export function largePurchase(state, amount) {
-  const next = cloneState(state);
-  let left = Math.max(0, amount);
+/**
+ * Drain liquid assets (cash → savings → stocks) for `amount`.
+ * Shortfall adds to otherDebt. Mutates `next` in place.
+ */
+function payFromLiquid(next, amount) {
+  let left = Math.max(0, Math.round(amount));
   for (const key of ['cash', 'savings', 'stocksTotal']) {
     if (left <= 0) break;
     const have = next[key] || 0;
@@ -420,6 +468,47 @@ export function largePurchase(state, amount) {
     left -= take;
   }
   if (left > 0) next.otherDebt = (next.otherDebt || 0) + left;
+  return left;
+}
+
+/**
+ * Large purchase — cash or financed.
+ * @param {object} state
+ * @param {number} amount purchase price
+ * @param {object} [opts]
+ * @param {boolean} [opts.financed]
+ * @param {number} [opts.downPayment] dollars (capped at amount)
+ * @param {number} [opts.rate] annual decimal (e.g. 0.069)
+ * @param {number} [opts.term] years (default 5)
+ * @param {string} [opts.label]
+ */
+export function largePurchase(state, amount, opts = {}) {
+  const next = cloneState(state);
+  const price = Math.max(0, Math.round(amount || 0));
+  if (price <= 0) return next;
+
+  if (!opts.financed) {
+    payFromLiquid(next, price);
+    return next;
+  }
+
+  const down = Math.max(0, Math.min(price, Math.round(opts.downPayment || 0)));
+  const principal = price - down;
+  const rate = Math.max(0, Number(opts.rate) || 0);
+  const term = Math.max(1, Math.round(opts.term || 5));
+
+  payFromLiquid(next, down);
+
+  if (principal > 0) {
+    next.otherLoans = next.otherLoans || [];
+    next.otherLoans.push({
+      label: opts.label || 'Large Purchase',
+      principal,
+      rate,
+      remainingTerm: term,
+      originalAmount: principal,
+    });
+  }
   return next;
 }
 
