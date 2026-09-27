@@ -2,7 +2,7 @@
  * You Can't Take It With You — bootstrap & scene loop.
  */
 
-import { VIEW_W, VIEW_H, CANVAS_H, SCALE, KEYS, GAME_VERSION } from './config.js';
+import { VIEW_W, CANVAS_H, KEYS, GAME_VERSION } from './config.js';
 import { Dialog } from './render/Dialog.js';
 import { TitleScene } from './scenes/TitleScene.js';
 import { SetupScene } from './scenes/SetupScene.js';
@@ -14,9 +14,42 @@ import { PauseMenu } from './scenes/PauseMenu.js';
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
+function availableViewport() {
+  const vv = window.visualViewport;
+  if (vv) return { w: vv.width, h: vv.height };
+  return { w: window.innerWidth, h: window.innerHeight };
+}
+
 function fitCanvas() {
-  const maxW = Math.min(window.innerWidth - 16, VIEW_W * SCALE * 2);
-  const scale = Math.max(2, Math.floor(maxW / VIEW_W));
+  const { w: winW, h: winH } = availableViewport();
+  const topbar = document.querySelector('.topbar');
+  const hint = document.querySelector('.hint');
+  const frame = document.querySelector('.frame');
+
+  const topbarH = topbar ? topbar.getBoundingClientRect().height : 48;
+  const hintStyle = hint ? getComputedStyle(hint) : null;
+  const hintVisible = hint && hintStyle && hintStyle.display !== 'none';
+  const hintH = hintVisible
+    ? hint.getBoundingClientRect().height + (parseFloat(hintStyle.marginTop) || 0)
+    : 0;
+
+  // Frame border (each side) + modest outer padding already on body
+  const border = frame ? (parseFloat(getComputedStyle(frame).borderTopWidth) || 4) : 4;
+  const padX = 8;
+  const padY = 8;
+
+  const availW = Math.max(32, winW - padX * 2 - border * 2);
+  const availH = Math.max(32, winH - topbarH - hintH - padY * 2 - border * 2);
+
+  let scale = Math.min(availW / VIEW_W, availH / CANVAS_H);
+  // Prefer integer scale when it wastes less than ~15% of the fitted size
+  const intScale = Math.floor(scale);
+  if (intScale >= 1 && scale - intScale < 0.15 * scale) {
+    scale = intScale;
+  }
+  // Never overflow; allow fractional scales (no hard floor of 2)
+  scale = Math.max(0.25, scale);
+
   canvas.width = VIEW_W;
   canvas.height = CANVAS_H;
   canvas.style.width = `${VIEW_W * scale}px`;
@@ -26,6 +59,10 @@ function fitCanvas() {
 
 fitCanvas();
 window.addEventListener('resize', fitCanvas);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', fitCanvas);
+  window.visualViewport.addEventListener('scroll', fitCanvas);
+}
 
 const dialog = new Dialog();
 const title = new TitleScene({});
