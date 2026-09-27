@@ -1,5 +1,6 @@
 import { KEYS, TILE } from '../config.js';
 import { makePlayerSprite } from './Assets.js';
+import { virtualKeys } from '../input/VirtualPad.js';
 
 /** Movement keys only — typing never pollutes the pressed set. */
 const MOVE_KEYS = new Set([
@@ -53,7 +54,10 @@ export class Player {
   }
 
   pressed(dirs) {
-    for (const k of dirs) if (this.keys.has(k)) return true;
+    for (const k of dirs) {
+      if (this.keys.has(k)) return true;
+      if (virtualKeys.has(k)) return true;
+    }
     return false;
   }
 

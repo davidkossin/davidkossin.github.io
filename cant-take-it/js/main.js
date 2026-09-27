@@ -10,6 +10,7 @@ import { RoomScene } from './scenes/RoomScene.js';
 import { HallwayScene } from './scenes/HallwayScene.js';
 import { EndingScene } from './scenes/EndingScene.js';
 import { PauseMenu } from './scenes/PauseMenu.js';
+import { VirtualPad } from './input/VirtualPad.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -63,6 +64,12 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', fitCanvas);
   window.visualViewport.addEventListener('scroll', fitCanvas);
 }
+
+const virtualPadEl = document.getElementById('virtual-pad');
+const virtualPad = new VirtualPad(virtualPadEl);
+virtualPad.mount();
+// Re-fit after pad / hint visibility changes layout
+requestAnimationFrame(fitCanvas);
 
 const dialog = new Dialog();
 const title = new TitleScene({});

@@ -143,3 +143,164 @@ body {
       4px;
   }
 }
+
+/* —— Virtual pad (smartphone) —— */
+.hint-mobile {
+  display: none;
+}
+
+body.has-virtual-pad .hint-desktop {
+  display: none;
+}
+
+body.has-virtual-pad .hint-mobile {
+  display: inline;
+}
+
+body.has-virtual-pad .hint {
+  display: block;
+}
+
+@media (max-width: 520px) {
+  body.has-virtual-pad .hint {
+    display: block;
+    font-size: 0.6rem;
+    margin-top: 0.35rem;
+  }
+}
+
+.virtual-pad {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  touch-action: none;
+  /* leave top clear for topbar / canvas */
+}
+
+.virtual-pad .vp-dpad,
+.virtual-pad .vp-actions {
+  pointer-events: auto;
+  touch-action: none;
+  position: absolute;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.virtual-pad .vp-dpad {
+  left: calc(10px + env(safe-area-inset-left, 0px));
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(3, 56px);
+  gap: 4px;
+  grid-template-areas:
+    ". up ."
+    "left center right"
+    ". down .";
+}
+
+.virtual-pad .vp-dir[data-dir="up"] { grid-area: up; }
+.virtual-pad .vp-dir[data-dir="left"] { grid-area: left; }
+.virtual-pad .vp-dir[data-dir="right"] { grid-area: right; }
+.virtual-pad .vp-dir[data-dir="down"] { grid-area: down; }
+.virtual-pad .vp-center { grid-area: center; opacity: 0; pointer-events: none; }
+
+.virtual-pad .vp-actions {
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.virtual-pad .vp-ab {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.virtual-pad .vp-btn {
+  appearance: none;
+  border: 2px solid rgba(212, 168, 75, 0.55);
+  background: rgba(20, 14, 28, 0.72);
+  color: rgba(240, 232, 200, 0.9);
+  font-family: "Press Start 2P", monospace;
+  font-size: 10px;
+  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45);
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.virtual-pad .vp-btn.is-down,
+.virtual-pad .vp-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+  background: rgba(212, 168, 75, 0.35);
+  color: #fff8e0;
+}
+
+.virtual-pad .vp-a {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  font-size: 14px;
+  background: rgba(56, 104, 160, 0.75);
+  border-color: rgba(120, 180, 255, 0.6);
+}
+
+.virtual-pad .vp-b {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  font-size: 12px;
+  background: rgba(160, 56, 40, 0.7);
+  border-color: rgba(255, 140, 120, 0.55);
+  margin-bottom: 8px;
+}
+
+.virtual-pad .vp-menu {
+  width: auto;
+  min-width: 72px;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  border-radius: 8px;
+  opacity: 0.9;
+}
+
+@media (max-width: 420px) {
+  .virtual-pad .vp-dpad {
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(3, 48px);
+    gap: 3px;
+  }
+  .virtual-pad .vp-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 9px;
+  }
+  .virtual-pad .vp-a {
+    width: 56px;
+    height: 56px;
+  }
+  .virtual-pad .vp-b {
+    width: 46px;
+    height: 46px;
+  }
+}
+
+/* Dim pad slightly when not needed visual clutter on large coarse tablets */
+@media (min-width: 901px) and (pointer: fine) {
+  .virtual-pad:not([hidden]) {
+    opacity: 0.55;
+  }
+}
