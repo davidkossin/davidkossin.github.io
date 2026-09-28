@@ -16,7 +16,7 @@
 
 import { getFederalTable } from '../data/tax-brackets.js';
 import { stateFromZip } from '../data/state-from-zip.js';
-import { LTCG_FEDERAL_RATE } from '../config.js';
+import { LTCG_FEDERAL_RATE, K401_EMPLOYEE_LIMIT } from '../config.js';
 
 /**
  * Progressive federal income tax on taxable income.
@@ -38,6 +38,33 @@ export function federalTaxOn(taxable, table) {
   return Math.round(tax);
 }
 
+
+/**
+ * Traditional 401(k) employee elective deferral for the year (while employed).
+ * Caps at K401_EMPLOYEE_LIMIT (TY 2025 spirit). Reduces taxable wages.
+ */
+export function employee401kDeferral(state) {
+  if (!state?.employed || state.retired || !(state.salary > 0)) return 0;
+  const rate = Math.max(0, Math.min(1, Number(state.k401ContribRate) || 0));
+  if (rate <= 0) return 0;
+  return Math.min(Math.round((state.salary || 0) * rate), K401_EMPLOYEE_LIMIT);
+}
+
+/**
+ * Employer match: min(deferral, salary * matchOnFirst) * matchRate
+ * (classic “100% of first 3%”: matchRate=1, matchOnFirst=0.03).
+ */
+export function employer401kMatch(state, deferral) {
+  if (!state?.employed || state.retired || !(state.salary > 0)) return 0;
+  const d = Math.max(0, deferral || 0);
+  if (d <= 0) return 0;
+  const matchRate = Math.max(0, Math.min(1, Number(state.k401MatchRate) || 0));
+  const matchOnFirst = Math.max(0, Math.min(1, Number(state.k401MatchOnFirst) || 0));
+  if (matchRate <= 0 || matchOnFirst <= 0) return 0;
+  const capped = Math.min(d, Math.round((state.salary || 0) * matchOnFirst));
+  return Math.round(capped * matchRate);
+}
+
 /**
  * Estimate annual taxes for a portfolio snapshot.
  * @param {object} state - game financial state
@@ -48,12 +75,17 @@ export function estimateAnnualTax(state, difficulty) {
   const year = state.year;
   const table = getFederalTable(year, difficulty.inflation);
   const zipInfo = stateFromZip(state.zip || '85001');
-  const gross = Math.max(0, (state.salary || 0) + (state.socialSecurity || 0));
-  const taxable = Math.max(0, gross - table.stdDeduction);
+  const deferral = employee401kDeferral(state);
+  const extraOrdinary = Math.max(0, Number(state._extraOrdinaryIncome) || 0);
+  const grossWages = Math.max(
+    0,
+    (state.salary || 0) + (state.socialSecurity || 0) - deferral + extraOrdinary
+  );
+  const taxable = Math.max(0, grossWages - table.stdDeduction);
   let federal = federalTaxOn(taxable, table);
   federal = Math.round(federal * (difficulty.taxMult || 1));
 
-  const stateTax = Math.round(gross * zipInfo.stateIncomeTaxApprox * (difficulty.taxMult || 1));
+  const stateTax = Math.round(grossWages * zipInfo.stateIncomeTaxApprox * (difficulty.taxMult || 1));
 
   let property = 0;
   for (const home of state.homes || []) {
@@ -70,6 +102,8 @@ export function estimateAnnualTax(state, difficulty) {
       zipInfo,
       stdDeduction: table.stdDeduction,
       taxable,
+      k401Deferral: deferral,
+      extraOrdinary,
       source: 'static-offline',
     },
   };
@@ -116,6 +150,24 @@ export function estimateCapitalGainsTax({ gains, yearsHeld, state, difficulty })
     rateNote,
     stateAbbr: zipInfo.abbr,
   };
+}
+
+
+/**
+ * Incremental federal + state tax if `extraIncome` is added as ordinary income
+ * (e.g. traditional 401(k) withdrawal in retirement). Property tax unchanged.
+ */
+export function estimateTaxOnExtraIncome(state, difficulty, extraIncome) {
+  const extra = Math.max(0, Math.round(Number(extraIncome) || 0));
+  if (extra <= 0) return { federal: 0, state: 0, total: 0 };
+  const base = estimateAnnualTax(state, difficulty);
+  const withExtra = estimateAnnualTax(
+    { ...state, _extraOrdinaryIncome: (Number(state._extraOrdinaryIncome) || 0) + extra },
+    difficulty
+  );
+  const federal = Math.max(0, withExtra.federal - base.federal);
+  const stateTax = Math.max(0, withExtra.state - base.state);
+  return { federal, state: stateTax, total: federal + stateTax };
 }
 
 /**

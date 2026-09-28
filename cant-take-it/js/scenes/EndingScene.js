@@ -91,7 +91,7 @@ export class EndingScene {
       ctx.fillStyle = '#666';
       if (worth) {
         ctx.fillText(`Net Worth  ${formatMoneyDisplay(worth.netWorth)}`, VIEW_W / 2, 90);
-        ctx.fillText(`The Bank   ${formatMoneyDisplay(worth.bank)}`, VIEW_W / 2, 106);
+        ctx.fillText(`Cash   ${formatMoneyDisplay(worth.bank)}`, VIEW_W / 2, 106);
       } else {
         ctx.fillText('Net Worth  - - -', VIEW_W / 2, 90);
         ctx.fillText('Assets    - - -', VIEW_W / 2, 106);

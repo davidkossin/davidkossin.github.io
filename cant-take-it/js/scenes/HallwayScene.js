@@ -172,7 +172,7 @@ export class HallwayScene {
     this.setInputBlocked(true);
     const y = this.glassWall.year;
     await dialog.show(
-      `The Bank would be empty by ${y}.\nEnter a previous year's door, make decisions, and get more cash into The Bank before you can continue.`,
+      `Cash would be empty by ${y}.\nEnter a previous year's door, make decisions, and get more Cash before you can continue.`,
       { title: 'Glass Wall' }
     );
     this._glassDialogShowing = false;

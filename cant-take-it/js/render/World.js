@@ -6,7 +6,7 @@ import { TILE, VIEW_W, VIEW_H, PALETTE } from '../config.js';
 import { makeTile, makeDoor, makeLamp, makeBlueTorch, makeTellerWindow, makeTellerIcon } from './Assets.js';
 
 /**
- * Decision Room — north wall is doorway only; tellers on E / S / W walls.
+ * Decision Room — north wall is doorway only; tellers on E / S / W walls (2 each).
  */
 export function buildDecisionRoom() {
   const cols = 20;
@@ -25,7 +25,7 @@ export function buildDecisionRoom() {
   map[0][9] = 'floor';
   map[0][10] = 'floor';
 
-  // Teller windows on east / south / west only (2 + 2 + 1). North = door alone.
+  // Teller windows on east / south / west (2 + 2 + 2). North = door alone.
   const interactables = [
     {
       id: 'door-hallway',
@@ -88,16 +88,29 @@ export function buildDecisionRoom() {
       wall: true,
       wallSide: 'south',
     },
-    // East wall (1)
+    // East wall (2) — Job + Borrow
     {
       id: 'teller-job',
       x: (cols - 1) * TILE - 4,
-      y: 5 * TILE,
+      y: 3 * TILE,
       w: 20,
       h: 32,
       label: 'Job / Retire',
       kind: 'teller',
       action: 'job',
+      wall: true,
+      sideways: true,
+      wallSide: 'east',
+    },
+    {
+      id: 'teller-borrow',
+      x: (cols - 1) * TILE - 4,
+      y: 8 * TILE,
+      w: 20,
+      h: 32,
+      label: 'Borrow',
+      kind: 'teller',
+      action: 'borrow',
       wall: true,
       sideways: true,
       wallSide: 'east',

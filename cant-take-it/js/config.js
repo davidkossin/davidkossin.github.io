@@ -131,6 +131,40 @@ export const RETIREMENT_AGE = 65;
 /** Simplified long-term federal capital gains rate (illustrative). */
 export const LTCG_FEDERAL_RATE = 0.15;
 
+/**
+ * IRS elective deferral limit (employee 401(k) contributions), tax year 2025.
+ * Catch-up contributions for age 50+ are not modeled in this pass.
+ */
+export const K401_EMPLOYEE_LIMIT = 23500;
+
+/**
+ * HELOC combined LTV (CLTV) underwriting rule of thumb: max (new+existing) HELOC
+ * principal ≤ max(0, HELOC_CLTV * homeValue − mortgage).
+ */
+export const HELOC_CLTV = 0.80;
+
+/**
+ * Securities-backed / pledged-asset line advance rate against taxable brokerage
+ * (stocksTotal only — not 401(k)). Maintenance: if principal > SB_LTV * stocks, margin call.
+ */
+export const SB_LTV = 0.50;
+
+/**
+ * Default HELOC APR — mid-2020s US prime (~7.5–8.5%) + typical bank margin.
+ * Player may adjust within HELOC_RATE_MIN..HELOC_RATE_MAX in the Borrow dialog.
+ */
+export const HELOC_DEFAULT_RATE = 0.085;
+export const HELOC_RATE_MIN = 0.06;
+export const HELOC_RATE_MAX = 0.12;
+
+/**
+ * Default securities-backed loan APR — typically below HELOC (brokerage pledged lines).
+ * Mid-2020s spirit ~6.5–7.5%; adjustable within band.
+ */
+export const SECURITIES_LOAN_DEFAULT_RATE = 0.07;
+export const SECURITIES_LOAN_RATE_MIN = 0.055;
+export const SECURITIES_LOAN_RATE_MAX = 0.09;
+
 export const CURRENT_YEAR = new Date().getFullYear();
 
 export const KEYS = {

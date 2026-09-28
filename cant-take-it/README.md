@@ -7,15 +7,16 @@ A 16-bit, top-down life & finance RPG (A Link to the Past vibe) playable in the 
 ## How to play
 
 1. **Title** — New Game or Load Game (localStorage).
-2. **Setup** — LTTP-styled prompts with **Back** on every step: name, year, age, appearance, The Bank (starting cash), annual household gross salary, savings (+ interest %), homes (rate as %), stocks (total only), family (kid **name** + age), spending, ZIP, difficulty.
-3. **Decision Room** — Walk with WASD / arrows. Wall-embedded bank windows (`Enter` / `Z` / `E`):
+2. **Setup** — LTTP-styled prompts with **Back** on every step: name, year, age, appearance, starting **Cash**, annual household gross salary, savings (+ interest %), **401(k)** (balance, contribution %, employer match), homes (rate as %), stocks (total only), family (kid **name** + age), spending, ZIP, difficulty.
+3. **Decision Room** — Walk with WASD / arrows. Wall-embedded teller windows (`Enter` / `Z` / `E`), layout W2 / S2 / E2:
    - Buy / Sell Home
    - Buy / Sell Stock (capital gains tax on sell)
    - Have A Kid (name only → age 0)
    - Large Purchase
-   - Job / Retire (side wall)
+   - Job / Retire
+   - **Borrow** — HELOC or loan against shares (asset-backed only; APRs shown)
 4. **North door** — “Hallway of Time.” Confirm leaving the year.
-5. **Hallway** — Narrow corridor through a dark purple stippled void. First door = **leave year + 1**. HUD age / year / Bank / portfolio project forward (deterministic). A **glass wall** blocks years where The Bank would hit ≤ $0. Lanterns flicker beside doors.
+5. **Hallway** — Narrow corridor through a dark purple stippled void. First door = **leave year + 1**. HUD age / year / Cash / portfolio project forward (deterministic). A **glass wall** blocks years where Cash would hit ≤ $0. Lanterns flicker beside doors.
 6. **Esc** — Pause: **Map** (timeline graph; jump back to a prior Hallway node) and **Charts** (net worth over years).
 7. **Age 100** — “End of the Line.” Ending → See your charts / New Game.
 8. **Saves** — Auto-save on entering a year’s room and when entering the hallway (`ycitwy_saves_v2`).
@@ -73,9 +74,10 @@ Vanilla ES modules + Canvas. No build step. GitHub Pages serves the folder as st
 
 ### Net worth & HUD
 
-- **The Bank** / **Bank** (HUD) = `cash` only (liquid cash on hand).
-- **Portfolio** (HUD) = net worth = `cash + savings + stocksTotal + homeEquity − otherDebt − otherLoans.principal`.
-- Savings still earn interest; they are not shown as “Bank.”
+- **Cash** (HUD) = `cash` only (liquid cash on hand).
+- **Portfolio** (HUD) = net worth = `cash + savings + stocksTotal + k401Balance + homeEquity − otherDebt − otherLoans.principal`.
+- Savings still earn interest; 401(k) is illiquid for Decision Room spending but counts in Portfolio.
+- Traditional 401(k) withdrawals in retirement refill Cash (taxable); not available while working.
 - `stocksCostBasis` tracks tax basis: **buy** increases basis by purchase amount; **sell** reduces basis proportionally to `proceeds / stocksTotal`.
 
 ### Annual projection (`projectOneYear`)
@@ -85,11 +87,12 @@ Vanilla ES modules + Canvas. No build step. GitHub Pages serves the folder as st
 3. Auto events: retirement at 65, college 18–22, optional SS, random shock (skipped if `deterministic`).
 4. Salary growth if employed: `salary *= (1 + salaryGrowth)`.
 5. Savings interest: `savings += savings * savingsRate`.
-6. Equity return: `stocksTotal += stocksTotal * equityReturn * noise`  
+6. Equity return: stocks and **401(k)** grow with `equityReturn * noise`.
    - Hallway / HUD projection uses **`deterministic: true`** (noise = 1, no shocks) so numbers don’t jitter.
+6b. While employed: 401(k) employee deferral = `min(salary × contribRate, K401_EMPLOYEE_LIMIT)`; employer match = `min(deferral, salary × matchOnFirst) × matchRate`; deferral reduces disposable income and taxable wages; match does not come from player cash.
 7. Home appreciation: `value *= (1 + inflation + 0.005)`.
 8. Mortgage: one year of P&I; interest = `owed * rate`; principal = payment − interest.
-8b. **Other loans** (financed large purchases): same P&I amortization on `otherLoans[]` (`principal`, `rate`, `remainingTerm`); annual payment added to outflow; payoff logged when principal clears.
+8b. **Other loans** (financed large purchases, **HELOC**, **loan against shares**): same P&I amortization on `otherLoans[]` (`principal`, `rate`, `remainingTerm`); interest + principal payment is an annual cash-flow expense; payoff logged when principal clears. Securities loans: if principal > `SB_LTV × stocksTotal`, margin call liquidates stock → Cash → pay down loan.
 9. **Child costs** (USDA-style bands, every year, *not* a flat +$8k on birth):
    - Ages 0–5: ~$13,500 / yr  
    - Ages 6–12: ~$14,500 / yr  
@@ -97,7 +100,7 @@ Vanilla ES modules + Canvas. No build step. GitHub Pages serves the folder as st
    - Scaled by `expensePressure × childCostInflator`.
 10. **College tuition (ages 18–21):** `NATIONAL_AVG_COLLEGE_COST` ($11,610 — College Board 2024–25 public 4-year in-state average tuition & fees) × `expensePressure` × `childCostInflator`, added to annual outflow. One-shot log “{name} goes to college” at age 18; yearly “{name} — college tuition”. **Not** double-counted with USDA child bands (0–17 only).
 11. Income tax (federal brackets + ZIP state) + property tax.
-12. Cash flow: inflow = salary (or 0 if retired) + simplified SS; outflow = spending × pressure + mortgage + taxes + child costs. **Surplus → The Bank (`cash`)**; deficit drains cash → savings → stocks (basis adjusted).
+12. Cash flow: inflow = salary (or 0 if retired) + simplified SS; outflow = spending × pressure + mortgage + other loans + taxes + child costs + 401(k) deferral. **Surplus → Cash**; deficit drains cash → savings → stocks (basis adjusted). If **retired** and still short: withdraw from 401(k) → Cash (taxable ordinary income) before adding `otherDebt`.
 
 ### Hallway life-event auras
 
@@ -105,13 +108,28 @@ Deterministic projection logs mark major one-shots as soft cyan/violet/gold band
 
 ### Hallway insolvency glass wall
 
-Using the same deterministic `projectYears` snapshots as the HUD: the first future year where The Bank (`cash`) would be ≤ 0 after that year’s simulation places a translucent cyan glass barrier across the corridor at/before that year’s door. The player cannot walk past it; bumping shows a message to enter an earlier year’s Decision Room and get cash into The Bank. Earlier doors south of the wall remain usable.
+Using the same deterministic `projectYears` snapshots as the HUD: the first future year where Cash (`cash`) would be ≤ 0 after that year’s simulation places a translucent cyan glass barrier across the corridor at/before that year’s door. The player cannot walk past it; bumping shows a message to enter an earlier year’s Decision Room and rebuild Cash. Earlier doors south of the wall remain usable.
 
 ### Large purchase (cash or financed)
 
 1. Enter purchase amount.
 2. **Financed?** No → pay full amount from liquid (cash → savings → stocks); shortfall → `otherDebt`.
 3. Yes → down payment (from liquid), interest rate (%), loan term (years, default 5). Remaining principal becomes an `otherLoans` entry and amortizes each year like a mortgage.
+
+
+### Borrow (HELOC / loan against shares)
+
+Asset-backed only (no unsecured “just borrow money”).
+
+- **HELOC:** capacity per home = `max(0, HELOC_CLTV(0.80) × value − mortgage − existing HELOCs on that home)`. Default APR **8.5%** (mid-2020s prime + margin; adjustable 6–12%). Term 10–30 yr amortizing. Proceeds → Cash. Selling the home pays off its HELOC lien first.
+- **Loan against shares:** capacity = `max(0, SB_LTV(0.50) × stocksTotal − existing securities loans)`. Against taxable brokerage only — **not** 401(k). Default APR **7.0%** (adjustable 5.5–9%). Amortizing; margin call if over LTV.
+
+### 401(k)
+
+- Setup: balance, contribution % of salary, employer match (% of deferrals) + match-on-first (% of salary).
+- Annual employee deferral capped at `K401_EMPLOYEE_LIMIT` ($23,500, TY 2025 spirit).
+- Grows with difficulty stock-like return; illiquid for Decision Room; in Portfolio.
+- Retired only: auto-withdraw to cover Cash shortfalls; withdrawals taxed as ordinary income.
 
 ### Capital gains on stock sale
 
@@ -120,7 +138,7 @@ Player enters **sale amount** (or % of portfolio), **realized gains $**, and **y
 - `yearsHeld ≥ 1` → long-term federal CGT ≈ **15%** of gains (`LTCG_FEDERAL_RATE`).
 - `yearsHeld < 1` → short-term: tax gains as ordinary income (difference in federal tax with/without gains).
 - State CGT ≈ ZIP state income-tax rate × gains.
-- Net cash to Bank = `proceeds − (federal + state CGT)`.
+- Net cash to Cash = `proceeds − (federal + state CGT)`.
 - `stocksTotal` reduced by proceeds; basis reduced proportionally.
 
 *Illustrative gameplay model — not tax advice.*

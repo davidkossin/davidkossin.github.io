@@ -286,7 +286,7 @@ export function makeTellerWindow() {
 
 /**
  * Clear 14×14 LTTP-scale icon for a teller action (drawn on the window pane).
- * @param {'home'|'stock'|'kid'|'purchase'|'job'} action
+ * @param {'home'|'stock'|'kid'|'purchase'|'job'|'borrow'} action
  */
 export function makeTellerIcon(action) {
   const key = `teller-icon-${action}`;
@@ -344,6 +344,15 @@ export function makeTellerIcon(action) {
     px(ctx, 6, 2, '#3a5a78', 2, 1);
     px(ctx, 5, 8, PALETTE.gold, 4, 1);      // clasp
     px(ctx, 6, 7, PALETTE.gold, 2, 1);
+  } else if (action === 'borrow') {
+    // stacked coins / loan
+    px(ctx, 3, 9, PALETTE.goldDark, 8, 2);
+    px(ctx, 4, 7, PALETTE.gold, 6, 2);
+    px(ctx, 5, 5, PALETTE.gold, 4, 2);
+    px(ctx, 2, 11, '#c8a050', 10, 1);
+    px(ctx, 6, 2, '#3868a0', 2, 3);         // arrow down (borrow)
+    px(ctx, 5, 4, '#3868a0', 4, 1);
+    px(ctx, 4, 3, '#4880b0', 6, 1);
   } else {
     px(ctx, 5, 5, PALETTE.gold, 4, 4);
   }

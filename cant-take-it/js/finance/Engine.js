@@ -5,7 +5,13 @@
  */
 
 import { getDifficulty } from './Difficulty.js';
-import { estimateAnnualTax, estimateCapitalGainsTax } from './Tax.js';
+import {
+  estimateAnnualTax,
+  estimateCapitalGainsTax,
+  employee401kDeferral,
+  employer401kMatch,
+  estimateTaxOnExtraIncome,
+} from './Tax.js';
 import { applyAutoEvents, liquidTotal } from './Events.js';
 import { resolveRng } from './rng.js';
 import {
@@ -14,6 +20,10 @@ import {
   NATIONAL_AVG_COLLEGE_COST,
   COLLEGE_AGE_MIN,
   COLLEGE_AGE_MAX,
+  HELOC_CLTV,
+  SB_LTV,
+  HELOC_DEFAULT_RATE,
+  SECURITIES_LOAN_DEFAULT_RATE,
 } from '../config.js';
 
 /** Deep-ish clone for portfolio snapshots. */
@@ -38,13 +48,15 @@ export function annualChildCost(age, difficulty, inflator = 1) {
 }
 
 /**
- * Compute bank (cash), portfolio (net worth), and legacy liquid/illiquid.
- * HUD: Bank = cash on hand only; Portfolio = net worth.
+ * Compute Cash (`cash`), portfolio (net worth), and legacy liquid/illiquid.
+ * HUD: Cash = cash on hand only; Portfolio = net worth.
  */
 export function computeWorth(state) {
   const cash = state.cash || 0;
   const savings = state.savings || 0;
   const stocks = state.stocksTotal || 0;
+  const k401 = state.k401Balance || 0;
+  // 401(k) is illiquid for Decision Room spending (not Cash) but counts in Portfolio
   const liquid = cash + savings + stocks;
 
   let homeValue = 0;
@@ -60,19 +72,20 @@ export function computeWorth(state) {
   }
   const unsecured = (state.otherDebt || 0) + otherLoansOwed;
   const debts = mortgage + unsecured;
-  const netWorth = Math.round(liquid + homeEquity - unsecured);
+  const netWorth = Math.round(liquid + k401 + homeEquity - unsecured);
 
   return {
     bank: Math.round(cash),
     portfolio: netWorth,
     liquid: Math.round(liquid),
-    illiquid: Math.round(homeValue),
+    illiquid: Math.round(homeValue + k401),
     homeEquity: Math.round(homeEquity),
     debts: Math.round(debts),
     netWorth,
     cash,
     savings,
     stocks,
+    k401Balance: Math.round(k401),
     stocksCostBasis: Math.round(state.stocksCostBasis || 0),
   };
 }
@@ -145,14 +158,22 @@ export function projectOneYear(state, difficultyId, opts = {}) {
     if (interest > 0) events.push(`Savings interest: +$${fmt(interest)}`);
   }
 
-  // Equity returns — deterministic (no noise) when projecting hallway HUD
-  if (next.stocksTotal > 0) {
+  // Equity returns — stocks + 401(k) (retirement accounts are invested)
+  // Deterministic (no noise) when projecting hallway HUD
+  {
     const ret = difficulty.equityReturn;
     const noise = opts.deterministic ? 1 : 1 + (rng() * 0.04 - 0.02);
-    const gain = Math.round(next.stocksTotal * ret * noise);
-    // Cost basis unchanged on mark-to-market (unrealized)
-    next.stocksTotal = Math.max(0, next.stocksTotal + gain);
-    events.push(`Market return: ${gain >= 0 ? '+' : ''}$${fmt(gain)}`);
+    if (next.stocksTotal > 0) {
+      const gain = Math.round(next.stocksTotal * ret * noise);
+      next.stocksTotal = Math.max(0, next.stocksTotal + gain);
+      events.push(`Market return (stocks): ${gain >= 0 ? '+' : ''}$${fmt(gain)}`);
+    }
+    if ((next.k401Balance || 0) > 0) {
+      const kNoise = opts.deterministic ? 1 : 1 + (rng() * 0.04 - 0.02);
+      const kGain = Math.round(next.k401Balance * ret * kNoise);
+      next.k401Balance = Math.max(0, next.k401Balance + kGain);
+      events.push(`401(k) return: ${kGain >= 0 ? '+' : ''}$${fmt(kGain)}`);
+    }
   }
 
   // Home appreciation (inflation-linked + slight real growth)
@@ -178,11 +199,11 @@ export function projectOneYear(state, difficultyId, opts = {}) {
     }
   }
 
-  // Financed large-purchase / other loans (amortize like mortgages)
+  // Financed purchases + HELOC / securities-backed loans (amortizing P&I → cash-flow expense)
   let otherLoanPaid = 0;
   for (const loan of next.otherLoans || []) {
     if ((loan.principal || 0) <= 0 || (loan.remainingTerm || 0) <= 0) continue;
-    const interest = (loan.principal || 0) * (loan.rate || 0);
+    const interest = Math.round((loan.principal || 0) * (loan.rate || 0));
     let annual = annualLoanPayment(loan);
     let principalPay = Math.min(loan.principal, Math.max(0, annual - interest));
     // Final year: clear residual principal so the loan doesn't stick
@@ -192,7 +213,12 @@ export function projectOneYear(state, difficultyId, opts = {}) {
     }
     loan.principal = Math.max(0, loan.principal - principalPay);
     loan.remainingTerm = Math.max(0, (loan.remainingTerm || 0) - 1);
-    otherLoanPaid += annual;
+    otherLoanPaid += Math.round(annual);
+    if (loan.type === 'heloc' || loan.type === 'securities') {
+      events.push(
+        `${loan.label || loan.type}: payment $${fmt(annual)} (interest $${fmt(interest)})`
+      );
+    }
     if (loan.principal < 1) {
       loan.principal = 0;
       loan.remainingTerm = 0;
@@ -225,12 +251,30 @@ export function projectOneYear(state, difficultyId, opts = {}) {
     events.push(`${kid.name || 'Child'} — college tuition: −$${fmt(cost)}`);
   }
 
-  // Taxes
+  // 401(k) employee deferral + employer match (while employed; before tax & surplus)
+  let k401Deferral = 0;
+  let k401Match = 0;
+  if (next.employed && !next.retired && (next.salary || 0) > 0) {
+    k401Deferral = employee401kDeferral(next);
+    k401Match = employer401kMatch(next, k401Deferral);
+    if (k401Deferral > 0 || k401Match > 0) {
+      next.k401Balance = (next.k401Balance || 0) + k401Deferral + k401Match;
+      if (k401Deferral > 0) {
+        events.push(`401(k) deferral: $${fmt(k401Deferral)} (from paycheck)`);
+      }
+      if (k401Match > 0) {
+        events.push(`Employer 401(k) match: +$${fmt(k401Match)}`);
+      }
+    }
+  }
+
+  // Taxes (traditional 401(k) deferral reduces taxable wages via Tax.js)
   const tax = estimateAnnualTax(next, difficulty);
   const incomeTax = tax.federal + tax.state;
   const propertyTax = tax.property;
 
-  // Cash flow: salary + SS in; spending + taxes + mortgage + child costs out
+  // Cash flow: salary + SS in; spending + taxes + mortgage + loans + deferral out
+  // Deferral reduces disposable income (paycheck deduction) — do not also cut salary inflow
   const inflow =
     (next.retired ? 0 : next.salary || 0) + (next.socialSecurity || 0);
   const stated = next.annualSpending || 0;
@@ -242,13 +286,13 @@ export function projectOneYear(state, difficultyId, opts = {}) {
     incomeTax +
     propertyTax +
     childCosts +
-    collegeTuition;
+    collegeTuition +
+    k401Deferral;
 
   const net = inflow - outflow;
   if (net >= 0) {
-    // Salary / SS net of expenses lands in The Bank (cash), not savings
     next.cash = (next.cash || 0) + Math.round(net);
-    events.push(`Year surplus → The Bank: +$${fmt(net)}`);
+    events.push(`Year surplus → Cash: +$${fmt(net)}`);
   } else {
     const need = Math.round(-net);
     let left = need;
@@ -267,13 +311,27 @@ export function projectOneYear(state, difficultyId, opts = {}) {
       next[key] = have - take;
       left -= take;
     }
+    // Retired: auto-withdraw from 401(k) → Cash to cover remaining shortfall (taxable)
+    if (left > 0 && next.retired && (next.k401Balance || 0) > 0) {
+      const drawn = withdraw401kToCover(next, left, difficulty, events);
+      left = Math.max(0, left - drawn);
+    }
     if (left > 0) {
       next.otherDebt = (next.otherDebt || 0) + left;
       events.push(`Shortfall borrowed: +$${fmt(left)} debt`);
-    } else {
+    } else if (need > 0) {
       events.push(`Year deficit covered from liquid assets: −$${fmt(need)}`);
     }
   }
+
+  // If retired and Cash still < 0 (edge), pull from 401(k) to zero Cash
+  if (next.retired && (next.cash || 0) < 0 && (next.k401Balance || 0) > 0) {
+    const short = Math.round(-(next.cash || 0));
+    withdraw401kToCover(next, short, difficulty, events);
+  }
+
+  // Securities-backed loan maintenance (margin call if over SB_LTV)
+  applySecuritiesMarginCall(next, events);
 
   // Inflate discretionary spending baseline for next year
   next.annualSpending = Math.round((next.annualSpending || 0) * (1 + difficulty.inflation));
@@ -325,7 +383,7 @@ export function projectAtProgress(baseline, progress, difficultyId, opts = {}) {
 
 
 /**
- * First projected year index (1-based years from baseline) where The Bank (cash) ≤ 0.
+ * First projected year index (1-based years from baseline) where Cash (`cash`) ≤ 0.
  * snapshots[0] is the leave baseline; snapshots[k] is after k years.
  * @param {Array<{state?:object, worth?:object}>} snapshots
  * @returns {number} index k >= 1, or -1 if never insolvent
@@ -377,9 +435,32 @@ export function sellHome(state, index) {
   const next = cloneState(state);
   if (!next.homes?.[index]) return next;
   const home = next.homes[index];
-  const equity = (home.value || 0) - (home.mortgageOwed || 0);
-  next.cash = (next.cash || 0) + Math.max(0, equity);
+
+  // Real-world lien: pay off HELOCs on this home from sale proceeds
+  let helocOwed = 0;
+  next.otherLoans = (next.otherLoans || []).filter((loan) => {
+    if (loan.type === 'heloc' && loan.homeIndex === index) {
+      helocOwed += loan.principal || 0;
+      return false;
+    }
+    return true;
+  });
+
+  const net = (home.value || 0) - (home.mortgageOwed || 0) - helocOwed;
+  if (net >= 0) {
+    next.cash = (next.cash || 0) + net;
+  } else {
+    payFromLiquid(next, -net);
+  }
+
   next.homes.splice(index, 1);
+
+  // Renumber HELOC homeIndex after splice
+  for (const loan of next.otherLoans || []) {
+    if (loan.type === 'heloc' && (loan.homeIndex || 0) > index) {
+      loan.homeIndex--;
+    }
+  }
   return next;
 }
 
@@ -562,6 +643,154 @@ export function largePurchase(state, amount, opts = {}) {
     });
   }
   return next;
+}
+
+
+/**
+ * Available HELOC credit on one home: max(0, HELOC_CLTV * value − mortgage − existing HELOCs).
+ */
+export function helocCapacity(state, homeIndex) {
+  const home = state.homes?.[homeIndex];
+  if (!home) return 0;
+  const value = home.value || 0;
+  const mortgage = home.mortgageOwed || 0;
+  let existing = 0;
+  for (const loan of state.otherLoans || []) {
+    if (loan.type === 'heloc' && loan.homeIndex === homeIndex) {
+      existing += loan.principal || 0;
+    }
+  }
+  return Math.max(0, Math.round(HELOC_CLTV * value - mortgage - existing));
+}
+
+/**
+ * Available securities-backed loan capacity against taxable brokerage only.
+ * max(0, SB_LTV * stocksTotal − existing securities loan principals).
+ */
+export function securitiesLoanCapacity(state) {
+  let existing = 0;
+  for (const loan of state.otherLoans || []) {
+    if (loan.type === 'securities') existing += loan.principal || 0;
+  }
+  return Math.max(0, Math.round(SB_LTV * (state.stocksTotal || 0) - existing));
+}
+
+/**
+ * Open a HELOC: proceeds → Cash. Amortizing otherLoans entry type 'heloc'.
+ */
+export function takeHeloc(state, opts = {}) {
+  const next = cloneState(state);
+  const homeIndex = Number(opts.homeIndex);
+  const cap = helocCapacity(next, homeIndex);
+  const amount = Math.max(0, Math.min(cap, Math.round(Number(opts.amount) || 0)));
+  if (amount <= 0 || !next.homes?.[homeIndex]) return next;
+
+  const rate = Math.max(0, Number(opts.rate) || HELOC_DEFAULT_RATE);
+  const term = Math.max(1, Math.round(opts.term || 15));
+  const home = next.homes[homeIndex];
+  next.otherLoans = next.otherLoans || [];
+  next.otherLoans.push({
+    type: 'heloc',
+    homeIndex,
+    label: opts.label || `HELOC — ${home.label || home.type || 'Home'}`,
+    principal: amount,
+    rate,
+    remainingTerm: term,
+    originalAmount: amount,
+  });
+  next.cash = (next.cash || 0) + amount;
+  return next;
+}
+
+/**
+ * Securities-backed loan against stocksTotal. Proceeds → Cash.
+ */
+export function takeSecuritiesLoan(state, opts = {}) {
+  const next = cloneState(state);
+  const cap = securitiesLoanCapacity(next);
+  const amount = Math.max(0, Math.min(cap, Math.round(Number(opts.amount) || 0)));
+  if (amount <= 0) return next;
+
+  const rate = Math.max(0, Number(opts.rate) || SECURITIES_LOAN_DEFAULT_RATE);
+  const term = Math.max(1, Math.round(opts.term || 10));
+  next.otherLoans = next.otherLoans || [];
+  next.otherLoans.push({
+    type: 'securities',
+    label: opts.label || 'Loan against shares',
+    principal: amount,
+    rate,
+    remainingTerm: term,
+    originalAmount: amount,
+  });
+  next.cash = (next.cash || 0) + amount;
+  return next;
+}
+
+/**
+ * If securities loan principal > SB_LTV * stocks, liquidate stocks → Cash → pay down loan.
+ */
+function applySecuritiesMarginCall(next, events) {
+  const sbLoans = (next.otherLoans || []).filter((l) => l.type === 'securities' && (l.principal || 0) > 0);
+  if (!sbLoans.length) return;
+  let principal = sbLoans.reduce((s, l) => s + (l.principal || 0), 0);
+  const maxAllowed = Math.round(SB_LTV * (next.stocksTotal || 0));
+  if (principal <= maxAllowed) return;
+
+  let excess = principal - maxAllowed;
+  events.push(`Margin call: loan against shares over ${Math.round(SB_LTV * 100)}% LTV by $${fmt(excess)}.`);
+
+  // Sell stocks into Cash, then pay down securities loans
+  const sellAmt = Math.min(next.stocksTotal || 0, excess);
+  if (sellAmt > 0 && (next.stocksTotal || 0) > 0) {
+    const ratio = sellAmt / next.stocksTotal;
+    next.stocksCostBasis = Math.max(0, Math.round((next.stocksCostBasis || 0) * (1 - ratio)));
+    next.stocksTotal -= sellAmt;
+    next.cash = (next.cash || 0) + sellAmt;
+    events.push(`Margin call: sold $${fmt(sellAmt)} stock → Cash.`);
+  }
+
+  let pay = Math.min(next.cash || 0, excess);
+  next.cash = (next.cash || 0) - pay;
+  for (const loan of sbLoans) {
+    if (pay <= 0) break;
+    const take = Math.min(loan.principal || 0, pay);
+    loan.principal -= take;
+    pay -= take;
+    excess -= take;
+  }
+  next.otherLoans = (next.otherLoans || []).filter((l) => (l.principal || 0) > 0);
+  if (excess > 0.5) {
+    events.push(`Margin call: still $${fmt(excess)} over LTV after liquidation.`);
+  }
+}
+
+/**
+ * While retired: withdraw from traditional 401(k) to cover a Cash shortfall.
+ * Withdrawals are taxable ordinary income (Tax.js incremental); net → Cash.
+ * @returns {number} net dollars applied toward the shortfall
+ */
+function withdraw401kToCover(next, needNet, difficulty, events) {
+  const need = Math.max(0, Math.round(needNet || 0));
+  let bal = next.k401Balance || 0;
+  if (need <= 0 || bal <= 0) return 0;
+
+  // Gross-up for tax so net proceeds cover `need` when balance allows
+  let gross = Math.min(bal, need);
+  let taxInfo = estimateTaxOnExtraIncome(next, difficulty, gross);
+  let tax = taxInfo.total || 0;
+  let net = Math.max(0, gross - tax);
+  if (net < need && gross < bal) {
+    const r = gross > 0 ? tax / gross : 0.22;
+    gross = Math.min(bal, Math.ceil(need / Math.max(0.05, 1 - r)));
+    taxInfo = estimateTaxOnExtraIncome(next, difficulty, gross);
+    tax = taxInfo.total || 0;
+    net = Math.max(0, gross - tax);
+  }
+
+  next.k401Balance = bal - gross;
+  next.cash = Math.round((next.cash || 0) + net);
+  events.push(`401(k) withdrawal → Cash: $${fmt(net)} (tax $${fmt(tax)})`);
+  return net;
 }
 
 function fmt(n) {

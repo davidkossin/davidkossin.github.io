@@ -19,6 +19,10 @@ export function createDefaultSetup() {
     homes: [],
     stocksTotal: 10000,
     stocksCostBasis: 10000,
+    k401Balance: 0,
+    k401ContribRate: 0.06, // decimal; UI enters percent of salary
+    k401MatchRate: 1.0, // employer matches this fraction of deferrals (1.0 = 100%)
+    k401MatchOnFirst: 0.03, // match applies on first X of salary (0.03 = 3%)
     married: false,
     kids: [],
     annualSpending: 35000,
@@ -65,6 +69,10 @@ export function createGameFromSetup(setup) {
     })),
     stocksTotal: stocks,
     stocksCostBasis: Number(setup.stocksCostBasis) >= 0 ? Number(setup.stocksCostBasis) : stocks,
+    k401Balance: Math.max(0, Number(setup.k401Balance) || 0),
+    k401ContribRate: Math.max(0, Math.min(1, Number(setup.k401ContribRate) || 0)),
+    k401MatchRate: Math.max(0, Math.min(1, Number(setup.k401MatchRate) || 0)),
+    k401MatchOnFirst: Math.max(0, Math.min(1, Number(setup.k401MatchOnFirst) || 0)),
     married: !!setup.married,
     kids: (setup.kids || []).map((k, i) => ({
       name: k.name || `Child ${i + 1}`,

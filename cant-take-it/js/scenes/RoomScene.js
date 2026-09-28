@@ -1,4 +1,17 @@
-import { VIEW_W, VIEW_H, HUD_H, HOME_TYPES } from '../config.js';
+import {
+  VIEW_W,
+  VIEW_H,
+  HUD_H,
+  HOME_TYPES,
+  HELOC_DEFAULT_RATE,
+  HELOC_RATE_MIN,
+  HELOC_RATE_MAX,
+  SECURITIES_LOAN_DEFAULT_RATE,
+  SECURITIES_LOAN_RATE_MIN,
+  SECURITIES_LOAN_RATE_MAX,
+  HELOC_CLTV,
+  SB_LTV,
+} from '../config.js';
 import { Player } from '../render/Player.js';
 import { Hud } from '../render/Hud.js';
 import {
@@ -16,6 +29,11 @@ import {
   addKid,
   largePurchase,
   computeWorth,
+  helocCapacity,
+  securitiesLoanCapacity,
+  takeHeloc,
+  takeSecuritiesLoan,
+  annualLoanPayment,
 } from '../finance/Engine.js';
 import { getDifficulty } from '../finance/Difficulty.js';
 import { commitRoomDecisions } from '../state/GameState.js';
@@ -187,8 +205,21 @@ export class RoomScene {
           { title: 'Sell Home' }
         );
         if (idx == null) return;
+        const helocLien = (p.otherLoans || [])
+          .filter((l) => l.type === 'heloc' && l.homeIndex === idx)
+          .reduce((s, l) => s + (l.principal || 0), 0);
+        if (helocLien > 0) {
+          const okSell = await dialog.confirm(
+            `This home has a HELOC lien of ${formatMoneyDisplay(helocLien)}.\nSale proceeds will pay it off first. Continue?`,
+            { title: 'Sell Home', yes: 'Sell', no: 'Cancel' }
+          );
+          if (!okSell) return;
+        }
         game.portfolio = sellHome(game.portfolio, idx);
-        await dialog.show('Sold. Equity moved to The Bank.', { title: 'Sell Home' });
+        await dialog.show(
+          'Sold. Net proceeds (after mortgage / HELOC liens) moved to Cash.',
+          { title: 'Sell Home' }
+        );
       }
     } else if (action === 'stock') {
       const mode = await dialog.menu(
@@ -321,10 +352,175 @@ export class RoomScene {
           `at ${ratePct}% for ${Math.max(1, Math.round(term ?? 5))} yr.`,
         { title: 'Make Large Purchase' }
       );
+    } else if (action === 'borrow') {
+      await this.handleBorrow(game, dialog);
     }
   }
 
-  async handleSellStock(game, dialog, diff) {
+  async handleBorrow(game, dialog) {
+    const kind = await dialog.menu(
+      'Asset-backed borrowing only.\nNo unsecured loans.',
+      [
+        { label: 'HELOC (home equity)', value: 'heloc' },
+        { label: 'Loan against shares', value: 'securities' },
+        { label: 'Never mind', value: null },
+      ],
+      { title: 'Borrow' }
+    );
+    if (!kind) return;
+    if (kind === 'heloc') await this.handleHeloc(game, dialog);
+    else await this.handleSecuritiesLoan(game, dialog);
+  }
+
+  async handleHeloc(game, dialog) {
+    const p = game.portfolio;
+    const homes = p.homes || [];
+    if (!homes.length) {
+      await dialog.show(
+        `No homes to borrow against.\nA HELOC needs home equity (${Math.round(HELOC_CLTV * 100)}% CLTV rule).`,
+        { title: 'HELOC' }
+      );
+      return;
+    }
+
+    const homeIndex = await dialog.menu(
+      'Which home for the HELOC?',
+      [
+        ...homes.map((h, i) => ({
+          label: `${h.label || h.type} — avail ${formatMoneyDisplay(helocCapacity(p, i))}`,
+          value: i,
+          subtext: `Value ${formatMoneyDisplay(h.value)} · mtg ${formatMoneyDisplay(h.mortgageOwed || 0)}`,
+        })),
+        { label: 'Cancel', value: null },
+      ],
+      { title: 'HELOC' }
+    );
+    if (homeIndex == null) return;
+
+    const cap = helocCapacity(p, homeIndex);
+    if (cap <= 0) {
+      await dialog.show(
+        `No HELOC capacity on this home.\nNeed equity under ${Math.round(HELOC_CLTV * 100)}% CLTV after mortgage and existing HELOCs.`,
+        { title: 'HELOC' }
+      );
+      return;
+    }
+
+    const amount = await dialog.prompt(`HELOC amount ($)? Max ${formatMoneyDisplay(cap)}`, {
+      title: 'HELOC',
+      defaultValue: String(Math.min(cap, 25000)),
+      type: 'money',
+    });
+    if (amount == null) return;
+    const principal = Math.max(0, Math.min(cap, Math.round(amount)));
+    if (principal <= 0) {
+      await dialog.show('Amount must be greater than zero.', { title: 'HELOC' });
+      return;
+    }
+
+    const defPct = String(+(HELOC_DEFAULT_RATE * 100).toFixed(2));
+    const ratePct = await dialog.prompt(
+      `Interest rate APR (%)?\nTypical HELOC ~${defPct}% (prime + margin).\nAllowed ${HELOC_RATE_MIN * 100}–${HELOC_RATE_MAX * 100}%.`,
+      { title: 'HELOC', defaultValue: defPct, type: 'percent' }
+    );
+    if (ratePct == null) return;
+    const rate = Math.max(HELOC_RATE_MIN, Math.min(HELOC_RATE_MAX, (ratePct || 0) / 100));
+
+    const term = await dialog.prompt('Term (years)? (10–30)', {
+      title: 'HELOC',
+      defaultValue: '15',
+      type: 'number',
+    });
+    if (term == null) return;
+    const years = Math.max(10, Math.min(30, Math.round(term || 15)));
+
+    const annual = annualLoanPayment({ principal, rate, remainingTerm: years });
+    const aprShow = String(+(rate * 100).toFixed(2));
+    const ok = await dialog.confirm(
+      `HELOC summary:\n` +
+        `Principal ${formatMoneyDisplay(principal)} → Cash\n` +
+        `APR ${aprShow}% · ${years} yr amortizing\n` +
+        `Est. annual P&I ~${formatMoneyDisplay(Math.round(annual))}\n` +
+        `Confirm?`,
+      { title: 'HELOC', yes: 'Take HELOC', no: 'Cancel' }
+    );
+    if (!ok) return;
+
+    game.portfolio = takeHeloc(game.portfolio, { homeIndex, amount: principal, rate, term: years });
+    await dialog.show(
+      `HELOC funded ${formatMoneyDisplay(principal)} to Cash at ${aprShow}% APR.`,
+      { title: 'HELOC' }
+    );
+  }
+
+  async handleSecuritiesLoan(game, dialog) {
+    const p = game.portfolio;
+    const cap = securitiesLoanCapacity(p);
+    if (cap <= 0) {
+      await dialog.show(
+        `No capacity for a loan against shares.\n` +
+          `Need taxable brokerage; advance rate ${Math.round(SB_LTV * 100)}% minus existing share-backed loans.\n` +
+          `(401(k) cannot be pledged.)`,
+        { title: 'Loan against shares' }
+      );
+      return;
+    }
+
+    const amount = await dialog.prompt(
+      `Loan amount ($)? Max ${formatMoneyDisplay(cap)}\n(${Math.round(SB_LTV * 100)}% of stocks minus existing)`,
+      {
+        title: 'Loan against shares',
+        defaultValue: String(Math.min(cap, 10000)),
+        type: 'money',
+      }
+    );
+    if (amount == null) return;
+    const principal = Math.max(0, Math.min(cap, Math.round(amount)));
+    if (principal <= 0) {
+      await dialog.show('Amount must be greater than zero.', { title: 'Loan against shares' });
+      return;
+    }
+
+    const defPct = String(+(SECURITIES_LOAN_DEFAULT_RATE * 100).toFixed(2));
+    const ratePct = await dialog.prompt(
+      `Interest rate APR (%)?\nTypical pledged-asset line ~${defPct}% (usually below HELOC).\nAllowed ${SECURITIES_LOAN_RATE_MIN * 100}–${SECURITIES_LOAN_RATE_MAX * 100}%.`,
+      { title: 'Loan against shares', defaultValue: defPct, type: 'percent' }
+    );
+    if (ratePct == null) return;
+    const rate = Math.max(
+      SECURITIES_LOAN_RATE_MIN,
+      Math.min(SECURITIES_LOAN_RATE_MAX, (ratePct || 0) / 100)
+    );
+
+    const term = await dialog.prompt('Term (years)? (5–20)', {
+      title: 'Loan against shares',
+      defaultValue: '10',
+      type: 'number',
+    });
+    if (term == null) return;
+    const years = Math.max(5, Math.min(20, Math.round(term || 10)));
+
+    const annual = annualLoanPayment({ principal, rate, remainingTerm: years });
+    const aprShow = String(+(rate * 100).toFixed(2));
+    const ok = await dialog.confirm(
+      `Loan against shares:\n` +
+        `Principal ${formatMoneyDisplay(principal)} → Cash\n` +
+        `APR ${aprShow}% · ${years} yr amortizing\n` +
+        `Est. annual P&I ~${formatMoneyDisplay(Math.round(annual))}\n` +
+        `If stocks fall below maintenance LTV, a margin call may sell shares.\n` +
+        `Confirm?`,
+      { title: 'Loan against shares', yes: 'Take loan', no: 'Cancel' }
+    );
+    if (!ok) return;
+
+    game.portfolio = takeSecuritiesLoan(game.portfolio, { amount: principal, rate, term: years });
+    await dialog.show(
+      `Loan against shares funded ${formatMoneyDisplay(principal)} to Cash at ${aprShow}% APR.`,
+      { title: 'Loan against shares' }
+    );
+  }
+
+    async handleSellStock(game, dialog, diff) {
     const p = game.portfolio;
     const held = p.stocksTotal || 0;
     if (held <= 0) {
@@ -385,7 +581,7 @@ export class RoomScene {
       `Sold ${formatMoneyDisplay(result.proceeds)}.\n` +
         `CGT ${result.tax.longTerm ? 'LT' : 'ST'}: ${formatMoneyDisplay(result.tax.total)}\n` +
         `(${result.tax.rateNote})\n` +
-        `Net to The Bank: ${formatMoneyDisplay(result.netCash)}`,
+        `Net to Cash: ${formatMoneyDisplay(result.netCash)}`,
       { title: 'Sell Stock' }
     );
   }

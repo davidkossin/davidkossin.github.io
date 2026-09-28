@@ -10,12 +10,20 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
-### Changed
-- Annual surplus (salary / SS net of expenses & taxes) now goes to **The Bank** (`cash`) instead of savings
-- Player-facing copy: “cash on hand” / Cash → **The Bank** (HUD still shortens to Bank where space is tight)
-
 ### Added
-- Hallway of Time **glass wall**: deterministic projection finds the first year The Bank would be ≤ $0; translucent cyan barrier blocks walking past that door, with a message to enter an earlier year and rebuild The Bank
+- Setup: traditional **401(k)** — starting balance, employee contribution (% of salary, annual cap `K401_EMPLOYEE_LIMIT` = $23,500 TY 2025), employer match (match % of deferrals on first X% of salary)
+- Engine: while employed, 401(k) deferral from paycheck + employer match; balance grows with difficulty equity return; included in Portfolio / net worth (illiquid for Decision Room spending)
+- Retirement: when `retired`, auto **401(k) withdrawal → Cash** to cover year shortfalls (taxable ordinary income via Tax.js); ledger: `401(k) withdrawal → Cash: $X (tax $Y)`
+- Decision Room **Borrow** window (6th teller, east wall with Job — layout W2/S2/E2):
+  - **HELOC** — CLTV 80% of home value minus mortgage and existing HELOCs; amortizing; proceeds → Cash; lien paid off on home sale
+  - **Loan against shares** — 50% LTV on taxable brokerage only (not 401(k)); amortizing; margin call sells stock if over LTV
+  - APRs shown clearly in prompts and confirm (defaults: HELOC 8.5%, securities 7.0%; player adjustable within mid-2020s bands)
+- Hallway of Time **glass wall**: deterministic projection finds the first year Cash would be ≤ $0; translucent cyan barrier blocks walking past that door, with a message to enter an earlier year and rebuild Cash
+
+### Changed
+- Player-facing rename: **The Bank / Bank → Cash** (HUD, setup, dialogs, surplus events, glass wall, charts, ending). Internal field remains `cash`
+- Annual surplus → **Cash** (`cash`) instead of savings
+- Borrow / other loans: full amortizing P&I is an annual cash-flow expense (interest called out in year events for HELOC and share-backed loans)
 
 ---
 

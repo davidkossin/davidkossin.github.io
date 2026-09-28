@@ -108,7 +108,7 @@ export class SetupScene {
         s.hairLength = result;
         step++;
       } else if (step === 5) {
-        result = await dialog.prompt('The Bank — starting cash ($)?', {
+        result = await dialog.prompt('Starting Cash ($)?', {
           title: 'Finances',
           defaultValue: String(s.cash),
           type: 'money',
@@ -159,6 +159,63 @@ export class SetupScene {
         s.savingsRate = Math.max(0, Math.min(0.2, result / 100));
         step++;
       } else if (step === 9) {
+        result = await dialog.prompt('401(k) balance ($)?', {
+          title: 'Retirement',
+          defaultValue: String(s.k401Balance ?? 0),
+          type: 'money',
+        });
+        if (result == null) {
+          step--;
+          continue;
+        }
+        s.k401Balance = Math.max(0, result);
+        step++;
+      } else if (step === 10) {
+        const pctDefault = ((s.k401ContribRate || 0.06) * 100).toFixed(2).replace(/\.?0+$/, '');
+        result = await dialog.prompt('401(k) contribution (% of salary)?', {
+          title: 'Retirement',
+          defaultValue: pctDefault,
+          type: 'percent',
+        });
+        if (result == null) {
+          step--;
+          continue;
+        }
+        // 0–100% of salary; annual $ cap applied in engine (K401_EMPLOYEE_LIMIT)
+        s.k401ContribRate = Math.max(0, Math.min(1, result / 100));
+        step++;
+      } else if (step === 11) {
+        // Classic “100% of first 3%”: matchRate + matchOnFirst (nested like home term)
+        const matchPctDef = ((s.k401MatchRate ?? 1) * 100).toFixed(0);
+        result = await dialog.prompt(
+          'Employer match (% of your deferrals, 0–100)?\n(e.g. 100 = dollar-for-dollar)',
+          {
+            title: 'Retirement',
+            defaultValue: matchPctDef,
+            type: 'percent',
+          }
+        );
+        if (result == null) {
+          step--;
+          continue;
+        }
+        s.k401MatchRate = Math.max(0, Math.min(1, result / 100));
+        const onFirstDef = ((s.k401MatchOnFirst ?? 0.03) * 100).toFixed(2).replace(/\.?0+$/, '');
+        const onFirst = await dialog.prompt(
+          'Match applies on first (% of salary)?\n(e.g. 3 with 100% match = classic “100% of first 3%”)',
+          {
+            title: 'Retirement',
+            defaultValue: onFirstDef,
+            type: 'percent',
+          }
+        );
+        if (onFirst == null) {
+          step = 11;
+          continue;
+        }
+        s.k401MatchOnFirst = Math.max(0, Math.min(1, onFirst / 100));
+        step++;
+      } else if (step === 12) {
         result = await dialog.prompt('Stock portfolio total ($)?', {
           title: 'Investments',
           defaultValue: String(s.stocksTotal),
@@ -171,7 +228,7 @@ export class SetupScene {
         s.stocksTotal = Math.max(0, result);
         s.stocksCostBasis = s.stocksTotal; // assume basis = market at setup
         step++;
-      } else if (step === 10) {
+      } else if (step === 13) {
         result = await dialog.menu(
           'How many homes (0–5)?',
           withBack([
@@ -191,8 +248,8 @@ export class SetupScene {
         s._homeCount = result || 0;
         s.homes = [];
         s._homeIdx = 0;
-        step = s._homeCount > 0 ? 11 : 15;
-      } else if (step === 11) {
+        step = s._homeCount > 0 ? 14 : 18;
+      } else if (step === 14) {
         // Home type
         const i = s._homeIdx;
         result = await dialog.menu(
@@ -206,17 +263,17 @@ export class SetupScene {
         );
         if (result === BACK) {
           if (i === 0) {
-            step = 10;
+            step = 13;
           } else {
             s._homeIdx--;
             s.homes.pop();
-            step = 11;
+            step = 14;
           }
           continue;
         }
         s._homeType = result;
-        step = 12;
-      } else if (step === 12) {
+        step = 15;
+      } else if (step === 15) {
         const i = s._homeIdx;
         result = await dialog.prompt(`Home ${i + 1} market value ($)?`, {
           title: 'Homes',
@@ -224,12 +281,12 @@ export class SetupScene {
           type: 'money',
         });
         if (result == null) {
-          step = 11;
+          step = 14;
           continue;
         }
         s._homeValue = Math.max(0, result);
-        step = 13;
-      } else if (step === 13) {
+        step = 16;
+      } else if (step === 16) {
         const i = s._homeIdx;
         result = await dialog.prompt(`Home ${i + 1} mortgage owed ($)?`, {
           title: 'Homes',
@@ -237,12 +294,12 @@ export class SetupScene {
           type: 'money',
         });
         if (result == null) {
-          step = 12;
+          step = 15;
           continue;
         }
         s._homeOwed = Math.max(0, result);
-        step = 14;
-      } else if (step === 14) {
+        step = 17;
+      } else if (step === 17) {
         const i = s._homeIdx;
         result = await dialog.prompt(`Home ${i + 1} mortgage rate (%)?`, {
           title: 'Homes',
@@ -250,7 +307,7 @@ export class SetupScene {
           type: 'percent',
         });
         if (result == null) {
-          step = 13;
+          step = 16;
           continue;
         }
         s._homeRate = Math.max(0, result / 100);
@@ -260,7 +317,7 @@ export class SetupScene {
           type: 'number',
         });
         if (term == null) {
-          step = 14;
+          step = 17;
           continue;
         }
         s.homes.push({
@@ -273,9 +330,9 @@ export class SetupScene {
           propertyTaxRate: HOME_TYPES[s._homeType]?.taxRate ?? 0.012,
         });
         s._homeIdx++;
-        if (s._homeIdx < s._homeCount) step = 11;
-        else step = 15;
-      } else if (step === 15) {
+        if (s._homeIdx < s._homeCount) step = 14;
+        else step = 18;
+      } else if (step === 18) {
         result = await dialog.menu(
           'Married? (household = one entity for now)',
           withBack([
@@ -288,13 +345,13 @@ export class SetupScene {
           if (s._homeCount > 0) {
             s._homeIdx = s._homeCount - 1;
             s.homes.pop();
-            step = 11;
-          } else step = 10;
+            step = 14;
+          } else step = 13;
           continue;
         }
         s.married = !!result;
         step++;
-      } else if (step === 16) {
+      } else if (step === 19) {
         result = await dialog.menu(
           'How many kids (0–4)?',
           withBack([
@@ -313,25 +370,25 @@ export class SetupScene {
         s._kidCount = result || 0;
         s.kids = [];
         s._kidIdx = 0;
-        step = s._kidCount > 0 ? 17 : 19;
-      } else if (step === 17) {
+        step = s._kidCount > 0 ? 20 : 22;
+      } else if (step === 20) {
         const i = s._kidIdx;
         result = await dialog.prompt(`Name of child ${i + 1}?`, {
           title: 'Family',
           defaultValue: `Child ${i + 1}`,
         });
         if (result == null) {
-          if (i === 0) step = 16;
+          if (i === 0) step = 19;
           else {
             s._kidIdx--;
             s.kids.pop();
-            step = 17;
+            step = 20;
           }
           continue;
         }
         s._kidName = result || `Child ${i + 1}`;
-        step = 18;
-      } else if (step === 18) {
+        step = 21;
+      } else if (step === 21) {
         const i = s._kidIdx;
         result = await dialog.prompt(`Age of ${s._kidName}?`, {
           title: 'Family',
@@ -339,7 +396,7 @@ export class SetupScene {
           type: 'number',
         });
         if (result == null) {
-          step = 17;
+          step = 20;
           continue;
         }
         s.kids.push({
@@ -347,9 +404,9 @@ export class SetupScene {
           age: Math.max(0, Math.round(result || 0)),
         });
         s._kidIdx++;
-        if (s._kidIdx < s._kidCount) step = 17;
-        else step = 19;
-      } else if (step === 19) {
+        if (s._kidIdx < s._kidCount) step = 20;
+        else step = 22;
+      } else if (step === 22) {
         result = await dialog.prompt('Annual household spending ($)?', {
           title: 'Spending',
           defaultValue: String(s.annualSpending),
@@ -359,14 +416,14 @@ export class SetupScene {
           if (s._kidCount > 0) {
             s._kidIdx = s._kidCount - 1;
             s.kids.pop();
-            step = 17;
-          } else step = 16;
+            step = 20;
+          } else step = 19;
           continue;
         }
         s.annualSpending = Math.max(0, result);
         s.spendingBreakdown = { other: s.annualSpending };
         step++;
-      } else if (step === 20) {
+      } else if (step === 23) {
         result = await dialog.prompt('Primary ZIP (for tax estimate)?', {
           title: 'Taxes',
           defaultValue: s.zip,
@@ -377,7 +434,7 @@ export class SetupScene {
         }
         s.zip = String(result).replace(/\D/g, '').slice(0, 5) || '85001';
         step++;
-      } else if (step === 21) {
+      } else if (step === 24) {
         const diffs = listDifficulties();
         const stdIdx = Math.max(
           0,
@@ -400,7 +457,7 @@ export class SetupScene {
         }
         s.difficulty = result || 'standard';
         step++;
-      } else if (step === 22) {
+      } else if (step === 25) {
         await dialog.show(
           `Welcome, ${s.playerName}. Year ${s.year}, age ${s.age}. Your Decision Room awaits.`,
           { title: 'Begin' }
