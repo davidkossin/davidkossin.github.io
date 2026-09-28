@@ -25,6 +25,7 @@ import {
   HELOC_DEFAULT_RATE,
   SECURITIES_LOAN_DEFAULT_RATE,
 } from '../config.js';
+import { log as debugLog, isEnabled as debugOn } from '../debug/Logger.js';
 
 /** Deep-ish clone for portfolio snapshots. */
 export function cloneState(s) {
@@ -120,6 +121,10 @@ export function annualLoanPayment(loan) {
 
 /**
  * Apply one year of growth / costs to a cloned state.
+ * Hallway model: each year-door is Jan 1 of that year; salary for the year is
+ * included in this step's cashflow (paid as the player walks between doors,
+ * available before/at the door). Snapshots used for glass-wall insolvency
+ * therefore already reflect that year's salary.
  * @param {object} state
  * @param {string|object} difficultyId
  * @param {object} [opts] - { deterministic, seed, rng }
@@ -344,6 +349,26 @@ export function projectOneYear(state, difficultyId, opts = {}) {
   }
 
   const worth = computeWorth(next);
+  if (debugOn()) {
+    const cashBefore = state.cash || 0;
+    const cashAfter = next.cash || 0;
+    debugLog('year', {
+      year: next.year,
+      age: next.age,
+      salary: next.retired ? 0 : next.salary || 0,
+      socialSecurity: next.socialSecurity || 0,
+      employed: !!next.employed && !next.retired,
+      retired: !!next.retired,
+      spendingUsed: stated,
+      inflow,
+      outflow: Math.round(outflow),
+      net: Math.round(net),
+      cashBefore,
+      cashAfter,
+      cashDelta: Math.round(cashAfter - cashBefore),
+      surplusEvent: events.find((e) => /surplus → Cash/i.test(e)) || null,
+    });
+  }
   return { state: next, events, tax, worth };
 }
 
@@ -383,8 +408,10 @@ export function projectAtProgress(baseline, progress, difficultyId, opts = {}) {
 
 
 /**
- * First projected year index (1-based years from baseline) where Cash (`cash`) ≤ 0.
- * snapshots[0] is the leave baseline; snapshots[k] is after k years.
+ * First projected year index (1-based years from baseline) where Cash (`cash`) ≤ 0
+ * after that year's full cashflow — including salary (see projectOneYear).
+ * snapshots[0] is the leave baseline; snapshots[k] is after k years / at door k.
+ * Glass wall sits past door k-1 (last enterable) and blocks door k.
  * @param {Array<{state?:object, worth?:object}>} snapshots
  * @returns {number} index k >= 1, or -1 if never insolvent
  */

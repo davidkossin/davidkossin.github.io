@@ -10,6 +10,7 @@ import {
 import { projectYears, computeWorth, cloneState, findBankInsolvencyIndex } from '../finance/Engine.js';
 import { currentNode, enterYearRoom, commitHallwayNode } from '../state/GameState.js';
 import { autoSave } from '../state/SaveSystem.js';
+import { log as debugLog } from '../debug/Logger.js';
 
 export class HallwayScene {
   constructor() {
@@ -89,6 +90,22 @@ export class HallwayScene {
     this.glassWall = buildGlassWall(this.world, this.snapshots);
     this._glassMsgQueued = false;
     this._glassDialogShowing = false;
+    debugLog('hallway_enter', {
+      leaveYear: this.leaveYear,
+      leaveAge: this.leaveAge,
+      baselineCash: this.baseline?.cash ?? null,
+      baselineSalary: this.baseline?.salary ?? null,
+      baselineSpending: this.baseline?.annualSpending ?? null,
+      snapshotCount: this.snapshots.length,
+      glassYear: this.glassWall?.year ?? null,
+      glassYearIndex: this.glassWall?.yearIndex ?? null,
+      cashAtYears: this.snapshots.slice(0, 8).map((s, i) => ({
+        i,
+        year: s.state?.year,
+        cash: s.state?.cash,
+        salary: s.state?.salary,
+      })),
+    });
     autoSave(game, 'end');
   }
 
@@ -171,9 +188,16 @@ export class HallwayScene {
     this.player?.clearKeys();
     this.setInputBlocked(true);
     const y = this.glassWall.year;
+    debugLog('glass_wall', {
+      year: y,
+      yearIndex: this.glassWall.yearIndex,
+      age: this.glassWall.age,
+    });
     await dialog.show(
-      `Cash would be empty by ${y}.\nEnter a previous year's door, make decisions, and get more Cash before you can continue.`,
-      { title: 'Glass Wall' }
+      `Beyond this point you will be out of Cash (by ${y}).\n` +
+        `You cannot continue until you make a financial decision:\n` +
+        `enter an earlier year's door into the Decision Room and refill your Cash, then return.`,
+      { title: 'Out of Cash' }
     );
     this._glassDialogShowing = false;
     this.player?.clearKeys();
@@ -206,6 +230,14 @@ export class HallwayScene {
         this.setInputBlocked(false);
         return null;
       }
+      debugLog('door_enter', {
+        year: obj.year,
+        age: obj.age,
+        yearIndex: obj.yearIndex,
+        cash: state.cash,
+        salary: state.salary,
+        spending: state.annualSpending,
+      });
       enterYearRoom(game, state);
       autoSave(game, 'begin');
       this.leave();
@@ -388,23 +420,40 @@ function drawEventAuras(ctx, world, auras, camX, camY, animTime) {
 
 
 /**
- * Place a corridor-wide glass barrier just south of the first insolvent year's door.
- * Door i corresponds to snapshots[i+1] (yearIndex = i+1).
+ * Corridor-wide glass barrier past the last enterable year-door.
+ *
+ * Door i ↔ snapshots[i+1] (yearIndex = i+1). Each door is Jan 1 of that year;
+ * projectOneYear already folds that year's salary into cash before the snapshot,
+ * matching "salary paid while walking between doors, before the next door".
+ *
+ * findBankInsolvencyIndex → first k where Cash ≤ 0 after that year's cashflow
+ * (incl. salary). Last enterable door = yearIndex k-1; wall sits north of that
+ * door's collider (hallway gap), not overlapping it, so the player can enter
+ * cleanly; further north toward the insolvent year is blocked.
  */
 function buildGlassWall(world, snapshots) {
   const k = findBankInsolvencyIndex(snapshots);
   if (k < 1) return null;
-  const i = k - 1; // door index
   const foyer = world.foyer || 5;
   const segment = world.segment || 3;
-  const yTile = world.rows - 1 - foyer - i * segment - 1;
-  // Barrier across the walkway, one tile south of the door tile (player approaches from south)
   const walkLeft = world.walkLeft ?? 5;
   const walkRight = world.walkRight ?? 8;
   const st = snapshots[k].state || {};
+  // Door collider: y ∈ [yTile*TILE, yTile*TILE+22] (see World.buildHallway)
+  const iSafe = k - 2; // door index for last year with Cash > 0; -1 if none
+  let y;
+  if (iSafe >= 0) {
+    const yTile = world.rows - 1 - foyer - iSafe * segment - 1;
+    // North of last safe door (smaller y); clear of its 22px-tall collider
+    y = yTile * TILE - 10;
+  } else {
+    // Even the first door is insolvent — block approach from the south
+    const yTile0 = world.rows - 1 - foyer - 1;
+    y = yTile0 * TILE + 24;
+  }
   return {
     x: walkLeft * TILE,
-    y: (yTile + 1) * TILE - 4,
+    y,
     w: (walkRight - walkLeft + 1) * TILE,
     h: 8,
     year: st.year,

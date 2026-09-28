@@ -39,6 +39,7 @@ import { getDifficulty } from '../finance/Difficulty.js';
 import { commitRoomDecisions } from '../state/GameState.js';
 import { autoSave } from '../state/SaveSystem.js';
 import { formatMoneyDisplay } from '../render/Dialog.js';
+import { log as debugLog } from '../debug/Logger.js';
 
 export class RoomScene {
   constructor() {
@@ -557,26 +558,46 @@ export class RoomScene {
       proceeds = Math.round(held * (Math.max(0, Math.min(100, pct)) / 100));
     }
 
-    const gains = await dialog.prompt('Realized gains on this sale ($)?', {
-      title: 'Capital Gains',
-      defaultValue: '0',
-      type: 'money',
-    });
+    const saleLine = `Sale amount: ${formatMoneyDisplay(proceeds)}`;
+    const gains = await dialog.prompt(
+      `${saleLine}\nRealized gains on this sale ($)?`,
+      {
+        title: 'Capital Gains',
+        defaultValue: '0',
+        type: 'money',
+      }
+    );
     if (gains == null) return;
 
-    const yearsHeld = await dialog.prompt('Years held?', {
-      title: 'Capital Gains',
-      defaultValue: '1',
-      type: 'number',
-    });
-    if (yearsHeld == null) return;
+    // CGT only cares short vs long (≥1yr); map to yearsHeld for estimateCapitalGainsTax
+    const holding = await dialog.menu(
+      `${saleLine}\nHolding period for capital gains?`,
+      [
+        { label: 'Short-term (< 1 year)', value: 'short' },
+        { label: 'Long-term (≥ 1 year)', value: 'long' },
+        { label: 'Cancel', value: null },
+      ],
+      { title: 'Capital Gains' }
+    );
+    if (!holding) return;
+    const yearsHeld = holding === 'long' ? 1 : 0;
 
     const result = sellStock(
       game.portfolio,
-      { proceeds, gains: Math.max(0, gains), yearsHeld: Math.max(0, yearsHeld) },
+      { proceeds, gains: Math.max(0, gains), yearsHeld },
       diff
     );
     game.portfolio = result.state;
+    debugLog('sell_stock', {
+      proceeds,
+      gains: Math.max(0, gains),
+      holding: holding,
+      yearsHeld,
+      cgt: result.tax?.total,
+      longTerm: !!result.tax?.longTerm,
+      netCash: result.netCash,
+      cashAfter: result.state?.cash,
+    });
     await dialog.show(
       `Sold ${formatMoneyDisplay(result.proceeds)}.\n` +
         `CGT ${result.tax.longTerm ? 'LT' : 'ST'}: ${formatMoneyDisplay(result.tax.total)}\n` +

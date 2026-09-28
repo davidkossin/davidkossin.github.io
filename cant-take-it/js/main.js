@@ -11,6 +11,12 @@ import { HallwayScene } from './scenes/HallwayScene.js';
 import { EndingScene } from './scenes/EndingScene.js';
 import { PauseMenu } from './scenes/PauseMenu.js';
 import { VirtualPad } from './input/VirtualPad.js';
+import {
+  initDebugFromEnvironment,
+  drawOverlay as drawDebugOverlay,
+  log as debugLog,
+  isEnabled as debugOn,
+} from './debug/Logger.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -70,6 +76,8 @@ const virtualPad = new VirtualPad(virtualPadEl);
 virtualPad.mount();
 // Re-fit after pad / hint visibility changes layout
 requestAnimationFrame(fitCanvas);
+
+initDebugFromEnvironment();
 
 const dialog = new Dialog();
 const title = new TitleScene({});
@@ -182,6 +190,7 @@ window.addEventListener('keydown', async (e) => {
 });
 
 async function transition(to) {
+  debugLog('scene', { to, from: mode });
   if (to === 'hallway') {
     room.leave();
     mode = 'hallway';
@@ -248,12 +257,15 @@ function loop() {
   ctx.fillText('v' + GAME_VERSION, VIEW_W - 4, CANVAS_H - 3);
   ctx.restore();
 
+  if (debugOn()) drawDebugOverlay(ctx, VIEW_W, CANVAS_H);
+
   requestAnimationFrame(loop);
 }
 
 loop();
 startTitle().catch((err) => {
   console.error(err);
+  debugLog('error', { where: 'boot', message: String(err && err.message || err) });
   ctx.fillStyle = '#c04040';
   ctx.font = '8px monospace';
   ctx.fillText('Boot error — see console', 20, 40);
