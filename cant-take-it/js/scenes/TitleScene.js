@@ -1,6 +1,12 @@
 import { PALETTE, VIEW_W, VIEW_H, CANVAS_H } from '../config.js';
-import { hasSaves, listSaves, loadSave } from '../state/SaveSystem.js';
+import { deleteSave, hasSaves, listSaves, loadSave } from '../state/SaveSystem.js';
 import { makeTile } from '../render/Assets.js';
+
+const MAX_VISIBLE_SAVES = 10;
+
+function saveIdentification(save) {
+  return `${save.label} — ${save.playerName} (age ${save.age})`;
+}
 
 export class TitleScene {
   constructor(game) {
@@ -13,11 +19,15 @@ export class TitleScene {
   }
 
   async runMenu(dialog) {
-    const opts = [{ label: 'New Game', value: 'new' }];
-    if (hasSaves()) opts.push({ label: 'Load Game', value: 'load' });
-    opts.push({ label: 'How to Play', value: 'help' });
-
     while (true) {
+      // Rebuild the title menu after save management so its save-dependent
+      // entries disappear immediately when the final save is deleted.
+      const opts = [{ label: 'New Game', value: 'new' }];
+      if (hasSaves()) {
+        opts.push({ label: 'Load Game', value: 'load' });
+        opts.push({ label: 'Manage Saves', value: 'manage' });
+      }
+      opts.push({ label: 'How to Play', value: 'help' });
       const choice = await dialog.menu(
         'A life of choices.\nYou can\'t take it with you.',
         opts,
@@ -32,6 +42,10 @@ export class TitleScene {
         );
         continue;
       }
+      if (choice === 'manage') {
+        await this.manageSaves(dialog);
+        continue;
+      }
       if (choice === 'load') {
         const saves = listSaves();
         if (!saves.length) {
@@ -41,8 +55,8 @@ export class TitleScene {
         const pick = await dialog.menu(
           'Choose a save:',
           [
-            ...saves.slice(0, 10).map((s) => ({
-              label: `${s.label} — ${s.playerName} (age ${s.age})`,
+            ...saves.slice(0, MAX_VISIBLE_SAVES).map((s) => ({
+              label: saveIdentification(s),
               value: s.id,
             })),
             { label: 'Cancel', value: null },
@@ -56,6 +70,53 @@ export class TitleScene {
           continue;
         }
         return { action: 'load', game: loaded };
+      }
+    }
+  }
+
+  async manageSaves(dialog) {
+    while (true) {
+      // Read the list on every pass so the menu reflects deletions immediately.
+      const saves = listSaves();
+      if (!saves.length) {
+        await dialog.show('No saves found.', { title: 'Manage Saves' });
+        return;
+      }
+
+      const pick = await dialog.menu(
+        'Choose a save to delete:',
+        [
+          ...saves.slice(0, MAX_VISIBLE_SAVES).map((s) => ({
+            label: saveIdentification(s),
+            value: s.id,
+          })),
+          { label: 'Back', value: null },
+        ],
+        { title: 'Manage Saves' }
+      );
+      if (!pick) return;
+
+      // Resolve the selected entry from the current list before confirming;
+      // this keeps the confirmation text tied to the id being deleted.
+      const save = saves.find((s) => s.id === pick);
+      if (!save) continue;
+
+      const confirmed = await dialog.menu(
+        `Delete ${saveIdentification(save)}?`,
+        [
+          { label: 'Delete Save', value: true },
+          { label: 'Cancel', value: false },
+        ],
+        // Cancellation is the safe default for this destructive action.
+        { title: 'Manage Saves', selected: 1 }
+      );
+      if (!confirmed) continue;
+
+      deleteSave(save.id);
+      await dialog.show('Save deleted.', { title: 'Manage Saves' });
+      if (!hasSaves()) {
+        await dialog.show('No saves found.', { title: 'Manage Saves' });
+        return;
       }
     }
   }

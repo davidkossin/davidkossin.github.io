@@ -305,9 +305,10 @@ export function projectOneYear(state, difficultyId, opts = {}) {
     let left = need;
     // Draw savings/brokerage before Cash so a single deficit year does not
     // zero Cash (and trip the hallway glass wall) while liquid reserves remain.
+    // Retired: 401(k) tops up Cash next (before Cash is drained) so retirement
+    // accounts fund the gap instead of emptying checking first.
     // Salary surplus still lands in Cash; Cash is the last liquid buffer spent.
-    const order = ['savings', 'stocksTotal', 'cash'];
-    for (const key of order) {
+    for (const key of ['savings', 'stocksTotal']) {
       if (left <= 0) break;
       const have = next[key] || 0;
       const take = Math.min(have, left);
@@ -321,10 +322,21 @@ export function projectOneYear(state, difficultyId, opts = {}) {
       next[key] = have - take;
       left -= take;
     }
-    // Retired: auto-withdraw from 401(k) → Cash to cover remaining shortfall (taxable)
+    // Retired: auto-withdraw from 401(k) → Cash to cover remaining shortfall (taxable).
+    // Proceeds are deposited then immediately applied to the unpaid shortfall so Cash
+    // is not left inflated after the year's bills (prior Cash cushion is preserved
+    // when the withdrawal covers `left`).
     if (left > 0 && next.retired && (next.k401Balance || 0) > 0) {
-      const drawn = withdraw401kToCover(next, left, difficulty, events);
-      left = Math.max(0, left - drawn);
+      withdraw401kToCover(next, left, difficulty, events);
+      const applied = Math.min(next.cash || 0, left);
+      next.cash = (next.cash || 0) - applied;
+      left = Math.max(0, left - applied);
+    }
+    if (left > 0) {
+      const have = next.cash || 0;
+      const take = Math.min(have, left);
+      next.cash = have - take;
+      left -= take;
     }
     if (left > 0) {
       next.otherDebt = (next.otherDebt || 0) + left;

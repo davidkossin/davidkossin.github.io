@@ -10,6 +10,17 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
+## [0.5.5] — 2026-09-28
+
+### Added
+- **Manage Saves** on the title screen: browse the newest saved games and delete an individual save with an explicit, Cancel-default confirmation; the save-dependent title options refresh after the last save is removed.
+
+### Fixed
+- Retirement shortfall no longer **inflates Cash** via 401(k): withdrawals were deposited into Cash after savings/stocks/Cash were already drained, without applying proceeds to the unpaid bills — Cash oscillated upward (e.g. ~$12k→~$89k) while net stayed deeply negative and the glass wall never appeared. Drain order is now **savings → taxable stocks → 401(k) → Cash**; 401(k) proceeds cover the remaining shortfall (prior Cash cushion kept when the draw is enough). Glass still triggers when Cash ≤ $0 after those buffers.
+
+### Changed
+- Cache-bust / `GAME_VERSION` bumped to **0.5.5**
+
 ## [0.5.4] — 2026-09-28
 
 ### Added

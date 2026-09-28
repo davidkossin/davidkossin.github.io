@@ -100,7 +100,7 @@ Vanilla ES modules + Canvas. No build step. GitHub Pages serves the folder as st
    - Scaled by `expensePressure × childCostInflator`.
 10. **College tuition (ages 18–21):** `NATIONAL_AVG_COLLEGE_COST` ($11,610 — College Board 2024–25 public 4-year in-state average tuition & fees) × `expensePressure` × `childCostInflator`, added to annual outflow. One-shot log “{name} goes to college” at age 18; yearly “{name} — college tuition”. **Not** double-counted with USDA child bands (0–17 only).
 11. Income tax (federal brackets + ZIP state) + property tax.
-12. Cash flow: inflow = salary (or 0 if retired) + simplified SS; outflow = spending × pressure + mortgage + other loans + taxes + child costs + 401(k) deferral. **Surplus → Cash**; deficit drains cash → savings → stocks (basis adjusted). If **retired** and still short: withdraw from 401(k) → Cash (taxable ordinary income) before adding `otherDebt`.
+12. Cash flow: inflow = salary (or 0 if retired) + simplified SS; outflow = spending × pressure + mortgage + other loans + taxes + child costs + 401(k) deferral. **Surplus → Cash**; deficit drains **savings → taxable stocks → (retired: 401(k) → Cash, proceeds applied to shortfall) → Cash** (stocks basis adjusted). Remaining gap → `otherDebt`.
 
 ### Hallway life-event auras
 
