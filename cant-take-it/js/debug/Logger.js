@@ -13,6 +13,12 @@ let buffer = [];
 let enabled = false;
 /** @type {Array<{t:string, type:string, [k:string]: unknown}>} */
 let recentOverlay = [];
+/** Brief on-canvas confirmation after toggle (ms timestamp + label). */
+let toastUntil = 0;
+let toastLabel = '';
+let toastPulse = 0;
+/** @type {object|null} last hallway projection summary for late exports */
+let hallwayStash = null;
 
 function loadPersisted() {
   try {
@@ -55,7 +61,9 @@ export function enable(reason = 'manual') {
   if (enabled) return;
   enabled = true;
   persistFlag();
+  flashToast('DEBUG ON');
   log('debug', { on: true, reason, version: GAME_VERSION });
+  flushHallwayStashToLog();
 }
 
 export function disable(reason = 'manual') {
@@ -64,6 +72,7 @@ export function disable(reason = 'manual') {
   enabled = false;
   persistFlag();
   persist();
+  flashToast('DEBUG OFF');
 }
 
 export function toggle(reason = 'hotkey') {
@@ -93,8 +102,22 @@ export function log(type, payload = {}) {
   }
 }
 
+export function setHallwayStash(summary) {
+  hallwayStash = summary ? { ...summary, stashedAt: new Date().toISOString() } : null;
+}
+
+export function getHallwayStash() {
+  return hallwayStash;
+}
+
 export function getLogs() {
   return buffer.slice();
+}
+
+/** Re-log stashed hallway summary into the ring buffer (e.g. debug enabled mid-hallway). */
+export function flushHallwayStashToLog() {
+  if (!hallwayStash || !enabled) return;
+  log('hallway_stash', hallwayStash);
 }
 
 export function clearLogs() {
@@ -112,6 +135,11 @@ function stampFileName() {
 
 export function exportDownload() {
   persist();
+  if (hallwayStash && enabled) {
+    // Ensure late exports include hallway math even if debug was off at enter
+    const already = buffer.some((e) => e.type === 'hallway_stash' || e.type === 'hallway_enter');
+    if (!already) log('hallway_stash', hallwayStash);
+  }
   const doc = {
     meta: {
       game: "You Can't Take It With You",
@@ -120,6 +148,7 @@ export function exportDownload() {
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
       entryCount: buffer.length,
       debugEnabled: enabled,
+      hallwayStash: hallwayStash,
     },
     log: buffer.slice(),
   };
@@ -151,26 +180,84 @@ export async function copyToClipboard() {
   log('export', { via: 'clipboard', entries: buffer.length });
 }
 
-/** Draw DEBUG badge + last few lines (call from main loop when enabled). */
+function flashToast(label) {
+  toastLabel = label;
+  toastUntil = Date.now() + 1800;
+  toastPulse = 0;
+}
+
+/** Draw DEBUG badge + last few lines (call from main loop). Toast draws even when OFF. */
 export function drawOverlay(ctx, viewW, canvasH) {
-  if (!enabled) return;
+  const now = Date.now();
   ctx.save();
-  ctx.font = '5px "Press Start 2P", monospace';
+
+  // Always draw brief ON/OFF toast so toggle is unmistakable
+  if (now < toastUntil && toastLabel) {
+    const life = (toastUntil - now) / 1800;
+    const alpha = Math.min(1, life * 2);
+    ctx.fillStyle = `rgba(10, 8, 24, ${0.82 * alpha})`;
+    ctx.fillRect(viewW / 2 - 70, 10, 140, 22);
+    ctx.strokeStyle = toastLabel.includes('OFF')
+      ? `rgba(255, 80, 160, ${alpha})`
+      : `rgba(80, 255, 220, ${alpha})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(viewW / 2 - 70, 10, 140, 22);
+    ctx.font = '8px "Press Start 2P", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = toastLabel.includes('OFF')
+      ? `rgba(255, 160, 200, ${alpha})`
+      : `rgba(120, 255, 230, ${alpha})`;
+    ctx.fillText(toastLabel, viewW / 2, 21);
+  }
+
+  if (!enabled) {
+    ctx.restore();
+    return;
+  }
+
+  toastPulse = (toastPulse + 1) % 120;
+  const pulse = 0.55 + 0.45 * Math.abs(Math.sin((toastPulse / 120) * Math.PI * 2));
+
+  // Top cyan/magenta border strip (readable on hallway + decision room)
+  ctx.fillStyle = `rgba(0, 255, 220, ${0.35 + pulse * 0.45})`;
+  ctx.fillRect(0, 0, viewW, 3);
+  ctx.fillStyle = `rgba(255, 60, 200, ${0.3 + pulse * 0.4})`;
+  ctx.fillRect(0, 3, viewW, 2);
+
+  // Corner panel — bottom-left, large bright badge
+  const panelH = 28 + Math.min(6, recentOverlay.length) * 7;
+  const panelW = Math.min(viewW - 8, 210);
+  const px = 3;
+  const py = canvasH - panelH - 3;
+  ctx.fillStyle = 'rgba(8, 6, 20, 0.88)';
+  ctx.fillRect(px, py, panelW, panelH);
+  ctx.strokeStyle = `rgba(80, 255, 230, ${0.7 + pulse * 0.3})`;
+  ctx.lineWidth = 2;
+  ctx.strokeRect(px + 0.5, py + 0.5, panelW - 1, panelH - 1);
+  ctx.strokeStyle = `rgba(255, 80, 200, ${0.45 + pulse * 0.35})`;
+  ctx.lineWidth = 1;
+  ctx.strokeRect(px + 3.5, py + 3.5, panelW - 7, panelH - 7);
+
   ctx.textAlign = 'left';
-  ctx.textBaseline = 'bottom';
-  ctx.fillStyle = 'rgba(80, 220, 255, 0.85)';
-  ctx.fillText('DEBUG  ` /F2  Shift+D export', 4, canvasH - 3);
+  ctx.textBaseline = 'top';
+  ctx.font = '7px "Press Start 2P", monospace';
+  ctx.fillStyle = `rgba(100, 255, 240, ${0.9 + pulse * 0.1})`;
+  ctx.fillText('DEBUG ON', px + 7, py + 6);
+  ctx.font = '5px "Press Start 2P", monospace';
+  ctx.fillStyle = 'rgba(220, 240, 255, 0.92)';
+  ctx.fillText('Shift+D export  ·  `/F2 toggle', px + 7, py + 16);
 
   ctx.font = '4px "Press Start 2P", monospace';
-  ctx.fillStyle = 'rgba(200, 230, 255, 0.55)';
-  let y = canvasH - 12;
+  ctx.fillStyle = 'rgba(180, 220, 255, 0.75)';
+  let y = py + 26;
   for (let i = recentOverlay.length - 1; i >= 0; i--) {
     const e = recentOverlay[i];
     const line = `${e.type}${e.year != null ? ' y' + e.year : ''}${
       e.cashAfter != null ? ' cash=' + e.cashAfter : e.cash != null ? ' cash=' + e.cash : ''
     }${e.net != null ? ' net=' + e.net : ''}`;
-    ctx.fillText(line.slice(0, 56), 4, y);
-    y -= 6;
+    ctx.fillText(line.slice(0, 48), px + 7, y);
+    y += 7;
   }
   ctx.restore();
 }
@@ -200,9 +287,11 @@ export function initDebugFromEnvironment() {
       const tag = (e.target && e.target.tagName) || '';
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
-      if (e.key === 'F2' || e.key === '`') {
+      // Capture phase: works anytime during play (dialogs, hallway, room) unless typing in an input
+      if (e.key === 'F2' || e.code === 'F2' || e.key === '`' || e.code === 'Backquote') {
         e.preventDefault();
-        toggle(e.key === 'F2' ? 'F2' : 'backtick');
+        e.stopPropagation();
+        toggle(e.key === 'F2' || e.code === 'F2' ? 'F2' : 'backtick');
         return;
       }
       if (enabled && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
@@ -230,5 +319,7 @@ if (typeof window !== 'undefined') {
     clearLogs,
     exportDownload,
     copyToClipboard,
+    getHallwayStash,
+    setHallwayStash,
   };
 }

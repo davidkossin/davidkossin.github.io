@@ -15,7 +15,6 @@ import {
   initDebugFromEnvironment,
   drawOverlay as drawDebugOverlay,
   log as debugLog,
-  isEnabled as debugOn,
 } from './debug/Logger.js';
 
 const canvas = document.getElementById('game');
@@ -257,7 +256,8 @@ function loop() {
   ctx.fillText('v' + GAME_VERSION, VIEW_W - 4, CANVAS_H - 3);
   ctx.restore();
 
-  if (debugOn()) drawDebugOverlay(ctx, VIEW_W, CANVAS_H);
+  // Always call — draws toast on toggle OFF as well as the DEBUG ON panel
+  drawDebugOverlay(ctx, VIEW_W, CANVAS_H);
 
   requestAnimationFrame(loop);
 }

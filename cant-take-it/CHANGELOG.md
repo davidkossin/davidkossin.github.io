@@ -12,6 +12,23 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ---
 
+## [0.5.2] — 2026-09-27
+
+### Added
+- Hallway of Time **south-wall door**: return to the previous Decision Room (leave-year baseline / portfolio when the hallway was entered); same confirm + interact as year doors; touch-friendly
+
+### Fixed
+- Yearly **shortfall** now draws **savings → taxable stocks → Cash** (was Cash first). A deficit no longer zeroes Cash—and places the glass wall immediately—while savings/brokerage remain
+- Debug export always includes a **hallwayStash** (baseline + projected cash/savings/salary + glass year), even if debug was turned on mid-hallway
+- Glass wall **Out of Cash** bump message: detection used the wrong edge (player bottom vs glass top) so it almost never fired; now queues when a northward step is blocked by the glass (or while abutting from the south and pressing up), with step-away debounce so it does not spam
+- Debug mode visibility: larger cyan/magenta DEBUG ON panel + top border strip; brief on-canvas **DEBUG ON / DEBUG OFF** toast on toggle; overlay always drawn so OFF toast is visible
+
+### Changed
+- Glass / insolvency placement documented as **salary-inclusive**: `projectOneYear` applies salary into Cash before the snapshot; `findBankInsolvencyIndex` / `buildGlassWall` use those post-salary snapshots only (comment + debug `glass_wall_place` with cash at last safe door vs insolvent year)
+- Cache-bust / `GAME_VERSION` bumped to **0.5.2**
+
+---
+
 ## [0.5.1] — 2026-09-27
 
 ### Added

@@ -280,6 +280,8 @@ export function projectOneYear(state, difficultyId, opts = {}) {
 
   // Cash flow: salary + SS in; spending + taxes + mortgage + loans + deferral out
   // Deferral reduces disposable income (paycheck deduction) — do not also cut salary inflow
+  // ORDER for glass wall: salary is included in inflow → Cash *before* the snapshot
+  // is stored; findBankInsolvencyIndex / buildGlassWall must use this post-salary Cash.
   const inflow =
     (next.retired ? 0 : next.salary || 0) + (next.socialSecurity || 0);
   const stated = next.annualSpending || 0;
@@ -301,7 +303,10 @@ export function projectOneYear(state, difficultyId, opts = {}) {
   } else {
     const need = Math.round(-net);
     let left = need;
-    const order = ['cash', 'savings', 'stocksTotal'];
+    // Draw savings/brokerage before Cash so a single deficit year does not
+    // zero Cash (and trip the hallway glass wall) while liquid reserves remain.
+    // Salary surplus still lands in Cash; Cash is the last liquid buffer spent.
+    const order = ['savings', 'stocksTotal', 'cash'];
     for (const key of order) {
       if (left <= 0) break;
       const have = next[key] || 0;
@@ -410,6 +415,7 @@ export function projectAtProgress(baseline, progress, difficultyId, opts = {}) {
 /**
  * First projected year index (1-based years from baseline) where Cash (`cash`) ≤ 0
  * after that year's full cashflow — including salary (see projectOneYear).
+ * Never test pre-salary cash: each snapshots[k] already has that year's salary in Cash.
  * snapshots[0] is the leave baseline; snapshots[k] is after k years / at door k.
  * Glass wall sits past door k-1 (last enterable) and blocks door k.
  * @param {Array<{state?:object, worth?:object}>} snapshots

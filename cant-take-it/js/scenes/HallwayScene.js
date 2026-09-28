@@ -10,7 +10,7 @@ import {
 import { projectYears, computeWorth, cloneState, findBankInsolvencyIndex } from '../finance/Engine.js';
 import { currentNode, enterYearRoom, commitHallwayNode } from '../state/GameState.js';
 import { autoSave } from '../state/SaveSystem.js';
-import { log as debugLog } from '../debug/Logger.js';
+import { log as debugLog, setHallwayStash } from '../debug/Logger.js';
 
 export class HallwayScene {
   constructor() {
@@ -32,6 +32,8 @@ export class HallwayScene {
     this.glassWall = null;
     this._glassMsgQueued = false;
     this._glassDialogShowing = false;
+    /** After a bump dialog (or while still touching), require stepping away before re-show. */
+    this._glassCanShow = true;
   }
 
   enter(game) {
@@ -88,8 +90,40 @@ export class HallwayScene {
     this.eventBanner = null;
     this.visual = this.snapshots[0];
     this.glassWall = buildGlassWall(this.world, this.snapshots);
+    {
+      const g = this.glassWall;
+      const cashAtYears = this.snapshots.slice(0, 12).map((s, i) => ({
+        i,
+        year: s.state?.year,
+        age: s.state?.age,
+        cash: s.state?.cash,
+        savings: s.state?.savings,
+        stocks: s.state?.stocksTotal,
+        salary: s.state?.salary,
+        spending: s.state?.annualSpending,
+      }));
+      setHallwayStash({
+        leaveYear: this.leaveYear,
+        leaveAge: this.leaveAge,
+        baseline: {
+          cash: this.baseline?.cash,
+          savings: this.baseline?.savings,
+          stocks: this.baseline?.stocksTotal,
+          salary: this.baseline?.salary,
+          spending: this.baseline?.annualSpending,
+          employed: this.baseline?.employed,
+          retired: this.baseline?.retired,
+        },
+        glassYear: g?.year ?? null,
+        glassYearIndex: g?.yearIndex ?? null,
+        cashAtYears,
+      });
+    }
+
     this._glassMsgQueued = false;
     this._glassDialogShowing = false;
+    this._glassCanShow = true;
+    const gIdx = this.glassWall?.yearIndex ?? -1;
     debugLog('hallway_enter', {
       leaveYear: this.leaveYear,
       leaveAge: this.leaveAge,
@@ -98,7 +132,14 @@ export class HallwayScene {
       baselineSpending: this.baseline?.annualSpending ?? null,
       snapshotCount: this.snapshots.length,
       glassYear: this.glassWall?.year ?? null,
-      glassYearIndex: this.glassWall?.yearIndex ?? null,
+      glassYearIndex: gIdx >= 0 ? gIdx : null,
+      cashAtLastSafeDoor:
+        gIdx >= 2
+          ? this.snapshots[gIdx - 1]?.state?.cash ?? null
+          : gIdx >= 1
+            ? this.snapshots[0]?.state?.cash ?? null
+            : null,
+      cashAtInsolventYear: gIdx >= 1 ? this.snapshots[gIdx]?.state?.cash ?? null : null,
       cashAtYears: this.snapshots.slice(0, 8).map((s, i) => ({
         i,
         year: s.state?.year,
@@ -161,16 +202,33 @@ export class HallwayScene {
     this.eventBanner = best ? best.messages.join(' · ') : null;
   }
 
-  /** Queue a message when the player pushes north into the insolvency glass wall. */
+  /**
+   * Queue Out of Cash when the player is blocked by the glass while moving north.
+   * Previous justSouth band checked player-bottom vs glass-top (wrong edge) so the
+   * message almost never fired. Debounce: re-arm only after stepping away (or after
+   * dialog closes and the player leaves contact).
+   */
   _detectGlassWallBump() {
-    if (!this.glassWall || this._glassDialogShowing || this._glassMsgQueued) return;
+    if (!this.glassWall || this._glassDialogShowing) return;
     const g = this.glassWall;
     const p = this.player;
     const inX = p.x + p.w > g.x && p.x < g.x + g.w;
-    // Just south of the barrier (corridor runs south→north, smaller y is north)
-    const justSouth = p.y + p.h <= g.y + 3 && p.y + p.h >= g.y - 6;
-    if (inX && justSouth && p.pressed(KEYS.up)) {
+    // Corridor: smaller y = north. Player approaches from south; blocked when a
+    // northward step would overlap the glass AABB.
+    const step = Math.max(p.speed || 1, 1);
+    const blockedByGlass =
+      p.pressed(KEYS.up) && hitsGlassWall(g, p.x, p.y - step, p.w, p.h);
+    // Abutting / overlapping from the south (player top near glass bottom)
+    const abutSouth =
+      inX && p.y <= g.y + g.h + 6 && p.y + p.h >= g.y - 2;
+
+    if (!abutSouth && !blockedByGlass) {
+      this._glassCanShow = true;
+      return;
+    }
+    if ((blockedByGlass || (abutSouth && p.pressed(KEYS.up))) && this._glassCanShow) {
       this._glassMsgQueued = true;
+      this._glassCanShow = false;
     }
   }
 
@@ -200,6 +258,8 @@ export class HallwayScene {
       { title: 'Out of Cash' }
     );
     this._glassDialogShowing = false;
+    // Stay disarmed until player steps away from the wall (avoids instant re-fire)
+    this._glassCanShow = false;
     this.player?.clearKeys();
     this.setInputBlocked(false);
   }
@@ -237,6 +297,33 @@ export class HallwayScene {
         cash: state.cash,
         salary: state.salary,
         spending: state.annualSpending,
+      });
+      enterYearRoom(game, state);
+      autoSave(game, 'begin');
+      this.leave();
+      return { goto: 'room' };
+    }
+
+    if (obj.kind === 'south-door') {
+      // Return to the Decision Room just left — leave baseline / current portfolio
+      const year = obj.year ?? this.leaveYear;
+      const age = obj.age ?? this.leaveAge;
+      const ok = await dialog.confirm(
+        `Return to Decision Room for ${year} (age ${age})?\nRestores your finances from when you left that room.`,
+        { title: 'Decision Room', yes: 'Return', no: 'Stay' }
+      );
+      if (!ok) {
+        this.setInputBlocked(false);
+        return null;
+      }
+      const state = cloneState(this.baseline || game.portfolio);
+      state.year = year;
+      state.age = age;
+      debugLog('south_door_return', {
+        year,
+        age,
+        cash: state.cash,
+        salary: state.salary,
       });
       enterYearRoom(game, state);
       autoSave(game, 'begin');
@@ -422,16 +509,18 @@ function drawEventAuras(ctx, world, auras, camX, camY, animTime) {
 /**
  * Corridor-wide glass barrier past the last enterable year-door.
  *
- * Door i ↔ snapshots[i+1] (yearIndex = i+1). Each door is Jan 1 of that year;
- * projectOneYear already folds that year's salary into cash before the snapshot,
- * matching "salary paid while walking between doors, before the next door".
+ * SALARY-INCLUSIVE ORDER (do not regress):
+ * 1) projectOneYear ages the year, then applies salary (+ SS) in cashflow, then
+ *    writes Cash on the snapshot — salary is already in Cash before insolvency.
+ * 2) findBankInsolvencyIndex tests those post-salary snapshots (Cash ≤ 0).
+ * 3) This wall is placed from that index only — never on pre-salary cash.
+ * Door = Jan 1; salary for that year is in the step that produces the door snapshot.
  *
- * findBankInsolvencyIndex → first k where Cash ≤ 0 after that year's cashflow
- * (incl. salary). Last enterable door = yearIndex k-1; wall sits north of that
- * door's collider (hallway gap), not overlapping it, so the player can enter
- * cleanly; further north toward the insolvent year is blocked.
+ * Door i ↔ snapshots[i+1] (yearIndex = i+1). Last enterable door = yearIndex k-1;
+ * wall sits north of that door's collider (hallway gap), not overlapping it.
  */
 function buildGlassWall(world, snapshots) {
+  // Insolvency index is salary-inclusive (see comment above + projectOneYear).
   const k = findBankInsolvencyIndex(snapshots);
   if (k < 1) return null;
   const foyer = world.foyer || 5;
@@ -439,6 +528,9 @@ function buildGlassWall(world, snapshots) {
   const walkLeft = world.walkLeft ?? 5;
   const walkRight = world.walkRight ?? 8;
   const st = snapshots[k].state || {};
+  const cashInsolvent = st.cash ?? null;
+  const cashSafe =
+    k >= 2 ? snapshots[k - 1]?.state?.cash ?? null : snapshots[0]?.state?.cash ?? null;
   // Door collider: y ∈ [yTile*TILE, yTile*TILE+22] (see World.buildHallway)
   const iSafe = k - 2; // door index for last year with Cash > 0; -1 if none
   let y;
@@ -451,6 +543,14 @@ function buildGlassWall(world, snapshots) {
     const yTile0 = world.rows - 1 - foyer - 1;
     y = yTile0 * TILE + 24;
   }
+  debugLog('glass_wall_place', {
+    year: st.year,
+    age: st.age,
+    yearIndex: k,
+    cashAtLastSafeDoor: cashSafe,
+    cashAtInsolventYear: cashInsolvent,
+    wallY: y,
+  });
   return {
     x: walkLeft * TILE,
     y,

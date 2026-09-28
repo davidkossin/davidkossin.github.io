@@ -256,6 +256,7 @@ export function buildHallway(doorCount, firstDoorYear, firstDoorAge) {
     kind: 'end-door',
   });
 
+  // South spawn marker (not interactable — findFacing skips kind:'spawn')
   interactables.push({
     id: 'south-entry',
     x: midX - TILE,
@@ -263,6 +264,21 @@ export function buildHallway(doorCount, firstDoorYear, firstDoorAge) {
     w: 2 * TILE,
     h: TILE,
     kind: 'spawn',
+  });
+
+  // South-wall door → return to the Decision Room just left (leave baseline year)
+  const leaveYear = firstDoorYear - 1;
+  const leaveAge = firstDoorAge - 1;
+  interactables.push({
+    id: 'south-return-door',
+    x: midX - TILE,
+    y: (rows - 1) * TILE - 8,
+    w: 2 * TILE,
+    h: TILE + 8,
+    label: `Decision Room ${leaveYear}`,
+    kind: 'south-door',
+    year: leaveYear,
+    age: leaveAge,
   });
 
   return {
@@ -357,7 +373,7 @@ export function drawWorld(ctx, world, camX, camY, animTime = 0) {
         ctx.drawImage(icon, sx + 9, sy + 4);
       }
       // No wall text — full name shows in [E] prompt only
-    } else if (obj.kind === 'year-door' || obj.kind === 'door' || obj.kind === 'end-door') {
+    } else if (obj.kind === 'year-door' || obj.kind === 'door' || obj.kind === 'end-door' || obj.kind === 'south-door') {
       ctx.drawImage(doorSpr, sx, sy - 4);
     } else if (obj.kind === 'lamp') {
       const isBlue = obj.style === 'blue';
