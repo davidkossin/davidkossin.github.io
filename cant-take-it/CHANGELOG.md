@@ -10,6 +10,12 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
+_(none yet)_
+
+---
+
+## [0.5.0] — 2026-09-27
+
 ### Added
 - Setup: traditional **401(k)** — starting balance, employee contribution (% of salary, annual cap `K401_EMPLOYEE_LIMIT` = $23,500 TY 2025), employer match (match % of deferrals on first X% of salary)
 - Engine: while employed, 401(k) deferral from paycheck + employer match; balance grows with difficulty equity return; included in Portfolio / net worth (illiquid for Decision Room spending)
@@ -24,6 +30,7 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 - Player-facing rename: **The Bank / Bank → Cash** (HUD, setup, dialogs, surplus events, glass wall, charts, ending). Internal field remains `cash`
 - Annual surplus → **Cash** (`cash`) instead of savings
 - Borrow / other loans: full amortizing P&I is an annual cash-flow expense (interest called out in year events for HELOC and share-backed loans)
+- Cache-bust / `GAME_VERSION` bumped to **0.5.0**
 
 ---
 
