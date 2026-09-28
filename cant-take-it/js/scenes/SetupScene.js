@@ -108,7 +108,7 @@ export class SetupScene {
         s.hairLength = result;
         step++;
       } else if (step === 5) {
-        result = await dialog.prompt('Cash on hand ($)?', {
+        result = await dialog.prompt('The Bank — starting cash ($)?', {
           title: 'Finances',
           defaultValue: String(s.cash),
           type: 'money',

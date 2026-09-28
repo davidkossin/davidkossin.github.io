@@ -36,7 +36,7 @@ export function drawWorthChart(ctx, history, opts = {}) {
   };
   const labels = {
     netWorth: 'Net Worth',
-    bank: 'Bank',
+    bank: 'The Bank',
     portfolio: 'Portfolio',
     salary: 'Salary',
   };

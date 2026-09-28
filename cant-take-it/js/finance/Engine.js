@@ -246,8 +246,9 @@ export function projectOneYear(state, difficultyId, opts = {}) {
 
   const net = inflow - outflow;
   if (net >= 0) {
-    next.savings = (next.savings || 0) + Math.round(net);
-    events.push(`Year surplus → savings: +$${fmt(net)}`);
+    // Salary / SS net of expenses lands in The Bank (cash), not savings
+    next.cash = (next.cash || 0) + Math.round(net);
+    events.push(`Year surplus → The Bank: +$${fmt(net)}`);
   } else {
     const need = Math.round(-net);
     let left = need;
@@ -320,6 +321,22 @@ export function projectAtProgress(baseline, progress, difficultyId, opts = {}) {
   });
   const last = snaps[snaps.length - 1];
   return { state: last.state, yearOffset, events: last.events, worth: last.worth };
+}
+
+
+/**
+ * First projected year index (1-based years from baseline) where The Bank (cash) ≤ 0.
+ * snapshots[0] is the leave baseline; snapshots[k] is after k years.
+ * @param {Array<{state?:object, worth?:object}>} snapshots
+ * @returns {number} index k >= 1, or -1 if never insolvent
+ */
+export function findBankInsolvencyIndex(snapshots) {
+  if (!snapshots?.length) return -1;
+  for (let k = 1; k < snapshots.length; k++) {
+    const cash = snapshots[k].state?.cash ?? snapshots[k].worth?.bank ?? 0;
+    if (cash <= 0) return k;
+  }
+  return -1;
 }
 
 /** Decision-room mutations */

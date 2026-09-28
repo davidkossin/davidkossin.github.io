@@ -188,7 +188,7 @@ export class RoomScene {
         );
         if (idx == null) return;
         game.portfolio = sellHome(game.portfolio, idx);
-        await dialog.show('Sold. Equity moved to cash.', { title: 'Sell Home' });
+        await dialog.show('Sold. Equity moved to The Bank.', { title: 'Sell Home' });
       }
     } else if (action === 'stock') {
       const mode = await dialog.menu(
@@ -385,7 +385,7 @@ export class RoomScene {
       `Sold ${formatMoneyDisplay(result.proceeds)}.\n` +
         `CGT ${result.tax.longTerm ? 'LT' : 'ST'}: ${formatMoneyDisplay(result.tax.total)}\n` +
         `(${result.tax.rateNote})\n` +
-        `Net to bank: ${formatMoneyDisplay(result.netCash)}`,
+        `Net to The Bank: ${formatMoneyDisplay(result.netCash)}`,
       { title: 'Sell Stock' }
     );
   }

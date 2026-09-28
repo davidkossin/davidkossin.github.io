@@ -7,7 +7,7 @@ A 16-bit, top-down life & finance RPG (A Link to the Past vibe) playable in the 
 ## How to play
 
 1. **Title** — New Game or Load Game (localStorage).
-2. **Setup** — LTTP-styled prompts with **Back** on every step: name, year, age, appearance, cash, annual household gross salary, savings (+ interest %), homes (rate as %), stocks (total only), family (kid **name** + age), spending, ZIP, difficulty.
+2. **Setup** — LTTP-styled prompts with **Back** on every step: name, year, age, appearance, The Bank (starting cash), annual household gross salary, savings (+ interest %), homes (rate as %), stocks (total only), family (kid **name** + age), spending, ZIP, difficulty.
 3. **Decision Room** — Walk with WASD / arrows. Wall-embedded bank windows (`Enter` / `Z` / `E`):
    - Buy / Sell Home
    - Buy / Sell Stock (capital gains tax on sell)
@@ -15,7 +15,7 @@ A 16-bit, top-down life & finance RPG (A Link to the Past vibe) playable in the 
    - Large Purchase
    - Job / Retire (side wall)
 4. **North door** — “Hallway of Time.” Confirm leaving the year.
-5. **Hallway** — Narrow corridor through a dark purple stippled void. First door = **leave year + 1**. HUD age / year / bank / portfolio project forward (deterministic). Lanterns flicker beside doors.
+5. **Hallway** — Narrow corridor through a dark purple stippled void. First door = **leave year + 1**. HUD age / year / Bank / portfolio project forward (deterministic). A **glass wall** blocks years where The Bank would hit ≤ $0. Lanterns flicker beside doors.
 6. **Esc** — Pause: **Map** (timeline graph; jump back to a prior Hallway node) and **Charts** (net worth over years).
 7. **Age 100** — “End of the Line.” Ending → See your charts / New Game.
 8. **Saves** — Auto-save on entering a year’s room and when entering the hallway (`ycitwy_saves_v2`).
@@ -73,7 +73,7 @@ Vanilla ES modules + Canvas. No build step. GitHub Pages serves the folder as st
 
 ### Net worth & HUD
 
-- **Bank** (HUD) = `cash` only (cash on hand).
+- **The Bank** / **Bank** (HUD) = `cash` only (liquid cash on hand).
 - **Portfolio** (HUD) = net worth = `cash + savings + stocksTotal + homeEquity − otherDebt − otherLoans.principal`.
 - Savings still earn interest; they are not shown as “Bank.”
 - `stocksCostBasis` tracks tax basis: **buy** increases basis by purchase amount; **sell** reduces basis proportionally to `proceeds / stocksTotal`.
@@ -97,11 +97,15 @@ Vanilla ES modules + Canvas. No build step. GitHub Pages serves the folder as st
    - Scaled by `expensePressure × childCostInflator`.
 10. **College tuition (ages 18–21):** `NATIONAL_AVG_COLLEGE_COST` ($11,610 — College Board 2024–25 public 4-year in-state average tuition & fees) × `expensePressure` × `childCostInflator`, added to annual outflow. One-shot log “{name} goes to college” at age 18; yearly “{name} — college tuition”. **Not** double-counted with USDA child bands (0–17 only).
 11. Income tax (federal brackets + ZIP state) + property tax.
-12. Cash flow: inflow = salary (or 0 if retired) + simplified SS; outflow = spending × pressure + mortgage + taxes + child costs. Surplus → savings; deficit drains cash → savings → stocks (basis adjusted).
+12. Cash flow: inflow = salary (or 0 if retired) + simplified SS; outflow = spending × pressure + mortgage + taxes + child costs. **Surplus → The Bank (`cash`)**; deficit drains cash → savings → stocks (basis adjusted).
 
 ### Hallway life-event auras
 
 Deterministic projection logs mark major one-shots as soft cyan/violet/gold bands across the corridor (floor + E/W walls). Crossing a band shows a bottom banner: mortgage/loan paid off, Retired, “{child} goes to college”. Movement is never blocked.
+
+### Hallway insolvency glass wall
+
+Using the same deterministic `projectYears` snapshots as the HUD: the first future year where The Bank (`cash`) would be ≤ 0 after that year’s simulation places a translucent cyan glass barrier across the corridor at/before that year’s door. The player cannot walk past it; bumping shows a message to enter an earlier year’s Decision Room and get cash into The Bank. Earlier doors south of the wall remain usable.
 
 ### Large purchase (cash or financed)
 

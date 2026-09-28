@@ -216,6 +216,21 @@ function loop() {
   } else if (mode === 'hallway' && game) {
     if (!pause.open) hallway.update(game, dialog);
     hallway.render(ctx, game);
+    if (
+      !pause.open &&
+      !interacting &&
+      !dialog.active &&
+      !booting &&
+      hallway.wantsGlassWallMessage()
+    ) {
+      interacting = true;
+      hallway
+        .showGlassWallMessage(dialog)
+        .catch((err) => console.error(err))
+        .finally(() => {
+          interacting = false;
+        });
+    }
   } else if (mode === 'ending') {
     ending.update();
     ending.render(ctx);

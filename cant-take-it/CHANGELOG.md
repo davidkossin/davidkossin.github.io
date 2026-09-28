@@ -10,7 +10,12 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
-_(none yet)_
+### Changed
+- Annual surplus (salary / SS net of expenses & taxes) now goes to **The Bank** (`cash`) instead of savings
+- Player-facing copy: “cash on hand” / Cash → **The Bank** (HUD still shortens to Bank where space is tight)
+
+### Added
+- Hallway of Time **glass wall**: deterministic projection finds the first year The Bank would be ≤ $0; translucent cyan barrier blocks walking past that door, with a message to enter an earlier year and rebuild The Bank
 
 ---
 

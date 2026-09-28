@@ -1,4 +1,4 @@
-import { VIEW_W, VIEW_H, HUD_H, MAX_AGE, TILE } from '../config.js';
+import { VIEW_W, VIEW_H, HUD_H, MAX_AGE, TILE, KEYS } from '../config.js';
 import { Player } from '../render/Player.js';
 import { Hud } from '../render/Hud.js';
 import {
@@ -7,7 +7,7 @@ import {
   isSolid,
   findFacingInteractable,
 } from '../render/World.js';
-import { projectYears, computeWorth, cloneState } from '../finance/Engine.js';
+import { projectYears, computeWorth, cloneState, findBankInsolvencyIndex } from '../finance/Engine.js';
 import { currentNode, enterYearRoom, commitHallwayNode } from '../state/GameState.js';
 import { autoSave } from '../state/SaveSystem.js';
 
@@ -27,6 +27,10 @@ export class HallwayScene {
     this.animTime = 0;
     this.leaveYear = 0;
     this.leaveAge = 0;
+    /** @type {{x:number,y:number,w:number,h:number,year:number,age:number,yearIndex:number}|null} */
+    this.glassWall = null;
+    this._glassMsgQueued = false;
+    this._glassDialogShowing = false;
   }
 
   enter(game) {
@@ -82,6 +86,9 @@ export class HallwayScene {
     this.eventAuras = buildEventAuras(this.world, this.snapshots, this.leaveYear);
     this.eventBanner = null;
     this.visual = this.snapshots[0];
+    this.glassWall = buildGlassWall(this.world, this.snapshots);
+    this._glassMsgQueued = false;
+    this._glassDialogShowing = false;
     autoSave(game, 'end');
   }
 
@@ -102,7 +109,7 @@ export class HallwayScene {
 
   update(game, dialog) {
     this.animTime += 1;
-    const blocked = !!dialog?.active;
+    const blocked = !!dialog?.active || this._glassDialogShowing;
     if (blocked) {
       this.setInputBlocked(true);
     } else {
@@ -110,8 +117,12 @@ export class HallwayScene {
         this.player.clearKeys();
         this.player.inputEnabled = true;
       }
-      this.player.update((x, y, w, h) => isSolid(this.world, x, y, w, h));
+      this.player.update((x, y, w, h) => {
+        if (isSolid(this.world, x, y, w, h)) return true;
+        return hitsGlassWall(this.glassWall, x, y, w, h);
+      });
       this.prompt = findFacingInteractable(this.player, this.world, 22);
+      this._detectGlassWallBump();
     }
 
     const progress = this.world.progressAtY(this.player.y);
@@ -131,6 +142,42 @@ export class HallwayScene {
       }
     }
     this.eventBanner = best ? best.messages.join(' · ') : null;
+  }
+
+  /** Queue a message when the player pushes north into the insolvency glass wall. */
+  _detectGlassWallBump() {
+    if (!this.glassWall || this._glassDialogShowing || this._glassMsgQueued) return;
+    const g = this.glassWall;
+    const p = this.player;
+    const inX = p.x + p.w > g.x && p.x < g.x + g.w;
+    // Just south of the barrier (corridor runs south→north, smaller y is north)
+    const justSouth = p.y + p.h <= g.y + 3 && p.y + p.h >= g.y - 6;
+    if (inX && justSouth && p.pressed(KEYS.up)) {
+      this._glassMsgQueued = true;
+    }
+  }
+
+  wantsGlassWallMessage() {
+    return !!this._glassMsgQueued && !this._glassDialogShowing;
+  }
+
+  async showGlassWallMessage(dialog) {
+    if (!this.glassWall) {
+      this._glassMsgQueued = false;
+      return;
+    }
+    this._glassMsgQueued = false;
+    this._glassDialogShowing = true;
+    this.player?.clearKeys();
+    this.setInputBlocked(true);
+    const y = this.glassWall.year;
+    await dialog.show(
+      `The Bank would be empty by ${y}.\nEnter a previous year's door, make decisions, and get more cash into The Bank before you can continue.`,
+      { title: 'Glass Wall' }
+    );
+    this._glassDialogShowing = false;
+    this.player?.clearKeys();
+    this.setInputBlocked(false);
   }
 
   stateAtDoor(yearIndex) {
@@ -198,6 +245,7 @@ export class HallwayScene {
     ctx.translate(0, HUD_H);
     drawWorld(ctx, this.world, camX, camY, this.animTime);
     drawEventAuras(ctx, this.world, this.eventAuras, camX, camY, this.animTime);
+    drawGlassWall(ctx, this.glassWall, camX, camY, this.animTime);
     ctx.save();
     ctx.translate(-camX, -camY);
     const vis = this.visual?.state || game.portfolio;
@@ -336,4 +384,72 @@ function drawEventAuras(ctx, world, auras, camX, camY, animTime) {
     ctx.fillRect(sx, sy - streakH / 2, 3, streakH);
     ctx.fillRect(sx + w - 3, sy - streakH / 2, 3, streakH);
   }
+}
+
+
+/**
+ * Place a corridor-wide glass barrier just south of the first insolvent year's door.
+ * Door i corresponds to snapshots[i+1] (yearIndex = i+1).
+ */
+function buildGlassWall(world, snapshots) {
+  const k = findBankInsolvencyIndex(snapshots);
+  if (k < 1) return null;
+  const i = k - 1; // door index
+  const foyer = world.foyer || 5;
+  const segment = world.segment || 3;
+  const yTile = world.rows - 1 - foyer - i * segment - 1;
+  // Barrier across the walkway, one tile south of the door tile (player approaches from south)
+  const walkLeft = world.walkLeft ?? 5;
+  const walkRight = world.walkRight ?? 8;
+  const st = snapshots[k].state || {};
+  return {
+    x: walkLeft * TILE,
+    y: (yTile + 1) * TILE - 4,
+    w: (walkRight - walkLeft + 1) * TILE,
+    h: 8,
+    year: st.year,
+    age: st.age,
+    yearIndex: k,
+  };
+}
+
+function hitsGlassWall(wall, x, y, w, h) {
+  if (!wall) return false;
+  return x < wall.x + wall.w && x + w > wall.x && y < wall.y + wall.h && y + h > wall.y;
+}
+
+/** Pixel-art friendly translucent cyan/blue barrier across the corridor. */
+function drawGlassWall(ctx, wall, camX, camY, animTime) {
+  if (!wall) return;
+  const sx = wall.x - camX;
+  const sy = wall.y - camY;
+  if (sy < -20 || sy > VIEW_H + 20) return;
+  const pulse = 0.55 + 0.25 * Math.sin((animTime || 0) / 10);
+
+  // Soft outer glow
+  ctx.fillStyle = `rgba(40,180,255,${0.12 + pulse * 0.1})`;
+  ctx.fillRect(sx - 2, sy - 4, wall.w + 4, wall.h + 8);
+
+  // Main glass slab (translucent cyan)
+  ctx.fillStyle = `rgba(60,200,255,${0.28 + pulse * 0.18})`;
+  ctx.fillRect(sx, sy, wall.w, wall.h);
+
+  // Bright top edge
+  ctx.fillStyle = `rgba(200,245,255,${0.55 + pulse * 0.25})`;
+  ctx.fillRect(sx, sy, wall.w, 2);
+
+  // Bright bottom edge
+  ctx.fillStyle = `rgba(100,210,255,${0.4 + pulse * 0.2})`;
+  ctx.fillRect(sx, sy + wall.h - 2, wall.w, 2);
+
+  // Vertical shimmer stripes (pixel-art panes)
+  ctx.fillStyle = `rgba(180,240,255,${0.2 + pulse * 0.15})`;
+  for (let px = sx + 4; px < sx + wall.w - 2; px += 8) {
+    ctx.fillRect(px, sy + 2, 2, wall.h - 4);
+  }
+
+  // Side pillars into walls
+  ctx.fillStyle = `rgba(120,220,255,${0.45 + pulse * 0.2})`;
+  ctx.fillRect(sx, sy - 6, 3, wall.h + 12);
+  ctx.fillRect(sx + wall.w - 3, sy - 6, 3, wall.h + 12);
 }
