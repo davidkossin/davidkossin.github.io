@@ -11,6 +11,7 @@ import { HallwayScene } from './scenes/HallwayScene.js';
 import { EndingScene } from './scenes/EndingScene.js';
 import { PauseMenu } from './scenes/PauseMenu.js';
 import { VirtualPad } from './input/VirtualPad.js';
+import { MobileTextInput } from './input/MobileTextInput.js';
 import {
   initDebugFromEnvironment,
   drawOverlay as drawDebugOverlay,
@@ -79,6 +80,8 @@ requestAnimationFrame(fitCanvas);
 initDebugFromEnvironment();
 
 const dialog = new Dialog();
+const mobileText = new MobileTextInput(canvas, dialog);
+mobileText.mount();
 const title = new TitleScene({});
 const setup = new SetupScene();
 const room = new RoomScene();

@@ -304,3 +304,38 @@ body.has-virtual-pad .hint {
     opacity: 0.55;
   }
 }
+
+/* —— Mobile OS keyboard overlay for Dialog.prompt fields —— */
+.mobile-text-input {
+  position: fixed;
+  z-index: 15;
+  margin: 0;
+  padding: 0 4px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-family: "Press Start 2P", monospace;
+  line-height: 1.2;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 0;
+  box-shadow: none;
+  /* Nearly invisible but still a real tap/focus target for the OS keyboard */
+  opacity: 0.02;
+  pointer-events: none;
+  touch-action: manipulation;
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-text-input.is-active {
+  pointer-events: auto;
+  opacity: 0.02;
+}
+
+.mobile-text-input:focus {
+  opacity: 0.02;
+}

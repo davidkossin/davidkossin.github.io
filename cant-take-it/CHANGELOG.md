@@ -10,6 +10,19 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
+## [0.5.4] — 2026-09-28
+
+### Added
+- Mobile OS keyboard for `Dialog.prompt` fields: tap the on-screen value box to focus a real HTML input (`inputmode` text/decimal) so phones can type names, salaries, money, and percents; desktop canvas keyboard entry unchanged when the overlay is not focused
+
+### Fixed
+- Prompt typing no longer double-applies Backspace/characters when the mobile HTML input is focused (canvas `handleKeyDown` skips native-input key events; Accept/Back via virtual pad A/B still work)
+
+### Changed
+- Cache-bust / `GAME_VERSION` bumped to **0.5.4**
+
+---
+
 ## [0.5.3] — 2026-09-28
 
 ### Fixed

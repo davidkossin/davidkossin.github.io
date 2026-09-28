@@ -28,6 +28,21 @@ export function formatMoneyDisplay(n) {
   return sign + '$' + Math.abs(v).toLocaleString('en-US');
 }
 
+/** Sanitize a full number/percent string (mobile HTML input sync). */
+export function sanitizeNumberInput(raw) {
+  let s = String(raw ?? '').replace(/[^\d.\-]/g, '');
+  const neg = s.startsWith('-');
+  s = s.replace(/-/g, '');
+  const parts = s.split('.');
+  s = parts[0] + (parts.length > 1 ? '.' + parts.slice(1).join('').replace(/\./g, '') : '');
+  return (neg ? '-' : '') + s;
+}
+
+/** Cap free-text prompts at 28 chars (same as desktop handleKeyDown). */
+export function sanitizeTextInput(raw) {
+  return String(raw ?? '').slice(0, 28);
+}
+
 export class Dialog {
   constructor() {
     this.active = false;
@@ -117,10 +132,81 @@ export class Dialog {
     if (r) r(result);
   }
 
+  /**
+   * Logical-canvas rect of the prompt value field (black box), or null.
+   * Must match draw() layout math.
+   */
+  getPromptFieldRect() {
+    if (!this.active || this.mode !== 'prompt') return null;
+    const layout = this._layout();
+    return {
+      x: layout.x + layout.pad,
+      y: layout.promptY,
+      w: layout.boxW - layout.pad * 2,
+      h: 14,
+    };
+  }
+
+  _layout() {
+    const boxW = 280;
+    const lineH = 12;
+    const hasSub = this.options.some((o) => o.subtext);
+    const optH = hasSub ? 22 : 14;
+    const pad = 12;
+    const textH = this.lines.length * lineH;
+    const promptH = this.mode === 'prompt' ? 20 : 0;
+    const optsH = this.options.length * optH + 4;
+    const titleH = this.title ? 16 : 0;
+    const boxH = Math.min(210, pad * 2 + titleH + textH + promptH + optsH + 8);
+    const x = Math.floor((VIEW_W - boxW) / 2);
+    const y = CANVAS_H - boxH - 8;
+    let ty = y + pad;
+    if (this.title) ty += titleH;
+    ty += textH;
+    let promptY = ty;
+    if (this.mode === 'prompt') {
+      promptY = ty + 4;
+    }
+    return { boxW, boxH, pad, lineH, optH, titleH, textH, x, y, promptY };
+  }
+
   handleKeyDown(e) {
     if (!this.active) return false;
 
-    if (this.mode === 'prompt') {
+    // When the mobile HTML input is focused, let it own typing / Backspace.
+    // Letter shortcuts (z/x/wasd/space) must NOT Accept/Cancel — only Enter/Escape.
+    // Virtual-pad synthetic keys target window, so they still flow through normally.
+    const fromNativeInput =
+      e.target &&
+      (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
+
+    if (fromNativeInput && this.mode === 'prompt') {
+      if (e.key === 'Enter') {
+        const opt = this.options[this.selected];
+        if (opt.value === '__back' || opt.value === '__cancel') this.close(null);
+        else {
+          let v = this.promptValue;
+          if (this.promptType === 'money') {
+            v = parseMoneyInput(v);
+          } else if (this.promptType === 'number' || this.promptType === 'percent') {
+            const n = parseFloat(String(v).replace(/,/g, ''));
+            v = Number.isFinite(n) ? n : 0;
+          }
+          this.close(v);
+        }
+        e.preventDefault();
+        return true;
+      }
+      if (e.key === 'Escape') {
+        this.close(null);
+        e.preventDefault();
+        return true;
+      }
+      // All other keys: ignore for dialog navigation (input handles them)
+      return true;
+    }
+
+    if (this.mode === 'prompt' && !fromNativeInput) {
       if (e.key === 'Backspace') {
         this.promptValue = this.promptValue.slice(0, -1);
         if (this.promptType === 'money') {
@@ -195,18 +281,8 @@ export class Dialog {
 
   draw(ctx) {
     if (!this.active) return;
-    const boxW = 280;
-    const lineH = 12;
-    const hasSub = this.options.some((o) => o.subtext);
-    const optH = hasSub ? 22 : 14;
-    const pad = 12;
-    const textH = this.lines.length * lineH;
-    const promptH = this.mode === 'prompt' ? 20 : 0;
-    const optsH = this.options.length * optH + 4;
-    const titleH = this.title ? 16 : 0;
-    const boxH = Math.min(210, pad * 2 + titleH + textH + promptH + optsH + 8);
-    const x = Math.floor((VIEW_W - boxW) / 2);
-    const y = CANVAS_H - boxH - 8;
+    const layout = this._layout();
+    const { boxW, boxH, pad, optH, x, y } = layout;
 
     if (!this.chrome || this.chrome.width !== boxW || this.chrome.height !== boxH) {
       this.chrome = makeDialogChrome(boxW, boxH);
@@ -221,13 +297,13 @@ export class Dialog {
     if (this.title) {
       ctx.fillStyle = PALETTE.gold;
       ctx.fillText(this.title, x + pad, ty);
-      ty += titleH;
+      ty += layout.titleH;
     }
 
     ctx.fillStyle = PALETTE.uiText;
     for (const line of this.lines) {
       ctx.fillText(line, x + pad, ty);
-      ty += lineH;
+      ty += layout.lineH;
     }
 
     if (this.mode === 'prompt') {
