@@ -10,6 +10,14 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
+## [0.5.3] — 2026-09-28
+
+### Fixed
+- Ending finances now remain `---` for the You Can't Take It With You theme; the ending charts still plot the real net-worth and Cash history.
+
+### Changed
+- Cache-bust / `GAME_VERSION` bumped to **0.5.3**
+
 ---
 
 ## [0.5.2] — 2026-09-27

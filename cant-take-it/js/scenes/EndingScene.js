@@ -1,7 +1,5 @@
-import { VIEW_W, VIEW_H, CANVAS_H, PALETTE, KEYS } from '../config.js';
+import { VIEW_W, CANVAS_H, PALETTE, KEYS } from '../config.js';
 import { drawWorthChart } from '../render/Charts.js';
-import { computeWorth } from '../finance/Engine.js';
-import { formatMoneyDisplay } from '../render/Dialog.js';
 
 export class EndingScene {
   constructor() {
@@ -86,16 +84,12 @@ export class EndingScene {
 
     if (this.phase >= 1 && this.phase < 3) {
       ctx.textAlign = 'center';
-      const worth = this.game ? computeWorth(this.game.portfolio) : null;
+      // The ending is about leaving material wealth behind: never reveal a final
+      // dollar amount here. The charts below intentionally keep the real history.
       ctx.font = '7px "Press Start 2P", monospace';
       ctx.fillStyle = '#666';
-      if (worth) {
-        ctx.fillText(`Net Worth  ${formatMoneyDisplay(worth.netWorth)}`, VIEW_W / 2, 90);
-        ctx.fillText(`Cash   ${formatMoneyDisplay(worth.bank)}`, VIEW_W / 2, 106);
-      } else {
-        ctx.fillText('Net Worth  - - -', VIEW_W / 2, 90);
-        ctx.fillText('Assets    - - -', VIEW_W / 2, 106);
-      }
+      ctx.fillText('Net Worth  ---', VIEW_W / 2, 90);
+      ctx.fillText('Cash       ---', VIEW_W / 2, 106);
 
       ctx.fillStyle = PALETTE.gold;
       ctx.font = '9px "Press Start 2P", monospace';
