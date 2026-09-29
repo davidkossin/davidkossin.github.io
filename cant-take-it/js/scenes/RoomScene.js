@@ -36,7 +36,7 @@ import {
   annualLoanPayment,
 } from '../finance/Engine.js';
 import { getDifficulty } from '../finance/Difficulty.js';
-import { commitRoomDecisions } from '../state/GameState.js';
+import { commitRoomDecisions, currentNode } from '../state/GameState.js';
 import { autoSave } from '../state/SaveSystem.js';
 import { formatMoneyDisplay } from '../render/Dialog.js';
 import { log as debugLog } from '../debug/Logger.js';
@@ -59,7 +59,19 @@ export class RoomScene {
     this.prompt = null;
     this.locked = false;
     this.animTime = 0;
-    commitRoomDecisions(game, 'begin');
+    // enterYearRoom / createGame already record the Decision Room begin node —
+    // only append another if we somehow entered without one (avoids duplicate begins).
+    const cur = currentNode(game);
+    const p = game.portfolio;
+    const alreadyBegin =
+      cur &&
+      cur.type === 'room' &&
+      cur.kind === 'begin' &&
+      cur.year === p.year &&
+      cur.age === p.age;
+    if (!alreadyBegin) {
+      commitRoomDecisions(game, 'begin');
+    }
     autoSave(game, 'begin');
   }
 

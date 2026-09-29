@@ -10,6 +10,18 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
+## [0.5.7] — 2026-09-28
+
+### Added
+- **New Game** submenu: **Standard portfolio** (skip setup; tuned average US household starter that hits the Hallway glass wall around year index ~6 on Standard with no Decision Room changes) vs **Custom setup** (existing full SetupScene)
+- Pause **Map Compare**: select two timelines, choose a calendar year, and view side-by-side Cash, savings, stocks, 401(k), homes/equity, loans, salary/retired, age, and net worth snapshots
+
+### Changed
+- Pause **Timeline Map** keeps the A/B/C timeline **TREE** semantics but now flows upward (past/start at bottom → future/age 100 at top); Decision Room forks still spawn right and render as Y-shaped up-right branches; jump-to-hallway unchanged
+- Decision Room entry from a parent that already has children is marked as a **fork** (`isFork`); duplicate begin nodes no longer appended when `enterYearRoom` / `createGame` already recorded the room
+- Pause **Charts** now stays focused on single-path net worth; timeline-pair comparison lives on **Map Compare**
+- Cache-bust / `GAME_VERSION` bumped to **0.5.7**
+
 ## [0.5.6] — 2026-09-28
 
 ### Changed

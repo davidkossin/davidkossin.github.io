@@ -124,6 +124,10 @@ async function startTitle() {
     mode = game.scene === 'hallway' ? 'hallway' : 'room';
     if (mode === 'room') room.enter(game, false);
     else hallway.enter(game);
+  } else if (result.action === 'new' && result.mode === 'standard' && result.game) {
+    game = result.game;
+    mode = 'room';
+    room.enter(game, false);
   } else {
     mode = 'setup';
     game = await setup.run(dialog);

@@ -1,6 +1,6 @@
 /**
- * Esc pause — Portfolio overview, Map (timeline graph + jump), and Charts.
- * Charts: current path, multi-timeline overlay, and year-entry side-by-side snapshots.
+ * Esc pause — Portfolio overview, Map (timeline graph + jump/compare), and Charts.
+ * Map Compare provides side-by-side portfolio snapshots for two timelines.
  */
 
 import { PALETTE, VIEW_W, CANVAS_H, KEYS } from '../config.js';
@@ -10,18 +10,17 @@ import {
   listCompareBranches,
   portfolioAtYearOnBranch,
   layoutTimelineMap,
+  buildTimelineMapModel,
+  pathFromRoot,
 } from '../state/GameState.js';
 import { computeWorth } from '../finance/Engine.js';
-import { drawWorthChart, drawCompareChart, BRANCH_COLORS } from '../render/Charts.js';
+import { drawWorthChart, BRANCH_COLORS } from '../render/Charts.js';
 import { makeDialogChrome } from '../render/Assets.js';
 import { formatMoneyDisplay } from '../render/Dialog.js';
 
 const VIEW_TABS = ['portfolio', 'map', 'charts'];
 
-/** Chart sub-modes when 2+ branches exist */
-const CHART_MODES_BRANCHED = ['compare-net', 'compare-cash', 'year', 'current'];
-/** Chart sub-modes with a single timeline */
-const CHART_MODES_SINGLE = ['current', 'year'];
+/** Charts remain focused on the current path; timeline comparison lives on Map. */
 
 export class PauseMenu {
   constructor() {
@@ -32,12 +31,13 @@ export class PauseMenu {
     this.portfolioDetailPage = 0;
     this.hallwayNodes = [];
     this.chrome = null;
-    /** @type {'compare-net'|'compare-cash'|'year'|'current'} */
-    this.chartMode = 'current';
-    /** Calendar year for side-by-side portfolio compare */
+    /** Map compare: overview | select | result. */
+    this.mapMode = 'overview';
+    this.mapCompareActive = 0;
+    this.mapCompareA = 0;
+    this.mapCompareB = 1;
+    /** Calendar year for Map Compare side-by-side portfolio snapshots. */
     this.compareYear = null;
-    /** Index into compare-branch list when picking which two to show side-by-side */
-    this.snapshotBranchOffset = 0;
     this._askingYear = false;
     /** @type {import('../render/Dialog.js').Dialog|null} */
     this.dialog = null;
@@ -51,10 +51,11 @@ export class PauseMenu {
     this.portfolioDetailPage = 0;
     this.dialog = dialog || this.dialog;
     this.compareYear = game?.portfolio?.year ?? this.compareYear;
-    this.snapshotBranchOffset = 0;
+    this.mapMode = 'overview';
+    this.mapCompareActive = 0;
+    this.mapCompareA = 0;
+    this.mapCompareB = 1;
     this.refresh(game);
-    const branches = listCompareBranches(game);
-    this.chartMode = branches.length >= 2 ? 'compare-net' : 'current';
   }
 
   hide() {
@@ -64,11 +65,18 @@ export class PauseMenu {
   refresh(game) {
     this.hallwayNodes = listTimelineNodes(game).filter((n) => n.type === 'hallway');
     this.selected = Math.min(this.selected, Math.max(0, this.hallwayNodes.length - 1));
-  }
-
-  chartModes(game) {
     const branches = listCompareBranches(game);
-    return branches.length >= 2 ? CHART_MODES_BRANCHED : CHART_MODES_SINGLE;
+    if (branches.length < 2) {
+      this.mapMode = 'overview';
+      this.mapCompareA = 0;
+      this.mapCompareB = 1;
+    } else {
+      this.mapCompareA = Math.min(this.mapCompareA, branches.length - 1);
+      this.mapCompareB = Math.min(this.mapCompareB, branches.length - 1);
+      if (this.mapCompareA === this.mapCompareB) {
+        this.mapCompareB = this.mapCompareA === 0 ? 1 : 0;
+      }
+    }
   }
 
   /**
@@ -79,6 +87,10 @@ export class PauseMenu {
 
     if (KEYS.cancel.includes(e.key)) {
       e.preventDefault();
+      if (this.screen === 'map' && this.mapMode !== 'overview') {
+        this.mapMode = 'overview';
+        return undefined;
+      }
       if (this.screen !== 'menu') {
         this.screen = 'menu';
         this.selected = 0;
@@ -111,10 +123,6 @@ export class PauseMenu {
         this.portfolioPage = 0;
         this.portfolioDetailPage = 0;
         this.refresh(game);
-        if (choice === 'charts') {
-          const branches = listCompareBranches(game);
-          this.chartMode = branches.length >= 2 ? 'compare-net' : 'current';
-        }
         return undefined;
       }
       return undefined;
@@ -151,6 +159,50 @@ export class PauseMenu {
     }
 
     if (this.screen === 'map') {
+      const branches = listCompareBranches(game);
+      if ((e.key === 'c' || e.key === 'C') && branches.length >= 2) {
+        this.mapMode = this.mapMode === 'overview' || this.mapMode === 'result' ? 'select' : 'overview';
+        this.mapCompareActive = 0;
+        e.preventDefault();
+        return undefined;
+      }
+
+      if (this.mapMode === 'select') {
+        if (KEYS.left.includes(e.key) || KEYS.right.includes(e.key)) {
+          this.mapCompareActive = KEYS.right.includes(e.key) ? 1 : 0;
+          e.preventDefault();
+          return undefined;
+        }
+        if (KEYS.up.includes(e.key) || KEYS.down.includes(e.key)) {
+          const dir = KEYS.down.includes(e.key) ? 1 : -1;
+          const other = this.mapCompareActive === 0 ? this.mapCompareB : this.mapCompareA;
+          let value = this.mapCompareActive === 0 ? this.mapCompareA : this.mapCompareB;
+          for (let i = 0; i < branches.length; i += 1) {
+            value = (value + dir + branches.length) % branches.length;
+            if (value !== other) break;
+          }
+          if (this.mapCompareActive === 0) this.mapCompareA = value;
+          else this.mapCompareB = value;
+          e.preventDefault();
+          return undefined;
+        }
+        if (KEYS.confirm.includes(e.key)) {
+          e.preventDefault();
+          this.promptMapCompareYear(game);
+          return undefined;
+        }
+        return undefined;
+      }
+
+      if (this.mapMode === 'result') {
+        if (KEYS.confirm.includes(e.key)) {
+          e.preventDefault();
+          this.promptMapCompareYear(game);
+          return undefined;
+        }
+        return undefined;
+      }
+
       if (KEYS.up.includes(e.key)) {
         if (this.hallwayNodes.length) {
           this.selected =
@@ -181,73 +233,38 @@ export class PauseMenu {
     }
 
     if (this.screen === 'charts') {
-      const modes = this.chartModes(game);
-      if (KEYS.left.includes(e.key) || KEYS.right.includes(e.key)) {
-        const dir = KEYS.right.includes(e.key) ? 1 : -1;
-        let idx = modes.indexOf(this.chartMode);
-        if (idx < 0) idx = 0;
-        this.chartMode = modes[(idx + dir + modes.length) % modes.length];
-        e.preventDefault();
-        return undefined;
-      }
-      if (KEYS.up.includes(e.key) || KEYS.down.includes(e.key)) {
-        // Cycle which pair of branches is shown in year snapshot (A|B, B|C, …)
-        const branches = listCompareBranches(game);
-        if (branches.length >= 2 && this.chartMode === 'year') {
-          const maxOff = Math.max(0, branches.length - 2);
-          const dir = KEYS.down.includes(e.key) ? 1 : -1;
-          this.snapshotBranchOffset =
-            (this.snapshotBranchOffset + dir + maxOff + 1) % (maxOff + 1);
-        }
-        e.preventDefault();
-        return undefined;
-      }
-      if (KEYS.confirm.includes(e.key)) {
-        e.preventDefault();
-        // Enter year for side-by-side portfolio compare
-        this.chartMode = 'year';
-        this.promptCompareYear(game);
-        return undefined;
-      }
+      // Timeline comparison is deliberately on Map; Charts stays single-path.
+      return undefined;
     }
 
     return undefined;
   }
 
-  /**
-   * Dialog.prompt for calendar year — mobile HTML input works via Dialog.
-   */
-  async promptCompareYear(game) {
+  /** Start Map Compare's year prompt after two timelines are selected. */
+  async promptMapCompareYear(game) {
     if (!this.dialog || this._askingYear) return;
     this._askingYear = true;
     const branches = listCompareBranches(game);
     const defaultYear =
-      this.compareYear ??
-      game.portfolio?.year ??
-      branches[0]?.yearMax ??
-      new Date().getFullYear();
+      this.compareYear ?? game.portfolio?.year ?? branches[0]?.yearMax ?? new Date().getFullYear();
     try {
-      const year = await this.dialog.prompt(
-        branches.length >= 2
-          ? 'Year to compare across timelines?'
-          : 'Year for portfolio snapshot?',
-        {
-          title: 'Year Snapshot',
-          defaultValue: String(defaultYear),
-          type: 'number',
-        }
-      );
+      const year = await this.dialog.prompt('Year to compare across timelines?', {
+        title: 'Map Compare',
+        defaultValue: String(defaultYear),
+        type: 'number',
+      });
       if (year != null && year !== '') {
         const y = Math.round(Number(year));
         if (Number.isFinite(y)) {
           this.compareYear = y;
-          this.chartMode = 'year';
+          this.mapMode = 'result';
         }
       }
     } finally {
       this._askingYear = false;
     }
   }
+
 
   draw(ctx, game) {
     if (!this.open) return;
@@ -328,59 +345,13 @@ export class PauseMenu {
   }
 
   chartTitle(game) {
-    switch (this.chartMode) {
-      case 'compare-net':
-        return 'Compare · Net';
-      case 'compare-cash':
-        return 'Compare · Cash';
-      case 'year':
-        return this.compareYear != null ? `Year ${this.compareYear}` : 'Year Snapshot';
-      default:
-        return 'Charts';
-    }
+    return 'Charts · Net worth';
   }
 
   drawCharts(ctx, game, x, y, boxW, boxH) {
-    const branches = listCompareBranches(game);
     ctx.font = '5px "Press Start 2P", monospace';
     ctx.fillStyle = '#888';
-    const hint =
-      this.chartMode === 'year'
-        ? 'Enter year · ←/→ mode · ↑/↓ pair'
-        : branches.length >= 2
-          ? '←/→ mode · Enter year snap'
-          : 'Enter year snap · ←/→ mode';
-    ctx.fillText(hint, x + 12, y + 28);
-
-    if (this.chartMode === 'year') {
-      this.drawYearSnapshot(ctx, game, branches, x, y, boxW, boxH);
-      return;
-    }
-
-    if (this.chartMode === 'compare-net' || this.chartMode === 'compare-cash') {
-      if (branches.length < 2) {
-        this.chartMode = 'current';
-      } else {
-        const metric = this.chartMode === 'compare-cash' ? 'bank' : 'netWorth';
-        ctx.font = '6px "Press Start 2P", monospace';
-        ctx.fillStyle = PALETTE.uiText;
-        ctx.fillText(
-          metric === 'bank' ? 'Cash by timeline' : 'Net worth by timeline',
-          x + 12,
-          y + 38
-        );
-        drawCompareChart(ctx, branches, {
-          x: x + 12,
-          y: y + 48,
-          w: boxW - 24,
-          h: boxH - 72,
-          metric,
-        });
-        return;
-      }
-    }
-
-    // current path
+    ctx.fillText('Current timeline · Map has Compare', x + 12, y + 28);
     ctx.font = '6px "Press Start 2P", monospace';
     ctx.fillStyle = PALETTE.uiText;
     ctx.fillText('Net worth over years', x + 12, y + 38);
@@ -393,42 +364,7 @@ export class PauseMenu {
     });
   }
 
-  /**
-   * Side-by-side portfolio columns for compareYear on two timelines.
-   */
-  drawYearSnapshot(ctx, game, branches, x, y, boxW, boxH) {
-    const year = this.compareYear ?? game.portfolio?.year;
-    if (year == null) {
-      ctx.font = '6px "Press Start 2P", monospace';
-      ctx.fillStyle = PALETTE.uiText;
-      ctx.fillText('Press Enter to pick a year', x + 12, y + 50);
-      return;
-    }
-
-    const pair =
-      branches.length >= 2
-        ? branches.slice(this.snapshotBranchOffset, this.snapshotBranchOffset + 2)
-        : branches.length === 1
-          ? [branches[0]]
-          : [];
-
-    if (!pair.length) {
-      // No tips yet — use live portfolio if year matches
-      ctx.font = '6px "Press Start 2P", monospace';
-      ctx.fillStyle = '#888';
-      ctx.fillText('No timeline branches yet.', x + 12, y + 50);
-      return;
-    }
-
-    const colW = pair.length === 1 ? boxW - 24 : Math.floor((boxW - 28) / 2);
-    pair.forEach((b, i) => {
-      const cx = x + 12 + i * (colW + 4);
-      const snap = portfolioAtYearOnBranch(game, b.tipId, year);
-      this.drawSnapshotColumn(ctx, b, snap, year, cx, y + 38, colW, boxH - 52);
-    });
-  }
-
-  drawSnapshotColumn(ctx, branch, snap, year, cx, cy, colW, colH) {
+  drawSnapshotColumn(ctx, branch, snap, year, cx, cy, colW, colH, compact = false) {
     const color =
       BRANCH_COLORS[
         Math.max(0, (branch.letter || 'A').charCodeAt(0) - 65) % BRANCH_COLORS.length
@@ -443,7 +379,7 @@ export class PauseMenu {
     const head = `${branch.letter}${branch.isCurrent ? '*' : ''}`;
     ctx.fillText(head, cx + 4, cy + 4);
 
-    ctx.font = '5px "Press Start 2P", monospace';
+    ctx.font = compact ? '4px "Press Start 2P", monospace' : '5px "Press Start 2P", monospace';
     if (snap.status === 'before') {
       ctx.fillStyle = '#888';
       ctx.fillText('Before branch', cx + 4, cy + 18);
@@ -471,12 +407,12 @@ export class PauseMenu {
     const p = snap.portfolio;
     const w = snap.worth;
     const lines = snapshotLines(p, w, snap);
-    let ry = cy + 16;
+    let ry = cy + (compact ? 14 : 16);
     for (const line of lines) {
-      if (ry > cy + colH - 10) break;
+      if (ry > cy + colH - (compact ? 5 : 10)) break;
       ctx.fillStyle = line.heading ? PALETTE.gold : PALETTE.uiText;
       ctx.fillText(clip(line.text, colW - 8), cx + 4, ry);
-      ry += 9;
+      ry += compact ? 7 : 9;
     }
   }
 
@@ -567,72 +503,154 @@ export class PauseMenu {
   }
 
   /**
-   * Vertical timeline map: time flows DOWN (past → future); forks spawn RIGHT.
-   * Jump list kept for Enter-to-hallway; selected node highlighted on the graph.
+   * Vertical timeline TREE: time ↑, forks ↗ at Decision Room entries.
+   * Each Timeline line shows A (start) / B (forks) / C (age 100).
+   * Jump list kept for Enter-to-hallway; selected hallway highlighted when on graph year.
    */
   drawMap(ctx, game, x, y, boxW, boxH) {
+    const compareSelect = this.mapMode === 'select';
+    const compareResult = this.mapMode === 'result';
+    const yearLabel = this.compareYear == null ? '' : ` · ${this.compareYear}`;
     ctx.font = '5px "Press Start 2P", monospace';
     ctx.fillStyle = PALETTE.uiText;
-    // Orientation: past at top, future at bottom; branches fork to the right of the spine.
-    ctx.fillText('Time ↓ · forks → · Enter jump', x + 12, y + 28);
+    ctx.fillText(
+      compareResult
+        ? `Compare${yearLabel} · Enter year · C change`
+        : compareSelect
+          ? 'Compare · ←/→ side · ↑/↓ timeline · Enter year'
+          : 'Time ↑ · DR forks ↗ · C Compare · Enter jump',
+      x + 12,
+      y + 28
+    );
 
     const graphX = x + 12;
-    const graphY = y + 40;
+    const graphY = y + 38;
+    // Leave room below the graph for Map Compare's two snapshot columns.
+    const graphH = compareResult ? 52 : compareSelect ? 76 : 92;
     const graphW = boxW - 24;
-    const graphH = 88;
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fillRect(graphX, graphY, graphW, graphH);
     ctx.strokeStyle = '#444';
     ctx.strokeRect(graphX + 0.5, graphY + 0.5, graphW - 1, graphH - 1);
 
     const layout = layoutTimelineMap(game, {
-      x: graphX + 8,
-      y: graphY + 6,
-      w: graphW - 16,
-      h: graphH - 14,
+      x: graphX + 10,
+      y: graphY + 8,
+      w: graphW - 20,
+      h: graphH - 16,
     });
+    const model = layout.model || buildTimelineMapModel(game);
     const selected = this.hallwayNodes[this.selected];
 
-    // edges — orthogonal-ish: vertical spine then right to fork
-    ctx.strokeStyle = '#555';
-    ctx.lineWidth = 1;
-    for (const e of layout.edges) {
-      const a = layout.positions.get(e.from);
-      const b = layout.positions.get(e.to);
-      if (!a || !b) continue;
+    // Spine + fork connectors
+    for (const seg of layout.segments || []) {
       ctx.beginPath();
-      ctx.moveTo(a.x + 3, a.y + 3);
-      if (a.x === b.x) {
-        ctx.lineTo(b.x + 3, b.y + 3);
+      if (seg.kind === 'spine') {
+        ctx.strokeStyle = seg.isCurrent ? '#c8a050' : '#555';
+        ctx.lineWidth = seg.isCurrent ? 2 : 1;
       } else {
-        // down along parent lane, then right/left to child
-        const midY = b.y + 3;
-        ctx.lineTo(a.x + 3, midY);
-        ctx.lineTo(b.x + 3, midY);
+        ctx.strokeStyle = '#887848';
+        ctx.lineWidth = 1;
       }
+      ctx.moveTo(seg.x1, seg.y1);
+      ctx.lineTo(seg.x2, seg.y2);
       ctx.stroke();
     }
 
-    for (const [, pos] of layout.positions) {
-      const n = pos.node;
-      const isHall = n.type === 'hallway';
-      const isSel = selected && selected.id === n.id;
-      const isCur = n.id === game.timeline.currentNodeId;
-      ctx.fillStyle = isHall ? '#80c0e0' : PALETTE.gold;
-      ctx.fillRect(pos.x, pos.y, 6, 6);
-      if (isCur) {
-        ctx.strokeStyle = '#fff';
-        ctx.strokeRect(pos.x - 1.5, pos.y - 1.5, 9, 9);
-      }
-      if (isSel) {
-        ctx.strokeStyle = PALETTE.gold;
-        ctx.strokeRect(pos.x - 2.5, pos.y - 2.5, 11, 11);
+    // Timeline number labels at each spine start
+    ctx.font = '5px "Press Start 2P", monospace';
+    for (const tl of model.timelines || []) {
+      const aPt = (layout.points || []).find(
+        (p) => p.timeline === tl.number && p.kind === 'A'
+      );
+      if (!aPt) continue;
+      ctx.fillStyle = tl.isCurrent ? PALETTE.gold : '#888';
+      ctx.fillText(String(tl.number), aPt.x - 8, aPt.y + 3);
+    }
+
+    // A / B / C points
+    for (const pt of layout.points || []) {
+      const r = pt.kind === 'C' ? 3.5 : 3;
+      if (pt.kind === 'A') ctx.fillStyle = PALETTE.gold;
+      else if (pt.kind === 'B') ctx.fillStyle = '#80c0e0';
+      else ctx.fillStyle = '#c04040';
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#aaa';
+      ctx.font = '4px "Press Start 2P", monospace';
+      const tag = pt.kind === 'B' ? pt.label : pt.kind;
+      ctx.fillText(tag, pt.x + 5, pt.y + 2);
+      if (pt.kind === 'A' || pt.kind === 'C') {
+        ctx.fillStyle = '#666';
+        ctx.fillText(String(pt.year), pt.x + 5, pt.y + 9);
       }
     }
 
+    if (!compareResult && layout.currentPos) {
+      const cp = layout.currentPos;
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(cp.x - 5, cp.y - 5, 10, 10);
+      ctx.fillStyle = '#fff';
+      ctx.font = '4px "Press Start 2P", monospace';
+      ctx.fillText('you', cp.x + 6, cp.y - 4);
+    }
+
+    // Selected jump-target year marker (hallway)
+    if (!compareSelect && !compareResult && selected && layout.xy) {
+      let markLane =
+        (model.timelines.find((t) => t.isCurrent) || model.timelines[0] || {})
+          .lane ?? 0;
+      for (const tl of model.timelines || []) {
+        const path = pathFromRoot(game, tl.tipId);
+        if (path.some((n) => n.id === selected.id)) {
+          markLane = tl.lane;
+          break;
+        }
+      }
+      const sp = layout.xy(markLane, selected.year);
+      ctx.strokeStyle = PALETTE.gold;
+      ctx.strokeRect(sp.x - 6, sp.y - 6, 12, 12);
+    }
+
     ctx.fillStyle = '#666';
-    ctx.font = '5px "Press Start 2P", monospace';
-    ctx.fillText('◆ room  ● hall  □ you', x + 12, graphY + graphH + 2);
+    ctx.font = '4px "Press Start 2P", monospace';
+    ctx.fillText('A start  B DR-fork  C age100', x + 12, graphY + graphH + 2);
+
+    if (compareSelect) {
+      const branches = listCompareBranches(game);
+      let ly = graphY + graphH + 13;
+      ctx.font = '5px "Press Start 2P", monospace';
+      [this.mapCompareA, this.mapCompareB].forEach((branchIndex, side) => {
+        const branch = branches[branchIndex];
+        const timeline = (model.timelines || []).find((t) => t.tipId === branch?.tipId);
+        const active = this.mapCompareActive === side;
+        ctx.fillStyle = active ? PALETTE.gold : PALETTE.uiText;
+        ctx.fillText(
+          `${active ? '▶' : ' '} ${side === 0 ? 'A' : 'B'}: Timeline ${timeline?.number ?? branchIndex + 1}${
+            branch?.isCurrent ? '*' : ''
+          }`,
+          x + 12,
+          ly
+        );
+        ly += 11;
+      });
+      return;
+    }
+
+    if (compareResult) {
+      const branches = listCompareBranches(game);
+      const pair = [branches[this.mapCompareA], branches[this.mapCompareB]].filter(Boolean);
+      const snapshotY = graphY + graphH + 14;
+      const colW = Math.floor((boxW - 28) / 2);
+      pair.forEach((branch, i) => {
+        const cx = x + 12 + i * (colW + 4);
+        const snap = portfolioAtYearOnBranch(game, branch.tipId, this.compareYear);
+        this.drawSnapshotColumn(ctx, branch, snap, this.compareYear, cx, snapshotY, colW, y + boxH - snapshotY - 6, true);
+      });
+      return;
+    }
 
     let ly = graphY + graphH + 12;
     ctx.font = '6px "Press Start 2P", monospace';

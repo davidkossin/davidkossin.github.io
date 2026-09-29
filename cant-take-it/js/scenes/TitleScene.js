@@ -1,5 +1,6 @@
 import { PALETTE, VIEW_W, VIEW_H, CANVAS_H } from '../config.js';
 import { deleteSave, hasSaves, listSaves, loadSave } from '../state/SaveSystem.js';
+import { createStandardPortfolioSetup, createGameFromSetup } from '../state/GameState.js';
 import { makeTile } from '../render/Assets.js';
 
 const MAX_VISIBLE_SAVES = 10;
@@ -34,7 +35,11 @@ export class TitleScene {
         { title: "You Can't Take It With You" }
       );
 
-      if (choice === 'new') return { action: 'new' };
+      if (choice === 'new') {
+        const start = await this.chooseNewGame(dialog);
+        if (!start) continue;
+        return start;
+      }
       if (choice === 'help') {
         await dialog.show(
           'WASD / Arrows move. Enter / Z / E talk. Esc opens Map/Charts (jump timelines). Walk the Hallway of Time — doors start the year after you leave. Wall windows change your portfolio. Auto-saves in localStorage.',
@@ -72,6 +77,51 @@ export class TitleScene {
         return { action: 'load', game: loaded };
       }
     }
+  }
+
+  /**
+   * New Game submenu: Standard portfolio (skip setup) vs Custom setup.
+   * @returns {Promise<{action:'new', mode:'standard'|'custom', game?:object}|null>}
+   */
+  async chooseNewGame(dialog) {
+    const mode = await dialog.menu(
+      'How do you want to begin?',
+      [
+        { label: 'Standard portfolio', value: 'standard', subtext: 'Typical US household — skip setup' },
+        { label: 'Custom setup', value: 'custom', subtext: 'Full questionnaire' },
+        { label: 'Cancel', value: null },
+      ],
+      { title: 'New Game' }
+    );
+    if (!mode) return null;
+
+    if (mode === 'custom') {
+      return { action: 'new', mode: 'custom' };
+    }
+
+    // Standard path: brief confirm, then ready-to-play Decision Room state
+    const confirmed = await dialog.menu(
+      'Average US household starter:\n' +
+        'Age 40, married, 1 child (7).\n' +
+        'Salary $78k · spend $35k/yr.\n' +
+        'Home $380k ($270k mortgage).\n' +
+        'Cash $5.5k · savings $15k ·\nstocks $22k · 401(k) $62k.\n' +
+        'ZIP 85001 · Standard difficulty.\n' +
+        'Glass wall ~6 years if unchanged.',
+      [
+        { label: 'Begin', value: true },
+        { label: 'Back', value: false },
+      ],
+      { title: 'Standard portfolio' }
+    );
+    if (!confirmed) return null;
+
+    const game = createGameFromSetup(createStandardPortfolioSetup());
+    await dialog.show(
+      `Welcome, ${game.portfolio.playerName}. Year ${game.portfolio.year}, age ${game.portfolio.age}. Your Decision Room awaits.`,
+      { title: 'Begin' }
+    );
+    return { action: 'new', mode: 'standard', game };
   }
 
   async manageSaves(dialog) {
