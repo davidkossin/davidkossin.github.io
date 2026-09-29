@@ -10,6 +10,18 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
+## [0.5.6] — 2026-09-28
+
+### Changed
+- Title subtitle: **An existential interactive financial planner** (was “A 16-bit life ledger”); wrapped to two lines on the title screen
+- Pause **Timeline Map** redrawn vertically: time flows **down** (past → future); forks/branches spawn to the **right**; jump-to-hallway still works on the 320-wide canvas
+- Cache-bust / `GAME_VERSION` bumped to **0.5.6**
+
+### Added
+- Pause menu **Portfolio Overview** with Cash, savings/rate, taxable stocks/cost basis, 401(k), homes/mortgages, loans, net worth, and current life details
+- Pause **Charts** timeline compare: when the tree has multiple branch tips (spawn-off after Map jump), overlay Net Worth or Cash across Timeline A/B/… on a shared year axis (legend labels; current tip marked `*`)
+- Pause **Charts** year snapshot: Enter a calendar year (Dialog.prompt — mobile HTML input supported) to see **side-by-side** portfolio columns per timeline (Cash, savings, stocks, 401(k), homes/equity, loans, salary/retired, age, net worth); missing span shows Before branch / After end / n/a; ←/→ cycles chart modes, ↑/↓ picks which pair when 3+ tips
+
 ## [0.5.5] — 2026-09-28
 
 ### Added

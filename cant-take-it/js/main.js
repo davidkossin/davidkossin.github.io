@@ -173,7 +173,7 @@ window.addEventListener('keydown', async (e) => {
     e.preventDefault();
     if (mode === 'room') room.setInputBlocked(true);
     else hallway.setInputBlocked(true);
-    pause.show(game);
+    pause.show(game, dialog);
     return;
   }
 
@@ -247,8 +247,8 @@ function loop() {
     ending.render(ctx);
   }
 
-  dialog.draw(ctx);
   if (pause.open && game) pause.draw(ctx, game);
+  dialog.draw(ctx);
 
   // Build version — bottom-right, always visible for cache checks
   ctx.save();

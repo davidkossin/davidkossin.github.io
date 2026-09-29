@@ -298,3 +298,288 @@ export function hallwayDoorCount(game) {
   const leaveAge = game.portfolio.age;
   return Math.max(0, MAX_AGE - leaveAge - 1);
 }
+
+
+/**
+ * Children of each timeline node (parentId → child ids).
+ * @param {object} game
+ * @returns {Map<string, string[]>}
+ */
+export function timelineChildrenMap(game) {
+  const map = new Map();
+  for (const n of Object.values(game.timeline?.nodes || {})) {
+    if (!n?.id) continue;
+    if (n.parentId) {
+      if (!map.has(n.parentId)) map.set(n.parentId, []);
+      map.get(n.parentId).push(n.id);
+    }
+  }
+  for (const kids of map.values()) {
+    kids.sort((a, b) => {
+      const na = game.timeline.nodes[a];
+      const nb = game.timeline.nodes[b];
+      if (na.year !== nb.year) return na.year - nb.year;
+      return String(a).localeCompare(String(b));
+    });
+  }
+  return map;
+}
+
+/**
+ * Root → node path (inclusive).
+ * @param {object} game
+ * @param {string} nodeId
+ * @returns {object[]}
+ */
+export function pathFromRoot(game, nodeId) {
+  const path = [];
+  let id = nodeId;
+  const guard = new Set();
+  while (id && !guard.has(id)) {
+    guard.add(id);
+    const n = game.timeline.nodes[id];
+    if (!n) break;
+    path.push(n);
+    id = n.parentId;
+  }
+  path.reverse();
+  return path;
+}
+
+/**
+ * Leaf tips of the timeline tree (nodes with no children).
+ * @param {object} game
+ * @returns {object[]}
+ */
+export function listBranchTips(game) {
+  const nodes = game.timeline?.nodes || {};
+  const kids = timelineChildrenMap(game);
+  return Object.values(nodes)
+    .filter((n) => !kids.has(n.id) || kids.get(n.id).length === 0)
+    .sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return String(a.id).localeCompare(String(b.id));
+    });
+}
+
+/**
+ * Rebuild a worth series from portfolio snapshots along root→tip.
+ * @param {object} game
+ * @param {string} tipNodeId
+ * @returns {Array<{year:number,age:number,netWorth:number,bank:number,portfolio:number,salary:number}>}
+ */
+export function reconstructWorthAlongPath(game, tipNodeId) {
+  const path = pathFromRoot(game, tipNodeId);
+  const history = [];
+  for (const n of path) {
+    const snap = game.timeline.snapshots?.[n.snapshotId];
+    if (!snap) continue;
+    const worth = computeWorth(snap);
+    const row = {
+      year: snap.year ?? n.year,
+      age: snap.age ?? n.age,
+      netWorth: worth.netWorth,
+      bank: worth.bank,
+      portfolio: worth.portfolio,
+      salary: snap.salary || 0,
+      retired: !!snap.retired,
+      nodeId: n.id,
+      snapshotId: n.snapshotId,
+    };
+    const last = history[history.length - 1];
+    if (last && last.year === row.year && last.age === row.age) {
+      Object.assign(last, row);
+    } else {
+      history.push(row);
+    }
+  }
+  return history;
+}
+
+const BRANCH_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+/**
+ * Distinct explored timelines (one per leaf tip), labeled A/B/C…
+ * `isCurrent` marks the tip whose path contains currentNodeId (prefer deepest).
+ * @param {object} game
+ * @returns {Array<{letter:string,label:string,tipId:string,tip:object,history:array,isCurrent:boolean,yearMin:number,yearMax:number}>}
+ */
+export function listCompareBranches(game) {
+  const tips = listBranchTips(game);
+  const currentId = game.timeline?.currentNodeId;
+  let currentTipId = null;
+  if (currentId) {
+    // Prefer a tip that descends from / is the current node
+    for (const tip of tips) {
+      const path = pathFromRoot(game, tip.id);
+      if (path.some((n) => n.id === currentId)) {
+        currentTipId = tip.id;
+        break;
+      }
+    }
+  }
+
+  return tips.map((tip, i) => {
+    const history = reconstructWorthAlongPath(game, tip.id);
+    const letter = BRANCH_LETTERS[i] || String(i + 1);
+    const forkLabel = tip.label || `Tip ${tip.year}`;
+    const yearMin = history.length ? history[0].year : tip.year;
+    const yearMax = history.length ? history[history.length - 1].year : tip.year;
+    return {
+      letter,
+      label: `Timeline ${letter}`,
+      shortLabel: letter,
+      tipId: tip.id,
+      tip,
+      history,
+      isCurrent: tip.id === currentTipId,
+      yearMin,
+      yearMax,
+      forkLabel,
+    };
+  });
+}
+
+/**
+ * Best portfolio snapshot on a branch for a calendar year.
+ * Prefers the latest node on that path with snap.year === year;
+ * falls back to nearest earlier year only when status would otherwise be missing mid-span
+ * (we report exact-year only for side-by-side clarity — before/after otherwise).
+ *
+ * @param {object} game
+ * @param {string} tipNodeId
+ * @param {number} year
+ * @returns {{status:'ok'|'before'|'after'|'empty', year:number, age?:number, portfolio?:object, worth?:object, node?:object}}
+ */
+export function portfolioAtYearOnBranch(game, tipNodeId, year) {
+  const y = Math.round(Number(year));
+  if (!Number.isFinite(y)) {
+    return { status: 'empty', year: y };
+  }
+  const path = pathFromRoot(game, tipNodeId);
+  if (!path.length) return { status: 'empty', year: y };
+
+  const withSnaps = [];
+  for (const n of path) {
+    const snap = game.timeline.snapshots?.[n.snapshotId];
+    if (!snap) continue;
+    withSnaps.push({ node: n, snap, year: snap.year ?? n.year, age: snap.age ?? n.age });
+  }
+  if (!withSnaps.length) return { status: 'empty', year: y };
+
+  const yearMin = withSnaps[0].year;
+  const yearMax = withSnaps[withSnaps.length - 1].year;
+  if (y < yearMin) {
+    return { status: 'before', year: y, yearMin, yearMax };
+  }
+  if (y > yearMax) {
+    return { status: 'after', year: y, yearMin, yearMax };
+  }
+
+  // Exact year only — mid-span gaps (e.g. spawned into a later door) are n/a
+  const exact = withSnaps.filter((s) => s.year === y);
+  if (exact.length) {
+    const pick = exact[exact.length - 1];
+    return {
+      status: 'ok',
+      year: y,
+      age: pick.age,
+      portfolio: pick.snap,
+      worth: computeWorth(pick.snap),
+      node: pick.node,
+      yearMin,
+      yearMax,
+    };
+  }
+
+  return { status: 'gap', year: y, yearMin, yearMax };
+}
+
+/**
+ * Layout positions for pause Timeline Map.
+ * Time flows DOWN the main spine (past → future); forks spawn RIGHT.
+ *
+ * @param {object} game
+ * @param {{x:number,y:number,w:number,h:number}} rect
+ * @returns {{positions: Map<string,{x:number,y:number,node:object,lane:number}>, edges: Array<{from:string,to:string}>, orientation:string}}
+ */
+export function layoutTimelineMap(game, rect) {
+  const nodes = game.timeline?.nodes || {};
+  const list = Object.values(nodes);
+  const kids = timelineChildrenMap(game);
+  const root = list.find((n) => !n.parentId) || list[0];
+  if (!root) {
+    return { positions: new Map(), edges: [], orientation: 'vertical-down' };
+  }
+
+  // Prefer current path as lane 0 (main spine)
+  const currentPath = new Set(
+    pathFromRoot(game, game.timeline.currentNodeId || root.id).map((n) => n.id)
+  );
+
+  const laneOf = new Map();
+  let nextLane = 1;
+
+  function assign(id, preferredLane) {
+    if (laneOf.has(id)) return;
+    laneOf.set(id, preferredLane);
+    const children = kids.get(id) || [];
+    // Keep current-path child on same lane; others fork right
+    const ordered = [...children].sort((a, b) => {
+      const ac = currentPath.has(a) ? 0 : 1;
+      const bc = currentPath.has(b) ? 0 : 1;
+      if (ac !== bc) return ac - bc;
+      return String(a).localeCompare(String(b));
+    });
+    let forked = false;
+    for (const cid of ordered) {
+      if (!forked && (currentPath.has(cid) || ordered.length === 1)) {
+        assign(cid, preferredLane);
+        forked = true;
+      } else if (!forked) {
+        assign(cid, preferredLane);
+        forked = true;
+      } else {
+        const lane = nextLane++;
+        assign(cid, lane);
+      }
+    }
+  }
+  assign(root.id, 0);
+
+  const years = list.map((n) => n.year);
+  const yMin = Math.min(...years);
+  const yMax = Math.max(...years);
+  const yearSpan = Math.max(1, yMax - yMin);
+  const maxLane = Math.max(0, ...laneOf.values());
+  const padX = 10;
+  const padY = 6;
+  const usableW = Math.max(20, rect.w - padX * 2);
+  const usableH = Math.max(20, rect.h - padY * 2);
+  const laneGap = maxLane === 0 ? 0 : Math.min(28, usableW / Math.max(1, maxLane));
+
+  const positions = new Map();
+  for (const n of list) {
+    const lane = laneOf.get(n.id) ?? 0;
+    const t = (n.year - yMin) / yearSpan;
+    const px = rect.x + padX + lane * laneGap;
+    const py = rect.y + padY + t * usableH;
+    positions.set(n.id, { x: px, y: py, node: n, lane });
+  }
+
+  const edges = [];
+  for (const n of list) {
+    if (n.parentId && positions.has(n.parentId) && positions.has(n.id)) {
+      edges.push({ from: n.parentId, to: n.id });
+    }
+  }
+
+  return {
+    positions,
+    edges,
+    orientation: 'vertical-down',
+    yMin,
+    yMax,
+    maxLane,
+  };
+}

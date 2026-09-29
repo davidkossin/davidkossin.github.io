@@ -1,8 +1,21 @@
 /**
  * Simple canvas line charts for net worth / bank / portfolio series.
+ * Also multi-timeline compare charts (shared year axis + legend labels).
  */
 
 import { PALETTE, VIEW_W, VIEW_H } from '../config.js';
+
+/** Distinct colors for Timeline A/B/C… overlays */
+export const BRANCH_COLORS = [
+  '#d4a84b', // gold — A
+  '#80c0e0', // blue — B
+  '#80e0a0', // green — C
+  '#e080c0', // pink — D
+  '#c0a0ff', // violet — E
+  '#e0c080', // tan — F
+  '#80e0e0', // cyan — G
+  '#e08080', // coral — H
+];
 
 /**
  * @param {CanvasRenderingContext2D} ctx
@@ -106,6 +119,115 @@ export function drawWorthChart(ctx, history, opts = {}) {
   // min/max
   ctx.fillStyle = '#666';
   ctx.fillText(compact(maxV), x + 2, y + 2);
+  ctx.fillText(compact(minV), x + 2, y + h - 8);
+}
+
+/**
+ * Overlay one metric across multiple timeline branches on a shared year axis.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Array<{letter:string,label?:string,history:array,isCurrent?:boolean}>} branches
+ * @param {object} [opts]
+ * @param {'netWorth'|'bank'|'portfolio'|'salary'} [opts.metric]
+ */
+export function drawCompareChart(ctx, branches, opts = {}) {
+  const x = opts.x ?? 16;
+  const y = opts.y ?? 36;
+  const w = opts.w ?? VIEW_W - 32;
+  const h = opts.h ?? VIEW_H - 80;
+  const metric = opts.metric || 'netWorth';
+
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
+  ctx.strokeStyle = PALETTE.uiBorder;
+  ctx.strokeRect(x - 4.5, y - 4.5, w + 8, h + 8);
+
+  const usable = (branches || []).filter((b) => b.history?.length);
+  if (!usable.length) {
+    ctx.fillStyle = PALETTE.uiText;
+    ctx.font = '7px "Press Start 2P", monospace';
+    ctx.fillText('No branch data', x + 8, y + h / 2);
+    return;
+  }
+
+  const yearSet = new Set();
+  let minV = Infinity;
+  let maxV = -Infinity;
+  for (const b of usable) {
+    for (const row of b.history) {
+      yearSet.add(row.year);
+      const v = row[metric];
+      if (v == null) continue;
+      minV = Math.min(minV, v);
+      maxV = Math.max(maxV, v);
+    }
+  }
+  const years = [...yearSet].sort((a, b) => a - b);
+  if (!Number.isFinite(minV)) minV = 0;
+  if (!Number.isFinite(maxV)) maxV = 1;
+  if (minV === maxV) {
+    minV -= 1;
+    maxV += 1;
+  }
+
+  ctx.strokeStyle = '#444';
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x + w, y + h);
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y + h);
+  ctx.stroke();
+
+  const xAt = (year) => {
+    if (years.length === 1) return x + w / 2;
+    const t = (year - years[0]) / (years[years.length - 1] - years[0]);
+    return x + t * w;
+  };
+  const yAt = (v) => y + h - ((v - minV) / (maxV - minV)) * h;
+
+  usable.forEach((b, i) => {
+    const color = BRANCH_COLORS[i % BRANCH_COLORS.length];
+    ctx.strokeStyle = color;
+    ctx.lineWidth = b.isCurrent ? 2 : 1;
+    ctx.beginPath();
+    let started = false;
+    const sorted = [...b.history].sort((a, c) => a.year - c.year || a.age - c.age);
+    for (const row of sorted) {
+      const v = row[metric];
+      if (v == null) continue;
+      const px = xAt(row.year);
+      const py = yAt(v);
+      if (!started) {
+        ctx.moveTo(px, py);
+        started = true;
+      } else ctx.lineTo(px, py);
+    }
+    if (started) ctx.stroke();
+    ctx.lineWidth = 1;
+  });
+
+  // legend — Timeline A / B ★
+  ctx.font = '5px "Press Start 2P", monospace';
+  let lx = x + 4;
+  const ly = y + 4;
+  usable.forEach((b, i) => {
+    const color = BRANCH_COLORS[i % BRANCH_COLORS.length];
+    const tag = `${b.letter || b.shortLabel || i}${b.isCurrent ? '*' : ''}`;
+    ctx.fillStyle = color;
+    ctx.fillRect(lx, ly, 6, 4);
+    ctx.fillStyle = PALETTE.uiText;
+    ctx.fillText(tag, lx + 8, ly - 1);
+    lx += 8 + ctx.measureText(tag).width + 8;
+    if (lx > x + w - 20) {
+      lx = x + 4;
+    }
+  });
+
+  ctx.fillStyle = '#888';
+  ctx.fillText(String(years[0]), x, y + h + 6);
+  ctx.fillText(String(years[years.length - 1]), x + w - 28, y + h + 6);
+
+  ctx.fillStyle = '#666';
+  ctx.fillText(compact(maxV), x + 2, y + 14);
   ctx.fillText(compact(minV), x + 2, y + h - 8);
 }
 

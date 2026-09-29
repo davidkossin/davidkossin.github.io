@@ -142,9 +142,10 @@ export class TitleScene {
     ctx.fillText("YOU CAN'T TAKE", VIEW_W / 2, 90);
     ctx.fillText('IT WITH YOU', VIEW_W / 2, 108);
 
-    ctx.font = '7px "Press Start 2P", monospace';
+    ctx.font = '6px "Press Start 2P", monospace';
     ctx.fillStyle = PALETTE.uiText;
-    ctx.fillText('A 16-bit life ledger', VIEW_W / 2, 140);
+    ctx.fillText('An existential interactive', VIEW_W / 2, 136);
+    ctx.fillText('financial planner', VIEW_W / 2, 150);
 
     if (Math.floor(this.blink / 30) % 2 === 0) {
       ctx.fillStyle = PALETTE.accent;

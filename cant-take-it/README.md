@@ -17,7 +17,7 @@ A 16-bit, top-down life & finance RPG (A Link to the Past vibe) playable in the 
    - **Borrow** — HELOC or loan against shares (asset-backed only; APRs shown)
 4. **North door** — “Hallway of Time.” Confirm leaving the year.
 5. **Hallway** — Narrow corridor through a dark purple stippled void. First door = **leave year + 1**. HUD age / year / Cash / portfolio project forward (deterministic). A **glass wall** blocks years where Cash would hit ≤ $0. Lanterns flicker beside doors.
-6. **Esc** — Pause: **Map** (timeline graph; jump back to a prior Hallway node) and **Charts** (net worth over years).
+6. **Esc** — Pause: **Portfolio** (holdings / net worth), **Map** (vertical timeline — time ↓, forks →; jump back to a Hallway node), and **Charts** (current path, A/B overlay compare, or Enter a year for side-by-side portfolio snapshots).
 7. **Age 100** — “End of the Line.” Ending → See your charts / New Game.
 8. **Saves** — Auto-save on entering a year’s room and when entering the hallway (`ycitwy_saves_v2`).
 
@@ -166,7 +166,7 @@ Interest / mortgage rates are **entered as percent** (e.g. `3.2` means 3.2%). St
 
 ### Timeline / pause map
 
-Each Decision Room and Hallway visit appends a node with a portfolio snapshot. Esc → Map lists Hallway nodes; selecting one **restores that branch** so you can spin alternate futures. Charts tab plots `worthHistory`.
+Each Decision Room and Hallway visit appends a node with a portfolio snapshot (`parentId` tree). Esc → Map lists Hallway nodes; selecting one **restores that branch** so you can spin alternate futures (abandoned tips remain for compare). Charts can overlay Net Worth/Cash across Timeline A/B/… (from snapshots along each tip path) or prompt for a year and show side-by-side portfolios; live `worthHistory` is the current path only.
 
 ## Extending
 
