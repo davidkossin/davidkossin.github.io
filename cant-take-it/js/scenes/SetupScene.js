@@ -29,10 +29,33 @@ export class SetupScene {
   }
 
   /**
-   * Run full setup via dialog; returns game state.
+   * Scrub temporary questionnaire fields from a setup object.
+   * @param {object} s
+   */
+  scrubTemps(s) {
+    delete s._homeCount;
+    delete s._homeIdx;
+    delete s._homeType;
+    delete s._homeValue;
+    delete s._homeOwed;
+    delete s._homeRate;
+    delete s._kidCount;
+    delete s._kidIdx;
+    delete s._kidName;
+    return s;
+  }
+
+  /**
+   * Run full setup via dialog.
+   * @param {object} dialog
+   * @param {{ mode?: 'game'|'profile' }} [options]
+   *   mode 'game' (default): welcome + createGameFromSetup
+   *   mode 'profile': return scrubbed setup (or null if cancelled at start)
    * Every step supports Back to edit prior answers.
    */
-  async run(dialog) {
+  async run(dialog, options = {}) {
+    const mode = options.mode === 'profile' ? 'profile' : 'game';
+    const allowCancelAtStart = mode === 'profile';
     const s = createDefaultSetup();
     let step = 0;
 
@@ -47,7 +70,8 @@ export class SetupScene {
           defaultValue: s.playerName,
         });
         if (result == null) {
-          /* first step: cancel stays */
+          if (allowCancelAtStart) return null;
+          /* game mode: first step cancel stays */
           continue;
         }
         s.playerName = result || s.playerName;
@@ -458,20 +482,14 @@ export class SetupScene {
         s.difficulty = result || 'standard';
         step++;
       } else if (step === 25) {
+        this.scrubTemps(s);
+        if (mode === 'profile') {
+          return s;
+        }
         await dialog.show(
           `Welcome, ${s.playerName}. Year ${s.year}, age ${s.age}. Your Decision Room awaits.`,
           { title: 'Begin' }
         );
-        // scrub temp fields
-        delete s._homeCount;
-        delete s._homeIdx;
-        delete s._homeType;
-        delete s._homeValue;
-        delete s._homeOwed;
-        delete s._homeRate;
-        delete s._kidCount;
-        delete s._kidIdx;
-        delete s._kidName;
         return createGameFromSetup(s);
       }
     }

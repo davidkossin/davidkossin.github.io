@@ -10,6 +10,16 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
+## [0.5.9] — 2026-09-29
+
+### Added
+- Title **Create a Profile**: run the full setup questionnaire and save answers as a reusable player profile in localStorage (`ycitwy_profiles_v1`, separate from game saves)
+- Title **Use Profile**: pick a saved profile and start a new Decision Room game without re-answering the questionnaire
+- Title **Manage Profiles**: list and delete profiles with Cancel-default confirm (mirrors Manage Saves); profile menu options refresh when the last profile is removed
+
+### Changed
+- Cache-bust / `GAME_VERSION` bumped to **0.5.9**
+
 ## [0.5.8] — 2026-09-28
 
 ### Fixed

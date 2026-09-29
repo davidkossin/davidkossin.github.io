@@ -9,7 +9,7 @@ export const HUD_H = 40;
 export const CANVAS_H = HUD_H + VIEW_H;
 
 /** Bump on each published build so players can confirm cache. */
-export const GAME_VERSION = '0.5.8';
+export const GAME_VERSION = '0.5.9';
 
 export const PALETTE = {
   bg: '#1a1420',
@@ -126,6 +126,8 @@ export const HOME_TYPES = {
 };
 
 export const SAVE_KEY = 'ycitwy_saves_v2';
+/** Player profiles (setup answers) — separate from game saves. */
+export const PROFILE_KEY = 'ycitwy_profiles_v1';
 export const MAX_AGE = 100;
 export const RETIREMENT_AGE = 65;
 /** Simplified long-term federal capital gains rate (illustrative). */

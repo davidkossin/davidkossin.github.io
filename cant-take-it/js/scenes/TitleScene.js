@@ -1,9 +1,19 @@
 import { PALETTE, VIEW_W, VIEW_H, CANVAS_H } from '../config.js';
 import { deleteSave, hasSaves, listSaves, loadSave } from '../state/SaveSystem.js';
+import {
+  deleteProfile,
+  hasProfiles,
+  listProfiles,
+  loadProfile,
+  profileIdentification,
+  saveProfile,
+} from '../state/ProfileSystem.js';
 import { createStandardPortfolioSetup, createGameFromSetup } from '../state/GameState.js';
+import { SetupScene } from './SetupScene.js';
 import { makeTile } from '../render/Assets.js';
 
 const MAX_VISIBLE_SAVES = 10;
+const MAX_VISIBLE_PROFILES = 10;
 
 function saveIdentification(save) {
   return `${save.label} — ${save.playerName} (age ${save.age})`;
@@ -13,6 +23,7 @@ export class TitleScene {
   constructor(game) {
     this.game = game;
     this.blink = 0;
+    this.setupScene = new SetupScene();
   }
 
   async enter() {
@@ -21,12 +32,19 @@ export class TitleScene {
 
   async runMenu(dialog) {
     while (true) {
-      // Rebuild the title menu after save management so its save-dependent
-      // entries disappear immediately when the final save is deleted.
+      // Rebuild the title menu after save/profile management so dependent
+      // entries disappear immediately when the final entry is deleted.
       const opts = [{ label: 'New Game', value: 'new' }];
+      if (hasProfiles()) {
+        opts.push({ label: 'Use Profile', value: 'useProfile' });
+      }
+      opts.push({ label: 'Create a Profile', value: 'createProfile' });
       if (hasSaves()) {
         opts.push({ label: 'Load Game', value: 'load' });
         opts.push({ label: 'Manage Saves', value: 'manage' });
+      }
+      if (hasProfiles()) {
+        opts.push({ label: 'Manage Profiles', value: 'manageProfiles' });
       }
       opts.push({ label: 'How to Play', value: 'help' });
       const choice = await dialog.menu(
@@ -39,6 +57,19 @@ export class TitleScene {
         const start = await this.chooseNewGame(dialog);
         if (!start) continue;
         return start;
+      }
+      if (choice === 'createProfile') {
+        await this.createProfile(dialog);
+        continue;
+      }
+      if (choice === 'useProfile') {
+        const start = await this.useProfile(dialog);
+        if (!start) continue;
+        return start;
+      }
+      if (choice === 'manageProfiles') {
+        await this.manageProfiles(dialog);
+        continue;
       }
       if (choice === 'help') {
         await dialog.show(
@@ -124,6 +155,104 @@ export class TitleScene {
     return { action: 'new', mode: 'standard', game };
   }
 
+  /**
+   * Run the setup questionnaire and persist answers as a reusable profile.
+   * Returns to the title menu (does not start a game).
+   */
+  async createProfile(dialog) {
+    this._setupActive = true;
+    try {
+      const setupAnswers = await this.setupScene.run(dialog, { mode: 'profile' });
+      if (!setupAnswers) return;
+      const entry = saveProfile(setupAnswers);
+      await dialog.show(
+        `Profile created.\n${profileIdentification(entry)}`,
+        { title: 'Create a Profile' }
+      );
+    } finally {
+      this._setupActive = false;
+    }
+  }
+
+  /**
+   * Pick a saved profile and start a new game from it.
+   * @returns {Promise<{action:'new', mode:'profile', game:object}|null>}
+   */
+  async useProfile(dialog) {
+    const profiles = listProfiles();
+    if (!profiles.length) {
+      await dialog.show('No profiles found.', { title: 'Use Profile' });
+      return null;
+    }
+    const pick = await dialog.menu(
+      'Choose a profile:',
+      [
+        ...profiles.slice(0, MAX_VISIBLE_PROFILES).map((p) => ({
+          label: profileIdentification(p),
+          value: p.id,
+        })),
+        { label: 'Cancel', value: null },
+      ],
+      { title: 'Use Profile' }
+    );
+    if (!pick) return null;
+    const setup = loadProfile(pick);
+    if (!setup) {
+      await dialog.show('Profile missing.', { title: 'Use Profile' });
+      return null;
+    }
+    const game = createGameFromSetup(setup);
+    await dialog.show(
+      `Welcome, ${game.portfolio.playerName}. Year ${game.portfolio.year}, age ${game.portfolio.age}. Your Decision Room awaits.`,
+      { title: 'Begin' }
+    );
+    return { action: 'new', mode: 'profile', game };
+  }
+
+  async manageProfiles(dialog) {
+    while (true) {
+      const profiles = listProfiles();
+      if (!profiles.length) {
+        await dialog.show('No profiles found.', { title: 'Manage Profiles' });
+        return;
+      }
+
+      const pick = await dialog.menu(
+        'Choose a profile to delete:',
+        [
+          ...profiles.slice(0, MAX_VISIBLE_PROFILES).map((p) => ({
+            label: profileIdentification(p),
+            value: p.id,
+          })),
+          { label: 'Back', value: null },
+        ],
+        { title: 'Manage Profiles' }
+      );
+      if (!pick) return;
+
+      const profile = profiles.find((p) => p.id === pick);
+      if (!profile) continue;
+
+      const confirmed = await dialog.menu(
+        `Delete ${profileIdentification(profile)}?`,
+        [
+          { label: 'Delete Profile', value: true },
+          { label: 'Cancel', value: false },
+        ],
+        // Cancellation is the safe default for this destructive action.
+        { title: 'Manage Profiles', selected: 1 }
+      );
+      if (!confirmed) continue;
+
+      deleteProfile(profile.id);
+      await dialog.show('Profile deleted.', { title: 'Manage Profiles' });
+      if (!hasProfiles()) {
+        await dialog.show('No profiles found.', { title: 'Manage Profiles' });
+        return;
+      }
+    }
+  }
+
   async manageSaves(dialog) {
     while (true) {
       // Read the list on every pass so the menu reflects deletions immediately.
@@ -176,6 +305,10 @@ export class TitleScene {
   }
 
   draw(ctx) {
+    if (this._setupActive) {
+      this.setupScene.draw(ctx);
+      return;
+    }
     // dithered title backdrop (full canvas incl. HUD band)
     const floor = makeTile('floor');
     for (let y = 0; y < CANVAS_H; y += 16) {

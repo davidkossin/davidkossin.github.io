@@ -124,11 +124,13 @@ async function startTitle() {
     mode = game.scene === 'hallway' ? 'hallway' : 'room';
     if (mode === 'room') room.enter(game, false);
     else hallway.enter(game);
-  } else if (result.action === 'new' && result.mode === 'standard' && result.game) {
+  } else if (result.action === 'new' && result.game) {
+    // Standard portfolio or Use Profile — game already built
     game = result.game;
     mode = 'room';
     room.enter(game, false);
   } else {
+    // Custom setup (one-off; not auto-saved as a profile)
     mode = 'setup';
     game = await setup.run(dialog);
     mode = 'room';
