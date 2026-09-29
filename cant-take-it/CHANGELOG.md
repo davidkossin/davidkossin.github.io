@@ -10,6 +10,21 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
+## [0.5.8] — 2026-09-28
+
+### Fixed
+- Timeline Map **you** marker tracks live portfolio year/age (no longer stuck at hallway entry year)
+- Map lane tips on abandoned parent spines keep the pre-fork hallway so ←/→ timeline jump still works
+- Decision Room entry after the start room now draws a **Y fork** on the Timeline Map (not only a second sibling spawn-off)
+
+### Changed
+- Timeline Map d-pad: **←/→** select timeline, **↑/↓** select a hallway jump point (and **Compare** when 2+ explored tips); Enter jumps or opens Map Compare
+- Compare is an on-map selectable button (C shortcut kept); jump list replaced by status line + graph highlight
+- A/C markers inset; legend includes DR visit dots; selected timeline spine is brighter
+
+### Added
+- Map shows Decision Room visit markers on a timeline spine even when that visit is the fork hub
+
 ## [0.5.7] — 2026-09-28
 
 ### Added

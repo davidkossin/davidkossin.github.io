@@ -11,7 +11,7 @@ import {
   portfolioAtYearOnBranch,
   layoutTimelineMap,
   buildTimelineMapModel,
-  pathFromRoot,
+  hallwayNodesForTimeline,
 } from '../state/GameState.js';
 import { computeWorth } from '../finance/Engine.js';
 import { drawWorthChart, BRANCH_COLORS } from '../render/Charts.js';
@@ -41,6 +41,15 @@ export class PauseMenu {
     this._askingYear = false;
     /** @type {import('../render/Dialog.js').Dialog|null} */
     this.dialog = null;
+    /** Map overview focus: timeline index + point index (or Compare). */
+    this.mapTimelineIndex = 0;
+    this.mapPointIndex = 0;
+    /** @type {'point'|'compare'} */
+    this.mapFocus = 'point';
+    /** @type {object[]} Hallway jump targets for the selected timeline. */
+    this.mapJumpPoints = [];
+    /** @type {object|null} Cached map model from last refresh. */
+    this.mapModel = null;
   }
 
   show(game, dialog = null) {
@@ -64,7 +73,6 @@ export class PauseMenu {
 
   refresh(game) {
     this.hallwayNodes = listTimelineNodes(game).filter((n) => n.type === 'hallway');
-    this.selected = Math.min(this.selected, Math.max(0, this.hallwayNodes.length - 1));
     const branches = listCompareBranches(game);
     if (branches.length < 2) {
       this.mapMode = 'overview';
@@ -77,6 +85,88 @@ export class PauseMenu {
         this.mapCompareB = this.mapCompareA === 0 ? 1 : 0;
       }
     }
+    this.syncMapSelection(game, { resetFocus: true });
+  }
+
+  /**
+   * Keep map timeline/point selection coherent with the live tree.
+   * On resetFocus (open/refresh): pick timeline containing currentNodeId and
+   * the hallway nearest to live portfolio year (or the current hallway node).
+   */
+  syncMapSelection(game, { resetFocus = false } = {}) {
+    const model = buildTimelineMapModel(game);
+    this.mapModel = model;
+    const timelines = model.timelines || [];
+    if (!timelines.length) {
+      this.mapTimelineIndex = 0;
+      this.mapPointIndex = 0;
+      this.mapFocus = 'point';
+      this.mapJumpPoints = [];
+      this.selected = 0;
+      return;
+    }
+
+    if (resetFocus) {
+      let ti = timelines.findIndex((t) => t.isCurrent);
+      if (ti < 0) ti = 0;
+      const currentId = game.timeline?.currentNodeId;
+      const curNode = currentId ? game.timeline?.nodes?.[currentId] : null;
+      // Prefer deepest timeline whose path/lane matches current when multiple claim isCurrent
+      if (curNode) {
+        const byLane = timelines.findIndex((t) => t.lane === (model.current?.lane ?? t.lane) && t.isCurrent);
+        if (byLane >= 0) ti = byLane;
+      }
+      this.mapTimelineIndex = ti;
+    } else {
+      this.mapTimelineIndex = Math.min(this.mapTimelineIndex, timelines.length - 1);
+    }
+
+    const tl = timelines[this.mapTimelineIndex];
+    this.mapJumpPoints = hallwayNodesForTimeline(game, tl?.tipId);
+    const canCompare = listCompareBranches(game).length >= 2;
+
+    if (resetFocus) {
+      this.mapFocus = 'point';
+      const liveYear = game.portfolio?.year ?? model.current?.year ?? 0;
+      const currentId = game.timeline?.currentNodeId;
+      const curNode = currentId ? game.timeline?.nodes?.[currentId] : null;
+      let pi = 0;
+      if (curNode?.type === 'hallway') {
+        const exact = this.mapJumpPoints.findIndex((n) => n.id === curNode.id);
+        if (exact >= 0) pi = exact;
+        else if (this.mapJumpPoints.length) {
+          pi = nearestHallwayIndex(this.mapJumpPoints, liveYear);
+        }
+      } else if (this.mapJumpPoints.length) {
+        pi = nearestHallwayIndex(this.mapJumpPoints, liveYear);
+      }
+      this.mapPointIndex = pi;
+    } else if (this.mapFocus === 'compare' && !canCompare) {
+      this.mapFocus = 'point';
+      this.mapPointIndex = Math.min(this.mapPointIndex, Math.max(0, this.mapJumpPoints.length - 1));
+    } else if (this.mapFocus === 'point') {
+      if (!this.mapJumpPoints.length) {
+        this.mapPointIndex = 0;
+        if (canCompare) this.mapFocus = 'compare';
+      } else {
+        this.mapPointIndex = Math.min(this.mapPointIndex, this.mapJumpPoints.length - 1);
+      }
+    }
+
+    const sel = this.mapFocus === 'point' ? this.mapJumpPoints[this.mapPointIndex] : null;
+    this.selected = sel
+      ? Math.max(0, this.hallwayNodes.findIndex((n) => n.id === sel.id))
+      : 0;
+  }
+
+  /** Focus list for ↑/↓ on the selected timeline: jump points then optional Compare. */
+  mapFocusItems(game) {
+    const points = this.mapJumpPoints || [];
+    const items = points.map((n, i) => ({ kind: 'point', index: i, node: n }));
+    if (listCompareBranches(game).length >= 2) {
+      items.push({ kind: 'compare' });
+    }
+    return items;
   }
 
   /**
@@ -135,6 +225,7 @@ export class PauseMenu {
       this.selected = 0;
       this.portfolioPage = 0;
       this.portfolioDetailPage = 0;
+      if (this.screen === 'map') this.syncMapSelection(game, { resetFocus: true });
       e.preventDefault();
       return undefined;
     }
@@ -203,24 +294,62 @@ export class PauseMenu {
         return undefined;
       }
 
-      if (KEYS.up.includes(e.key)) {
-        if (this.hallwayNodes.length) {
-          this.selected =
-            (this.selected - 1 + this.hallwayNodes.length) % this.hallwayNodes.length;
+      // Overview: ←/→ timeline · ↑/↓ point (and Compare) · Enter jump/Compare
+      this.syncMapSelection(game);
+      const timelines = this.mapModel?.timelines || [];
+      if (KEYS.left.includes(e.key) || KEYS.right.includes(e.key)) {
+        if (timelines.length >= 2) {
+          const dir = KEYS.right.includes(e.key) ? 1 : -1;
+          this.mapTimelineIndex =
+            (this.mapTimelineIndex + dir + timelines.length) % timelines.length;
+          this.mapFocus = 'point';
+          this.mapPointIndex = 0;
+          this.syncMapSelection(game);
+          // After timeline change, pick hallway nearest live year on that lane
+          const liveYear = game.portfolio?.year ?? this.mapModel?.current?.year ?? 0;
+          if (this.mapJumpPoints.length) {
+            this.mapPointIndex = nearestHallwayIndex(this.mapJumpPoints, liveYear);
+            this.syncMapSelection(game);
+          }
         }
         e.preventDefault();
         return undefined;
       }
-      if (KEYS.down.includes(e.key)) {
-        if (this.hallwayNodes.length) {
-          this.selected = (this.selected + 1) % this.hallwayNodes.length;
+      if (KEYS.up.includes(e.key) || KEYS.down.includes(e.key)) {
+        const items = this.mapFocusItems(game);
+        if (items.length) {
+          let cur = 0;
+          if (this.mapFocus === 'compare') {
+            cur = items.findIndex((it) => it.kind === 'compare');
+          } else {
+            cur = items.findIndex(
+              (it) => it.kind === 'point' && it.index === this.mapPointIndex
+            );
+          }
+          if (cur < 0) cur = 0;
+          const dir = KEYS.down.includes(e.key) ? 1 : -1;
+          const next = items[(cur + dir + items.length) % items.length];
+          if (next.kind === 'compare') {
+            this.mapFocus = 'compare';
+          } else {
+            this.mapFocus = 'point';
+            this.mapPointIndex = next.index;
+          }
+          this.syncMapSelection(game);
         }
         e.preventDefault();
         return undefined;
       }
       if (KEYS.confirm.includes(e.key)) {
         e.preventDefault();
-        const node = this.hallwayNodes[this.selected];
+        if (this.mapFocus === 'compare') {
+          if (branches.length >= 2) {
+            this.mapMode = 'select';
+            this.mapCompareActive = 0;
+          }
+          return undefined;
+        }
+        const node = this.mapJumpPoints[this.mapPointIndex];
         if (node) {
           const ok = jumpToHallwayNode(game, node.id);
           if (ok) {
@@ -503,9 +632,9 @@ export class PauseMenu {
   }
 
   /**
-   * Vertical timeline TREE: time ↑, forks ↗ at Decision Room entries.
-   * Each Timeline line shows A (start) / B (forks) / C (age 100).
-   * Jump list kept for Enter-to-hallway; selected hallway highlighted when on graph year.
+   * Vertical timeline TREE: time ↑, forks ↗ at every Decision Room entry.
+   * D-pad: ←/→ timeline · ↑/↓ jump point (and Compare) · Enter jump / open Compare.
+   * Selection is highlighted on the graph; status line replaces the old jump list.
    */
   drawMap(ctx, game, x, y, boxW, boxH) {
     const compareSelect = this.mapMode === 'select';
@@ -518,15 +647,15 @@ export class PauseMenu {
         ? `Compare${yearLabel} · Enter year · C change`
         : compareSelect
           ? 'Compare · ←/→ side · ↑/↓ timeline · Enter year'
-          : 'Time ↑ · DR forks ↗ · C Compare · Enter jump',
+          : '←/→ timeline · ↑/↓ point · Enter jump · Compare',
       x + 12,
       y + 28
     );
 
     const graphX = x + 12;
     const graphY = y + 38;
-    // Leave room below the graph for Map Compare's two snapshot columns.
-    const graphH = compareResult ? 52 : compareSelect ? 76 : 92;
+    // Leave room below the graph for status / Compare button / snapshot columns.
+    const graphH = compareResult ? 52 : compareSelect ? 76 : 88;
     const graphW = boxW - 24;
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.fillRect(graphX, graphY, graphW, graphH);
@@ -540,17 +669,41 @@ export class PauseMenu {
       h: graphH - 16,
     });
     const model = layout.model || buildTimelineMapModel(game);
-    const selected = this.hallwayNodes[this.selected];
+    this.mapModel = model;
+    const timelines = model.timelines || [];
+    if (!compareSelect && !compareResult) {
+      // Keep jump list in sync while drawing (tree may have changed mid-pause)
+      if (timelines.length) {
+        this.mapTimelineIndex = Math.min(this.mapTimelineIndex, timelines.length - 1);
+        const tl = timelines[this.mapTimelineIndex];
+        this.mapJumpPoints = hallwayNodesForTimeline(game, tl?.tipId);
+        if (this.mapFocus === 'point' && this.mapJumpPoints.length) {
+          this.mapPointIndex = Math.min(this.mapPointIndex, this.mapJumpPoints.length - 1);
+        }
+      }
+    }
+    const selectedTl = timelines[this.mapTimelineIndex] || null;
+    const selectedJump =
+      this.mapFocus === 'point' ? this.mapJumpPoints[this.mapPointIndex] : null;
 
-    // Spine + fork connectors
+    // Spine + fork connectors (selected timeline thicker / brighter)
     for (const seg of layout.segments || []) {
       ctx.beginPath();
       if (seg.kind === 'spine') {
-        ctx.strokeStyle = seg.isCurrent ? '#c8a050' : '#555';
-        ctx.lineWidth = seg.isCurrent ? 2 : 1;
+        const selected = selectedTl && seg.timeline === selectedTl.number;
+        if (selected) {
+          ctx.strokeStyle = '#e8c878';
+          ctx.lineWidth = 3;
+        } else if (seg.isCurrent) {
+          ctx.strokeStyle = '#c8a050';
+          ctx.lineWidth = 2;
+        } else {
+          ctx.strokeStyle = '#555';
+          ctx.lineWidth = 1;
+        }
       } else {
         ctx.strokeStyle = '#887848';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.5;
       }
       ctx.moveTo(seg.x1, seg.y1);
       ctx.lineTo(seg.x2, seg.y2);
@@ -559,17 +712,23 @@ export class PauseMenu {
 
     // Timeline number labels at each spine start
     ctx.font = '5px "Press Start 2P", monospace';
-    for (const tl of model.timelines || []) {
+    for (const tl of timelines) {
       const aPt = (layout.points || []).find(
         (p) => p.timeline === tl.number && p.kind === 'A'
       );
       if (!aPt) continue;
-      ctx.fillStyle = tl.isCurrent ? PALETTE.gold : '#888';
+      const selected = selectedTl && tl.number === selectedTl.number;
+      ctx.fillStyle = selected ? PALETTE.gold : tl.isCurrent ? '#c8a050' : '#888';
       ctx.fillText(String(tl.number), aPt.x - 8, aPt.y + 3);
     }
 
-    // A / B / C points
+    // A / DR / B / C points
     for (const pt of layout.points || []) {
+      if (pt.kind === 'DR') {
+        ctx.fillStyle = '#90b070';
+        ctx.fillRect(pt.x - 2, pt.y - 2, 4, 4);
+        continue;
+      }
       const r = pt.kind === 'C' ? 3.5 : 3;
       if (pt.kind === 'A') ctx.fillStyle = PALETTE.gold;
       else if (pt.kind === 'B') ctx.fillStyle = '#80c0e0';
@@ -597,26 +756,18 @@ export class PauseMenu {
       ctx.fillText('you', cp.x + 6, cp.y - 4);
     }
 
-    // Selected jump-target year marker (hallway)
-    if (!compareSelect && !compareResult && selected && layout.xy) {
-      let markLane =
-        (model.timelines.find((t) => t.isCurrent) || model.timelines[0] || {})
-          .lane ?? 0;
-      for (const tl of model.timelines || []) {
-        const path = pathFromRoot(game, tl.tipId);
-        if (path.some((n) => n.id === selected.id)) {
-          markLane = tl.lane;
-          break;
-        }
-      }
-      const sp = layout.xy(markLane, selected.year);
+    // Selected jump-target year marker (gold box on graph)
+    if (!compareSelect && !compareResult && selectedJump && layout.xy && selectedTl) {
+      const sp = layout.xy(selectedTl.lane, selectedJump.year);
       ctx.strokeStyle = PALETTE.gold;
+      ctx.lineWidth = 2;
       ctx.strokeRect(sp.x - 6, sp.y - 6, 12, 12);
+      ctx.lineWidth = 1;
     }
 
     ctx.fillStyle = '#666';
     ctx.font = '4px "Press Start 2P", monospace';
-    ctx.fillText('A start  B DR-fork  C age100', x + 12, graphY + graphH + 2);
+    ctx.fillText('A start · DR visit · B fork · C age100', x + 12, graphY + graphH + 2);
 
     if (compareSelect) {
       const branches = listCompareBranches(game);
@@ -624,7 +775,7 @@ export class PauseMenu {
       ctx.font = '5px "Press Start 2P", monospace';
       [this.mapCompareA, this.mapCompareB].forEach((branchIndex, side) => {
         const branch = branches[branchIndex];
-        const timeline = (model.timelines || []).find((t) => t.tipId === branch?.tipId);
+        const timeline = timelines.find((t) => t.tipId === branch?.tipId);
         const active = this.mapCompareActive === side;
         ctx.fillStyle = active ? PALETTE.gold : PALETTE.uiText;
         ctx.fillText(
@@ -652,33 +803,59 @@ export class PauseMenu {
       return;
     }
 
+    // Status line + optional Compare button (replaces scrolled Jump list)
     let ly = graphY + graphH + 12;
-    ctx.font = '6px "Press Start 2P", monospace';
-    if (!this.hallwayNodes.length) {
+    ctx.font = '5px "Press Start 2P", monospace';
+    const status = this.mapStatusLine(game, selectedTl, selectedJump);
+    ctx.fillStyle = this.mapFocus === 'point' ? PALETTE.gold : PALETTE.uiText;
+    ctx.fillText(status, x + 12, ly);
+    ly += 12;
+
+    const canCompare = listCompareBranches(game).length >= 2;
+    if (canCompare) {
+      const focused = this.mapFocus === 'compare';
+      const btnX = x + 10;
+      const btnW = boxW - 20;
+      const btnH = 14;
+      ctx.fillStyle = focused ? 'rgba(200,160,80,0.2)' : 'rgba(0,0,0,0.25)';
+      ctx.fillRect(btnX, ly - 2, btnW, btnH);
+      ctx.strokeStyle = focused ? PALETTE.gold : '#555';
+      ctx.lineWidth = focused ? 2 : 1;
+      ctx.strokeRect(btnX + 0.5, ly - 1.5, btnW - 1, btnH - 1);
+      ctx.lineWidth = 1;
+      ctx.fillStyle = focused ? PALETTE.gold : PALETTE.uiText;
+      ctx.font = '5px "Press Start 2P", monospace';
+      ctx.fillText(`${focused ? '▶' : ' '} Compare`, btnX + 4, ly + 2);
+    } else if (!this.mapJumpPoints.length) {
       ctx.fillStyle = '#888';
       ctx.fillText('No hallway nodes yet.', x + 12, ly);
-      return;
     }
-    ctx.fillStyle = PALETTE.gold;
-    ctx.fillText('Jump to Hallway:', x + 12, ly);
-    ly += 11;
-    const start = Math.max(0, this.selected - 1);
-    const visible = this.hallwayNodes.slice(start, start + 3);
-    visible.forEach((n, vi) => {
-      const idx = start + vi;
-      const sel = idx === this.selected;
-      ctx.fillStyle = sel ? 'rgba(200,160,80,0.25)' : 'transparent';
-      ctx.fillRect(x + 10, ly - 1, boxW - 20, 11);
-      ctx.fillStyle = sel ? PALETTE.gold : PALETTE.uiText;
-      ctx.font = '5px "Press Start 2P", monospace';
-      ctx.fillText(
-        `${sel ? '▶' : ' '} ${n.label || `Hallway ${n.year}`} (age ${n.age})`,
-        x + 12,
-        ly
-      );
-      ly += 11;
-    });
   }
+
+  mapStatusLine(game, selectedTl, selectedJump) {
+    if (this.mapFocus === 'compare') return 'Compare';
+    const n = selectedTl?.number ?? this.mapTimelineIndex + 1;
+    if (!selectedJump) {
+      return `Timeline ${n} · (no hallway)`;
+    }
+    const label = selectedJump.label || `Hallway after ${selectedJump.year}`;
+    return `Timeline ${n} · ${label} (age ${selectedJump.age})`;
+  }
+}
+
+
+function nearestHallwayIndex(hallways, year) {
+  if (!hallways?.length) return 0;
+  let best = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < hallways.length; i += 1) {
+    const d = Math.abs((hallways[i].year ?? 0) - year);
+    if (d < bestDist) {
+      bestDist = d;
+      best = i;
+    }
+  }
+  return best;
 }
 
 function snapshotLines(p, worth, snap) {

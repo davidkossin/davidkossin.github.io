@@ -568,30 +568,99 @@ export function portfolioAtYearOnBranch(game, tipNodeId, year) {
 }
 
 /**
- * True when this Decision Room begin splits a new timeline off a parent
- * that already had at least one child (spawn-off / Map jump then re-enter).
- * Hallway year doors alone do not count — only Decision Room entries.
+ * True when this node is a Decision Room begin that should fork the Map tree.
+ * Every non-root DR begin forks visually (Start DR → Hallway → later DR shows a Y).
+ * `isFork` / sibling-count still matter for spawn-off compare tips, but Map UX
+ * always treats a new Decision Room entry as a branch point.
  * @param {object} node
- * @param {Map<string, string[]>} kids
+ * @param {Map<string, string[]>|null} [_kids] unused; kept for call-site compat
  */
-export function isDecisionRoomForkEntry(node, kids) {
+export function isDecisionRoomForkEntry(node, _kids) {
   if (!node || node.type !== 'room') return false;
   if (node.kind && node.kind !== 'begin') return false;
-  if (node.isFork) return true;
+  // Root Decision Room is Point A on Timeline 1, not a fork off a parent.
   if (!node.parentId) return false;
-  const siblings = kids.get(node.parentId) || [];
-  if (siblings.length < 2) return false;
-  // First child continues the parent timeline; later Decision Room entries fork
-  return siblings[0] !== node.id;
+  return true;
+}
+
+/**
+ * Assign each timeline node to a Map lane.
+ * Hallway / room-end continue the parent lane; every non-root Decision Room
+ * begin spawns a new lane to the right (visible Y fork).
+ * @param {object} game
+ * @returns {{nodes:object, kids:Map, root:object, laneOf:Map<string,number>, laneCount:number, startYear:number, startAge:number, terminalYear:number}}
+ */
+export function assignTimelineLanes(game) {
+  const nodes = game.timeline?.nodes || {};
+  const list = Object.values(nodes);
+  const kids = timelineChildrenMap(game);
+  const root = list.find((n) => !n.parentId) || list[0] || null;
+  const startYear = game.timeline?.startYear ?? root?.year ?? 0;
+  const startAge = game.timeline?.startAge ?? root?.age ?? 0;
+  const terminalYear = root ? startYear + (MAX_AGE - startAge) : 0;
+  const laneOf = new Map();
+  let nextLane = 1;
+
+  function assign(id, preferredLane) {
+    if (!id || laneOf.has(id)) return;
+    laneOf.set(id, preferredLane);
+    const children = kids.get(id) || [];
+    const ordered = [...children].sort((a, b) => {
+      const na = nodes[a];
+      const nb = nodes[b];
+      const af = isDecisionRoomForkEntry(na) ? 1 : 0;
+      const bf = isDecisionRoomForkEntry(nb) ? 1 : 0;
+      // Continuations (hallway) before forks when sorting siblings
+      if (af !== bf) return af - bf;
+      if ((na?.year ?? 0) !== (nb?.year ?? 0)) return (na?.year ?? 0) - (nb?.year ?? 0);
+      return String(a).localeCompare(String(b));
+    });
+    for (const cid of ordered) {
+      const child = nodes[cid];
+      if (isDecisionRoomForkEntry(child)) {
+        assign(cid, nextLane++);
+      } else {
+        assign(cid, preferredLane);
+      }
+    }
+  }
+
+  if (root) assign(root.id, 0);
+
+  return {
+    nodes,
+    kids,
+    root,
+    laneOf,
+    laneCount: Math.max(1, nextLane),
+    startYear,
+    startAge,
+    terminalYear,
+  };
+}
+
+/**
+ * Hallway nodes on the selected timeline lane (path root→tipId, same lane as tip).
+ * @param {object} game
+ * @param {string} tipId
+ * @returns {object[]}
+ */
+export function hallwayNodesForTimeline(game, tipId) {
+  if (!tipId || !game?.timeline?.nodes?.[tipId]) return [];
+  const { laneOf } = assignTimelineLanes(game);
+  const tipLane = laneOf.get(tipId) ?? 0;
+  const path = pathFromRoot(game, tipId);
+  return path.filter((n) => n.type === 'hallway' && (laneOf.get(n.id) ?? 0) === tipLane);
 }
 
 /**
  * Semantic timeline TREE for the pause Map.
- * Each leaf tip is a Timeline (1, 2, 3…); forks spawn when entering a Decision Room
- * from a parent that already has descendants.
+ * Each lane is a Timeline (1, 2, 3…); every Decision Room begin after the root
+ * forks a new lane (Y-shaped branch). Real alternate playthrough tips still
+ * drive Map Compare via listCompareBranches.
  *
  * Point A = branch start year (game start on Timeline 1; Decision Room year on forks)
- * Point B / B2… = further Decision Room fork years along that timeline
+ * Point B / B2… = Decision Room fork years along that timeline
  * Point C = age-100 / terminal year end marker
  *
  * @param {object} game
@@ -618,70 +687,58 @@ export function buildTimelineMapModel(game) {
     };
   }
 
-  const kids = timelineChildrenMap(game);
-  const root = list.find((n) => !n.parentId) || list[0];
-  const startYear = game.timeline.startYear ?? root.year;
-  const startAge = game.timeline.startAge ?? root.age;
-  const terminalYear = startYear + (MAX_AGE - startAge);
+  const {
+    kids,
+    root,
+    laneOf,
+    laneCount,
+    startYear,
+    startAge,
+    terminalYear,
+  } = assignTimelineLanes(game);
 
   const currentId = game.timeline.currentNodeId;
+  const lanes = [...new Set(laneOf.values())].sort((a, b) => a - b);
 
-  // Timeline 1 = root / first Decision Room child at each hub (not current-path).
-  // Fork entries (isFork / later siblings) spawn lanes to the right.
-  const laneOf = new Map();
-  let nextLane = 1;
-  function assign(id, preferredLane) {
-    if (laneOf.has(id)) return;
-    laneOf.set(id, preferredLane);
-    const children = kids.get(id) || [];
-    const ordered = [...children].sort((a, b) => {
-      const na = nodes[a];
-      const nb = nodes[b];
-      const af = isDecisionRoomForkEntry(na, kids) ? 1 : 0;
-      const bf = isDecisionRoomForkEntry(nb, kids) ? 1 : 0;
-      if (af !== bf) return af - bf;
-      if ((na?.year ?? 0) !== (nb?.year ?? 0)) return (na?.year ?? 0) - (nb?.year ?? 0);
-      return String(a).localeCompare(String(b));
-    });
-    ordered.forEach((cid, i) => {
-      if (i === 0) assign(cid, preferredLane);
-      else assign(cid, nextLane++);
-    });
-  }
-  assign(root.id, 0);
+  const timelines = lanes.map((lane) => {
+    const onLane = list
+      .filter((n) => (laneOf.get(n.id) ?? 0) === lane)
+      .sort((a, b) => {
+        if (a.year !== b.year) return a.year - b.year;
+        return String(a.id).localeCompare(String(b.id));
+      });
 
-  const tips = listBranchTips(game);
-  const timelines = tips.map((tip) => {
-    const path = pathFromRoot(game, tip.id);
-    const lane = laneOf.get(tip.id) ?? 0;
-
-    // Point A: game start on root spine; Decision Room year where this lane spawned
     let yearA = startYear;
     let spawnNode = null;
-    for (let i = 1; i < path.length; i++) {
-      const n = path[i];
-      const parent = path[i - 1];
-      if ((laneOf.get(n.id) ?? 0) !== (laneOf.get(parent.id) ?? 0)) {
-        spawnNode = n;
-        break;
-      }
+    if (lane !== 0) {
+      // First node on a forked lane is the Decision Room begin that spawned it
+      spawnNode = onLane.find((n) => isDecisionRoomForkEntry(n)) || onLane[0] || null;
+      if (spawnNode) yearA = spawnNode.year;
     }
-    if (spawnNode) yearA = spawnNode.year;
+
+    // Tip for this lane: real leaf on lane, else deepest hallway (abandoned
+    // parent spine before a DR fork), else latest node on the lane.
+    const leaves = onLane.filter(
+      (n) => !kids.has(n.id) || (kids.get(n.id) || []).length === 0
+    );
+    const hallwaysOnLane = onLane.filter((n) => n.type === 'hallway');
+    const tip =
+      leaves[leaves.length - 1] ||
+      hallwaysOnLane[hallwaysOnLane.length - 1] ||
+      onLane[onLane.length - 1] ||
+      root;
 
     // Point B…: Decision Room entries that forked RIGHT off hubs on this lane
     const forks = [];
     let forkIdx = 0;
-    for (const n of path) {
-      if ((laneOf.get(n.id) ?? 0) !== lane) continue;
+    for (const n of onLane) {
       const children = kids.get(n.id) || [];
-      if (children.length < 2) continue;
       for (const cid of children) {
         const child = nodes[cid];
         if (!child) continue;
         const childLane = laneOf.get(cid) ?? 0;
         if (childLane === lane) continue;
-        // Only count Decision Room entries as fork tips (not room-end / hallway noise)
-        if (child.type !== 'room' || (child.kind && child.kind !== 'begin')) continue;
+        if (!isDecisionRoomForkEntry(child)) continue;
         forkIdx += 1;
         forks.push({
           year: child.year,
@@ -693,20 +750,32 @@ export function buildTimelineMapModel(game) {
       }
     }
 
+    // Decision Room visits on this lane (markers even when a visit is not a B hub)
+    const visits = [];
+    const seenVisitYears = new Set();
+    for (const n of onLane) {
+      if (n.type !== 'room' || (n.kind && n.kind !== 'begin')) continue;
+      if (seenVisitYears.has(n.year)) continue;
+      if (!spawnNode && n.year === yearA) continue;
+      if (spawnNode && n.id === spawnNode.id) continue;
+      seenVisitYears.add(n.year);
+      visits.push({ year: n.year, nodeId: n.id });
+    }
+
     return {
       number: 0,
       lane,
-      tipId: tip.id,
+      tipId: tip?.id,
       tip,
       yearA,
       yearC: terminalYear,
       forks,
-      isCurrent: path.some((n) => n.id === currentId),
+      visits,
+      isCurrent: (laneOf.get(currentId) ?? 0) === lane,
       spawnNodeId: spawnNode?.id ?? null,
     };
   });
 
-  timelines.sort((a, b) => a.lane - b.lane || a.yearA - b.yearA);
   timelines.forEach((t, i) => {
     t.number = i + 1;
   });
@@ -724,6 +793,10 @@ export function buildTimelineMapModel(game) {
   }
 
   const cur = currentId ? nodes[currentId] : null;
+  // Live "you" uses portfolio year/age: hallway nodes freeze at entry year while
+  // the player walks doors and the HUD advances.
+  const liveYear = game.portfolio?.year ?? cur?.year ?? startYear;
+  const liveAge = game.portfolio?.age ?? cur?.age ?? startAge;
   return {
     timelines,
     connectors,
@@ -731,25 +804,27 @@ export function buildTimelineMapModel(game) {
     terminalYear,
     current: cur
       ? {
-          year: cur.year,
-          age: cur.age,
+          year: liveYear,
+          age: liveAge,
           id: cur.id,
           lane: laneOf.get(currentId) ?? 0,
           type: cur.type,
+          nodeYear: cur.year,
         }
-      : null,
-    laneCount: Math.max(1, nextLane),
+      : game.portfolio
+        ? {
+            year: liveYear,
+            age: liveAge,
+            id: null,
+            lane: 0,
+            type: game.scene || 'room',
+            nodeYear: liveYear,
+          }
+        : null,
+    laneCount,
   };
 }
 
-/**
- * Layout positions for pause Timeline Map (A/B/C tree).
- * Time flows UP; forks spawn RIGHT as Y-shaped up-right branches.
- *
- * @param {object} game
- * @param {{x:number,y:number,w:number,h:number}} rect
- * @returns {object}
- */
 export function layoutTimelineMap(game, rect) {
   const model = buildTimelineMapModel(game);
   const padX = 14;
@@ -763,12 +838,14 @@ export function layoutTimelineMap(game, rect) {
   const laneGap =
     maxLane === 0 ? 0 : Math.min(36, usableW / Math.max(1, maxLane));
 
+  // Keep markers inset so A/C discs + labels stay inside the graph.
+  const edgeInset = Math.min(10, usableH * 0.06);
   function xy(lane, year) {
     const t = (year - yMin) / yearSpan;
     return {
-      x: rect.x + padX + lane * laneGap,
+      x: rect.x + padX + Math.max(8, lane * laneGap),
       // Past/start sits at the bottom; future/age 100 rises to the top.
-      y: rect.y + padY + (1 - t) * usableH,
+      y: rect.y + padY + edgeInset + (1 - t) * (usableH - edgeInset * 2),
     };
   }
 
@@ -800,6 +877,20 @@ export function layoutTimelineMap(game, rect) {
       timeline: tl.number,
       tipId: tl.tipId,
     });
+    for (const v of tl.visits || []) {
+      const vp = xy(tl.lane, v.year);
+      points.push({
+        key: `T${tl.number}-DR-${v.year}`,
+        x: vp.x,
+        y: vp.y,
+        lane: tl.lane,
+        year: v.year,
+        kind: 'DR',
+        label: 'DR',
+        timeline: tl.number,
+        tipId: tl.tipId,
+      });
+    }
     for (const f of tl.forks) {
       const bp = xy(tl.lane, f.year);
       points.push({
