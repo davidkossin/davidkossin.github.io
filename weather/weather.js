@@ -10,10 +10,68 @@
   const DEFAULT_A = { zip: "90045", short: "Los Angeles", label: "Los Angeles (90045)", state: "CA" };
   const DEFAULT_B = { zip: "97034", short: "Lake Oswego", label: "Lake Oswego (97034)", state: "OR" };
   const START_DATE = "2026-01-01";
-  const STORAGE_KEY = "weatherTracker.customPair.v1";
+  const STORAGE_KEY = "weatherTracker.customPair.v2";
+  const STORAGE_KEY_LEGACY = "weatherTracker.customPair.v1";
   const TZ = "America/Los_Angeles";
   const DAILY =
     "temperature_2m_max,temperature_2m_min,relative_humidity_2m_mean,precipitation_sum,rain_sum,cloud_cover_mean,daylight_duration";
+  const GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search";
+  const SUGGEST_DEBOUNCE_MS = 280;
+  const SUGGEST_MIN_CHARS = 2;
+
+  const US_STATE_ABBREV = {
+    Alabama: "AL",
+    Alaska: "AK",
+    Arizona: "AZ",
+    Arkansas: "AR",
+    California: "CA",
+    Colorado: "CO",
+    Connecticut: "CT",
+    Delaware: "DE",
+    "District of Columbia": "DC",
+    Florida: "FL",
+    Georgia: "GA",
+    Hawaii: "HI",
+    Idaho: "ID",
+    Illinois: "IL",
+    Indiana: "IN",
+    Iowa: "IA",
+    Kansas: "KS",
+    Kentucky: "KY",
+    Louisiana: "LA",
+    Maine: "ME",
+    Maryland: "MD",
+    Massachusetts: "MA",
+    Michigan: "MI",
+    Minnesota: "MN",
+    Mississippi: "MS",
+    Missouri: "MO",
+    Montana: "MT",
+    Nebraska: "NE",
+    Nevada: "NV",
+    "New Hampshire": "NH",
+    "New Jersey": "NJ",
+    "New Mexico": "NM",
+    "New York": "NY",
+    "North Carolina": "NC",
+    "North Dakota": "ND",
+    Ohio: "OH",
+    Oklahoma: "OK",
+    Oregon: "OR",
+    Pennsylvania: "PA",
+    "Rhode Island": "RI",
+    "South Carolina": "SC",
+    "South Dakota": "SD",
+    Tennessee: "TN",
+    Texas: "TX",
+    Utah: "UT",
+    Vermont: "VT",
+    Virginia: "VA",
+    Washington: "WA",
+    "West Virginia": "WV",
+    Wisconsin: "WI",
+    Wyoming: "WY",
+  };
 
   const metaEl = document.getElementById("meta");
   const taglineEl = document.getElementById("tagline");
@@ -22,6 +80,8 @@
   const zipBInput = document.getElementById("zip-b");
   const zipAResolved = document.getElementById("zip-a-resolved");
   const zipBResolved = document.getElementById("zip-b-resolved");
+  const sugAEl = document.getElementById("zip-a-suggestions");
+  const sugBEl = document.getElementById("zip-b-suggestions");
   const errorEl = document.getElementById("zip-error");
   const compareBtn = document.getElementById("zip-compare");
   const resetBtn = document.getElementById("zip-reset");
@@ -30,6 +90,11 @@
   let bundledData = null;
   let lastData = null;
   let activeMode = "default";
+
+  const fieldState = {
+    a: { input: zipAInput, resolved: zipAResolved, list: sugAEl, selected: null, timer: null, activeIndex: -1 },
+    b: { input: zipBInput, resolved: zipBResolved, list: sugBEl, selected: null, timer: null, activeIndex: -1 },
+  };
 
   function isNarrow() {
     return window.matchMedia("(max-width: 640px)").matches;
@@ -61,6 +126,12 @@
     return /^\d{5}$/.test(zip) ? zip : null;
   }
 
+  function stateAbbrev(admin1) {
+    if (!admin1) return "";
+    if (/^[A-Z]{2}$/.test(admin1)) return admin1;
+    return US_STATE_ABBREV[admin1] || admin1;
+  }
+
   function setError(msg) {
     if (!msg) {
       errorEl.hidden = true;
@@ -77,6 +148,10 @@
     zipAInput.disabled = busy;
     zipBInput.disabled = busy;
     compareBtn.textContent = busy ? "Loading…" : "Compare";
+    if (busy) {
+      hideSuggestions("a");
+      hideSuggestions("b");
+    }
   }
 
   function escapeHtml(s) {
@@ -87,16 +162,24 @@
       .replace(/"/g, "&quot;");
   }
 
+  function placeDisplayQuery(loc) {
+    if (loc.zip) return loc.zip;
+    return loc.short + (loc.state ? ", " + loc.state : "");
+  }
+
+  function taglinePart(loc) {
+    let html = escapeHtml(loc.short);
+    if (loc.zip) {
+      html += ' <span class="zip">' + escapeHtml(loc.zip) + "</span>";
+    } else if (loc.state) {
+      html += ' <span class="zip">' + escapeHtml(loc.state) + "</span>";
+    }
+    return html;
+  }
+
   function updateTagline(locA, locB) {
     taglineEl.innerHTML =
-      escapeHtml(locA.short) +
-      ' <span class="zip">' +
-      escapeHtml(locA.zip) +
-      "</span> vs " +
-      escapeHtml(locB.short) +
-      ' <span class="zip">' +
-      escapeHtml(locB.zip) +
-      "</span>, from the start of 2026 through today.";
+      taglinePart(locA) + " vs " + taglinePart(locB) + ", from the start of 2026 through today.";
   }
 
   function setResolved(el, place) {
@@ -104,14 +187,22 @@
       el.textContent = "";
       return;
     }
-    el.textContent = place.short + (place.state ? ", " + place.state : "");
+    const bits = [place.short];
+    if (place.state) bits.push(place.state);
+    let text = bits.filter(Boolean).join(", ");
+    if (place.zip && place.short) text = place.short + (place.state ? ", " + place.state : "");
+    el.textContent = text;
   }
 
   function syncForm(locA, locB) {
-    zipAInput.value = locA.zip;
-    zipBInput.value = locB.zip;
+    zipAInput.value = placeDisplayQuery(locA);
+    zipBInput.value = placeDisplayQuery(locB);
+    fieldState.a.selected = locA;
+    fieldState.b.selected = locB;
     setResolved(zipAResolved, locA);
     setResolved(zipBResolved, locB);
+    hideSuggestions("a");
+    hideSuggestions("b");
   }
 
   function baseOptions(yLabel) {
@@ -200,7 +291,7 @@
   }
 
   function shortLabel(loc) {
-    return loc.short || loc.zip;
+    return loc.short || loc.zip || "City";
   }
 
   function renderCharts(data) {
@@ -380,14 +471,55 @@
     return bundledData;
   }
 
+  function locFromGeocodeResult(r) {
+    const state = stateAbbrev(r.admin1);
+    const zip =
+      Array.isArray(r.postcodes) && r.postcodes.length
+        ? String(r.postcodes[0])
+        : "";
+    const short = r.name || "City";
+    return {
+      zip,
+      short,
+      state,
+      label: zip ? short + " (" + zip + ")" : short + (state ? ", " + state : ""),
+      latitude: r.latitude,
+      longitude: r.longitude,
+      geocodeId: r.id,
+    };
+  }
+
+  function suggestionLabel(loc) {
+    const main = loc.short + (loc.state ? ", " + loc.state : "");
+    const meta = loc.zip ? "ZIP " + loc.zip : "";
+    return { main, meta };
+  }
+
+  async function searchCities(name) {
+    const params = new URLSearchParams({
+      name: name,
+      count: "5",
+      language: "en",
+      format: "json",
+      countryCode: "US",
+    });
+    const res = await fetch(GEOCODE_URL + "?" + params.toString());
+    if (!res.ok) throw new Error("City lookup failed. Try again in a moment.");
+    const data = await res.json();
+    const results = Array.isArray(data.results) ? data.results : [];
+    return results
+      .filter((r) => r && r.country_code === "US" && r.latitude != null && r.longitude != null)
+      .map(locFromGeocodeResult);
+  }
+
   async function lookupZip(zip) {
     const res = await fetch("https://api.zippopotam.us/us/" + zip);
     if (res.status === 404 || !res.ok) {
-      throw new Error("Could not find ZIP " + zip + ".");
+      throw new Error("No match for ZIP " + zip + ".");
     }
     const data = await res.json();
     const place = data.places && data.places[0];
-    if (!place) throw new Error("Could not find ZIP " + zip + ".");
+    if (!place) throw new Error("No match for ZIP " + zip + ".");
     return {
       zip,
       short: place["place name"],
@@ -396,6 +528,198 @@
       latitude: parseFloat(place.latitude),
       longitude: parseFloat(place.longitude),
     };
+  }
+
+  function selectedStillMatches(slot, query) {
+    const sel = fieldState[slot].selected;
+    if (!sel) return false;
+    const q = String(query || "").trim().toLowerCase();
+    if (!q) return false;
+    if (sel.zip && q === String(sel.zip).toLowerCase()) return true;
+    const cityState = (sel.short + (sel.state ? ", " + sel.state : "")).toLowerCase();
+    if (q === cityState) return true;
+    if (q === String(sel.short || "").toLowerCase()) return true;
+    if (sel.label && q === String(sel.label).toLowerCase()) return true;
+    return false;
+  }
+
+  async function resolvePlace(slot, raw) {
+    const query = String(raw || "").trim();
+    if (!query) throw new Error("Enter a city name or 5-digit ZIP for both sides.");
+
+    if (selectedStillMatches(slot, query)) {
+      return fieldState[slot].selected;
+    }
+
+    const zip = validateZip(query);
+    if (zip) return lookupZip(zip);
+
+    if (query.length < SUGGEST_MIN_CHARS) {
+      throw new Error("Enter a city name (at least 2 letters) or a 5-digit ZIP.");
+    }
+
+    const results = await searchCities(query);
+    if (!results.length) {
+      throw new Error('No US cities matched "' + query + '". Try another spelling or a ZIP.');
+    }
+    return results[0];
+  }
+
+  function hideSuggestions(slot) {
+    const st = fieldState[slot];
+    st.list.hidden = true;
+    st.list.innerHTML = "";
+    st.activeIndex = -1;
+    st.input.setAttribute("aria-expanded", "false");
+  }
+
+  function setActiveSuggestion(slot, index) {
+    const st = fieldState[slot];
+    const buttons = st.list.querySelectorAll(".place-suggestion");
+    if (!buttons.length) {
+      st.activeIndex = -1;
+      return;
+    }
+    const next = ((index % buttons.length) + buttons.length) % buttons.length;
+    st.activeIndex = next;
+    buttons.forEach((btn, i) => {
+      btn.setAttribute("aria-selected", i === next ? "true" : "false");
+    });
+    buttons[next].scrollIntoView({ block: "nearest" });
+  }
+
+  function chooseSuggestion(slot, loc) {
+    const st = fieldState[slot];
+    st.selected = loc;
+    st.input.value = placeDisplayQuery(loc);
+    setResolved(st.resolved, loc);
+    hideSuggestions(slot);
+    setError("");
+  }
+
+  function renderSuggestions(slot, places, emptyMsg) {
+    const st = fieldState[slot];
+    st.list.innerHTML = "";
+    st.activeIndex = -1;
+
+    if (!places.length) {
+      const li = document.createElement("li");
+      li.className = "place-suggestions-empty";
+      li.textContent = emptyMsg || "No matching US cities.";
+      st.list.appendChild(li);
+      st.list.hidden = false;
+      st.input.setAttribute("aria-expanded", "true");
+      return;
+    }
+
+    places.forEach((loc, i) => {
+      const li = document.createElement("li");
+      li.setAttribute("role", "presentation");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "place-suggestion";
+      btn.setAttribute("role", "option");
+      btn.setAttribute("aria-selected", "false");
+      btn.id = "place-opt-" + slot + "-" + i;
+      const labels = suggestionLabel(loc);
+      btn.innerHTML =
+        "<span>" +
+        escapeHtml(labels.main) +
+        "</span>" +
+        (labels.meta
+          ? '<span class="place-meta">' + escapeHtml(labels.meta) + "</span>"
+          : "");
+      btn.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        chooseSuggestion(slot, loc);
+      });
+      li.appendChild(btn);
+      st.list.appendChild(li);
+    });
+
+    st.list.hidden = false;
+    st.input.setAttribute("aria-expanded", "true");
+  }
+
+  async function runCitySuggest(slot) {
+    const st = fieldState[slot];
+    const query = String(st.input.value || "").trim();
+
+    if (validateZip(query) || /^\d+$/.test(query)) {
+      hideSuggestions(slot);
+      return;
+    }
+
+    if (query.length < SUGGEST_MIN_CHARS) {
+      hideSuggestions(slot);
+      return;
+    }
+
+    try {
+      const places = await searchCities(query);
+      if (String(st.input.value || "").trim() !== query) return;
+      if (!places.length) {
+        renderSuggestions(slot, [], 'No US cities matched "' + query + '".');
+        return;
+      }
+      renderSuggestions(slot, places);
+    } catch (err) {
+      if (String(st.input.value || "").trim() !== query) return;
+      renderSuggestions(slot, [], "City lookup unavailable. Try a ZIP or try again.");
+      console.error(err);
+    }
+  }
+
+  function scheduleSuggest(slot) {
+    const st = fieldState[slot];
+    if (st.timer) clearTimeout(st.timer);
+    st.timer = setTimeout(() => {
+      st.timer = null;
+      runCitySuggest(slot);
+    }, SUGGEST_DEBOUNCE_MS);
+  }
+
+  function onFieldInput(slot) {
+    const st = fieldState[slot];
+    st.selected = null;
+    setError("");
+    const raw = st.input.value;
+    // Soft ZIP assist: if the field is digits-only, cap at 5
+    if (/^\d*$/.test(raw)) {
+      st.input.value = raw.slice(0, 5);
+      hideSuggestions(slot);
+      return;
+    }
+    scheduleSuggest(slot);
+  }
+
+  function onFieldKeydown(slot, e) {
+    const st = fieldState[slot];
+    const open = !st.list.hidden;
+    const buttons = st.list.querySelectorAll(".place-suggestion");
+
+    if (e.key === "Escape") {
+      hideSuggestions(slot);
+      return;
+    }
+
+    if (!open || !buttons.length) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveSuggestion(slot, st.activeIndex + 1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveSuggestion(slot, st.activeIndex <= 0 ? buttons.length - 1 : st.activeIndex - 1);
+    } else if (e.key === "Enter" && st.activeIndex >= 0) {
+      e.preventDefault();
+      buttons[st.activeIndex].dispatchEvent(new MouseEvent("mousedown"));
+    }
+  }
+
+  function onFieldBlur(slot) {
+    // Delay so mousedown on a suggestion can fire first
+    setTimeout(() => hideSuggestions(slot), 150);
   }
 
   async function fetchArchiveDaily(loc, endDate) {
@@ -412,10 +736,11 @@
     const res = await fetch(
       "https://archive-api.open-meteo.com/v1/archive?" + params.toString()
     );
-    if (!res.ok) throw new Error("Weather fetch failed for " + loc.zip + ".");
+    const where = loc.zip || loc.short || "location";
+    if (!res.ok) throw new Error("Weather fetch failed for " + where + ".");
     const raw = await res.json();
     if (!raw.daily || !raw.daily.time) {
-      throw new Error("Unexpected weather response for " + loc.zip + ".");
+      throw new Error("Unexpected weather response for " + where + ".");
     }
     return raw.daily;
   }
@@ -433,11 +758,14 @@
     };
   }
 
-  async function fetchCustomPair(zipA, zipB) {
+  function isDefaultPair(locA, locB) {
+    return locA.zip === DEFAULT_A.zip && locB.zip === DEFAULT_B.zip;
+  }
+
+  async function fetchCustomPair(locA, locB) {
     const end = pacificTodayIso();
     const endDate = end < START_DATE ? START_DATE : end;
 
-    const [locA, locB] = await Promise.all([lookupZip(zipA), lookupZip(zipB)]);
     setResolved(zipAResolved, locA);
     setResolved(zipBResolved, locB);
 
@@ -463,9 +791,34 @@
     };
   }
 
-  function saveCustom(zipA, zipB) {
+  function saveCustom(locA, locB) {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ zipA, zipB }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          a: {
+            zip: locA.zip || "",
+            short: locA.short,
+            state: locA.state || "",
+            label: locA.label,
+            latitude: locA.latitude,
+            longitude: locA.longitude,
+          },
+          b: {
+            zip: locB.zip || "",
+            short: locB.short,
+            state: locB.state || "",
+            label: locB.label,
+            latitude: locB.latitude,
+            longitude: locB.longitude,
+          },
+        })
+      );
+      try {
+        localStorage.removeItem(STORAGE_KEY_LEGACY);
+      } catch (_) {
+        /* ignore */
+      }
     } catch (_) {
       /* ignore */
     }
@@ -474,21 +827,53 @@
   function clearCustom() {
     try {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_KEY_LEGACY);
     } catch (_) {
       /* ignore */
     }
   }
 
+  function normalizeSavedLoc(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const lat = Number(raw.latitude);
+    const lon = Number(raw.longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    const short = String(raw.short || "").trim();
+    if (!short && !raw.zip) return null;
+    return {
+      zip: raw.zip ? String(raw.zip) : "",
+      short: short || String(raw.zip),
+      state: raw.state ? String(raw.state) : "",
+      label: raw.label || short || String(raw.zip || ""),
+      latitude: lat,
+      longitude: lon,
+    };
+  }
+
   function readSavedCustom() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      const parsed = JSON.parse(raw);
-      const a = validateZip(parsed.zipA);
-      const b = validateZip(parsed.zipB);
-      if (!a || !b) return null;
-      if (a === DEFAULT_A.zip && b === DEFAULT_B.zip) return null;
-      return { zipA: a, zipB: b };
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const a = normalizeSavedLoc(parsed.a);
+        const b = normalizeSavedLoc(parsed.b);
+        if (!a || !b) return null;
+        if (isDefaultPair(a, b)) return null;
+        return { a, b };
+      }
+    } catch (_) {
+      /* fall through */
+    }
+
+    try {
+      const legacy = localStorage.getItem(STORAGE_KEY_LEGACY);
+      if (!legacy) return null;
+      const parsed = JSON.parse(legacy);
+      const zipA = validateZip(parsed.zipA);
+      const zipB = validateZip(parsed.zipB);
+      if (!zipA || !zipB) return null;
+      if (zipA === DEFAULT_A.zip && zipB === DEFAULT_B.zip) return null;
+      return { zipA, zipB, legacy: true };
     } catch (_) {
       return null;
     }
@@ -497,24 +882,28 @@
   async function showDefaults() {
     clearCustom();
     setError("");
+    hideSuggestions("a");
+    hideSuggestions("b");
     if (!bundledData) await loadBundled();
     applyView(bundledData, "default");
   }
 
-  async function showCustom(zipA, zipB) {
+  async function showCustom(locA, locB) {
     setError("");
     setBusy(true);
-    metaEl.textContent = "Fetching weather for " + zipA + " and " + zipB + "…";
+    const labelA = locA.zip || locA.short;
+    const labelB = locB.zip || locB.short;
+    metaEl.textContent = "Fetching weather for " + labelA + " and " + labelB + "…";
     try {
-      const data = await fetchCustomPair(zipA, zipB);
-      saveCustom(zipA, zipB);
+      const data = await fetchCustomPair(locA, locB);
+      saveCustom(locA, locB);
       applyView(data, "custom");
     } catch (err) {
       console.error(err);
       setError(
         err && err.message
           ? err.message
-          : "Could not load weather for those ZIP codes. Check the ZIPs and try again."
+          : "Could not load weather for those places. Check the cities or ZIPs and try again."
       );
       if (lastData) {
         updateMeta(lastData, activeMode === "custom" ? "live fetch" : "");
@@ -529,19 +918,44 @@
 
   formEl.addEventListener("submit", (e) => {
     e.preventDefault();
-    const a = validateZip(zipAInput.value);
-    const b = validateZip(zipBInput.value);
-    if (!a || !b) {
-      setError("Enter two valid US 5-digit ZIP codes.");
-      return;
-    }
-    if (a === DEFAULT_A.zip && b === DEFAULT_B.zip) {
-      showDefaults().catch((err) => console.error(err));
-      return;
-    }
-    showCustom(a, b).catch(() => {
-      /* error already shown */
-    });
+    hideSuggestions("a");
+    hideSuggestions("b");
+
+    (async () => {
+      setError("");
+      setBusy(true);
+      try {
+        const [locA, locB] = await Promise.all([
+          resolvePlace("a", zipAInput.value),
+          resolvePlace("b", zipBInput.value),
+        ]);
+        fieldState.a.selected = locA;
+        fieldState.b.selected = locB;
+        setResolved(zipAResolved, locA);
+        setResolved(zipBResolved, locB);
+
+        if (isDefaultPair(locA, locB)) {
+          setBusy(false);
+          await showDefaults();
+          return;
+        }
+
+        // showCustom manages busy flag
+        setBusy(false);
+        await showCustom(locA, locB);
+      } catch (err) {
+        console.error(err);
+        setBusy(false);
+        setError(
+          err && err.message
+            ? err.message
+            : "Could not resolve those places. Try a city from the list or a 5-digit ZIP."
+        );
+        if (lastData) {
+          updateMeta(lastData, activeMode === "custom" ? "live fetch" : "");
+        }
+      }
+    })();
   });
 
   resetBtn.addEventListener("click", () => {
@@ -551,10 +965,18 @@
     });
   });
 
-  [zipAInput, zipBInput].forEach((input) => {
-    input.addEventListener("input", () => {
-      input.value = input.value.replace(/\D/g, "").slice(0, 5);
-    });
+  ["a", "b"].forEach((slot) => {
+    const st = fieldState[slot];
+    st.input.addEventListener("input", () => onFieldInput(slot));
+    st.input.addEventListener("keydown", (e) => onFieldKeydown(slot, e));
+    st.input.addEventListener("blur", () => onFieldBlur(slot));
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!formEl.contains(e.target)) {
+      hideSuggestions("a");
+      hideSuggestions("b");
+    }
   });
 
   const mq = window.matchMedia("(max-width: 640px)");
@@ -573,15 +995,29 @@
       await loadBundled();
       const saved = readSavedCustom();
       if (saved) {
-        syncForm(
-          { zip: saved.zipA, short: "…", state: "" },
-          { zip: saved.zipB, short: "…", state: "" }
-        );
-        try {
-          await showCustom(saved.zipA, saved.zipB);
-          return;
-        } catch (_) {
-          /* fall through to defaults */
+        if (saved.legacy) {
+          syncForm(
+            { zip: saved.zipA, short: "…", state: "" },
+            { zip: saved.zipB, short: "…", state: "" }
+          );
+          try {
+            const [locA, locB] = await Promise.all([
+              lookupZip(saved.zipA),
+              lookupZip(saved.zipB),
+            ]);
+            await showCustom(locA, locB);
+            return;
+          } catch (_) {
+            /* fall through to defaults */
+          }
+        } else {
+          syncForm(saved.a, saved.b);
+          try {
+            await showCustom(saved.a, saved.b);
+            return;
+          } catch (_) {
+            /* fall through to defaults */
+          }
         }
       }
       applyView(bundledData, "default");
