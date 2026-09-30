@@ -120,7 +120,7 @@
   color: var(--text);
   font-family: inherit;
   font-size: 1.05rem;
-  letter-spacing: 0.06em;
+  letter-spacing: normal;
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -292,4 +292,66 @@
   .chart-wrap {
     height: min(240px, 45vh);
   }
+}
+
+.place-input-wrap {
+  position: relative;
+}
+
+.zip-field input::placeholder {
+  color: rgba(154, 163, 199, 0.55);
+  letter-spacing: normal;
+}
+
+.place-suggestions {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.35rem 0;
+  list-style: none;
+  max-height: 14rem;
+  overflow-y: auto;
+  background: rgba(8, 12, 28, 0.98);
+  border: 1px solid rgba(232, 236, 255, 0.16);
+  border-radius: 0.65rem;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.place-suggestions[hidden] {
+  display: none;
+}
+
+.place-suggestion {
+  display: block;
+  width: 100%;
+  padding: 0.55rem 0.85rem;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.place-suggestion:hover,
+.place-suggestion[aria-selected="true"] {
+  background: rgba(125, 211, 252, 0.12);
+  color: #e8ecff;
+}
+
+.place-suggestion .place-meta {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: rgba(154, 163, 199, 0.95);
+}
+
+.place-suggestions-empty {
+  padding: 0.65rem 0.85rem;
+  font-size: 0.85rem;
+  color: rgba(154, 163, 199, 0.95);
 }

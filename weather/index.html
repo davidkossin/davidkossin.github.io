@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Weather comparison by ZIP code. Defaults: Los Angeles 90045 vs Lake Oswego 97034." />
+  <meta name="description" content="Weather comparison by city or ZIP. Defaults: Los Angeles 90045 vs Lake Oswego 97034." />
   <title>Weather Tracker · Macinapp</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,33 +39,43 @@
     <form class="zip-picker" id="zip-form" novalidate>
       <div class="zip-fields">
         <div class="zip-field">
-          <label for="zip-a"><span class="swatch swatch-a" aria-hidden="true"></span> ZIP A</label>
-          <input
-            id="zip-a"
-            name="zipA"
-            type="text"
-            inputmode="numeric"
-            pattern="[0-9]{5}"
-            maxlength="5"
-            autocomplete="postal-code"
-            value="90045"
-            required
-          />
+          <label for="zip-a"><span class="swatch swatch-a" aria-hidden="true"></span> City A</label>
+          <div class="place-input-wrap">
+            <input
+              id="zip-a"
+              name="zipA"
+              type="text"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="zip-a-suggestions"
+              aria-expanded="false"
+              autocomplete="off"
+              placeholder="City or ZIP"
+              value="90045"
+              required
+            />
+            <ul class="place-suggestions" id="zip-a-suggestions" role="listbox" hidden></ul>
+          </div>
           <p class="zip-resolved" id="zip-a-resolved">Los Angeles, CA</p>
         </div>
         <div class="zip-field">
-          <label for="zip-b"><span class="swatch swatch-b" aria-hidden="true"></span> ZIP B</label>
-          <input
-            id="zip-b"
-            name="zipB"
-            type="text"
-            inputmode="numeric"
-            pattern="[0-9]{5}"
-            maxlength="5"
-            autocomplete="postal-code"
-            value="97034"
-            required
-          />
+          <label for="zip-b"><span class="swatch swatch-b" aria-hidden="true"></span> City B</label>
+          <div class="place-input-wrap">
+            <input
+              id="zip-b"
+              name="zipB"
+              type="text"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="zip-b-suggestions"
+              aria-expanded="false"
+              autocomplete="off"
+              placeholder="City or ZIP"
+              value="97034"
+              required
+            />
+            <ul class="place-suggestions" id="zip-b-suggestions" role="listbox" hidden></ul>
+          </div>
           <p class="zip-resolved" id="zip-b-resolved">Lake Oswego, OR</p>
         </div>
       </div>
