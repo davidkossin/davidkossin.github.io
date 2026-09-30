@@ -9,6 +9,11 @@ import {
   saveProfile,
 } from '../state/ProfileSystem.js';
 import { createStandardPortfolioSetup, createGameFromSetup } from '../state/GameState.js';
+import {
+  CHANGELOG_MENU_PAGE,
+  loadChangelog,
+  paginateChangelogText,
+} from '../state/Changelog.js';
 import { SetupScene } from './SetupScene.js';
 import { makeTile } from '../render/Assets.js';
 
@@ -47,6 +52,7 @@ export class TitleScene {
         opts.push({ label: 'Manage Profiles', value: 'manageProfiles' });
       }
       opts.push({ label: 'How to Play', value: 'help' });
+      opts.push({ label: 'Changelog', value: 'changelog' });
       const choice = await dialog.menu(
         'A life of choices.\nYou can\'t take it with you.',
         opts,
@@ -76,6 +82,10 @@ export class TitleScene {
           'WASD / Arrows move. Enter / Z / E talk. Esc opens Map/Charts (jump timelines). Walk the Hallway of Time — doors start the year after you leave. Wall windows change your portfolio. Auto-saves in localStorage.',
           { title: 'How to Play' }
         );
+        continue;
+      }
+      if (choice === 'changelog') {
+        await this.showChangelog(dialog);
         continue;
       }
       if (choice === 'manage') {
@@ -207,6 +217,87 @@ export class TitleScene {
       { title: 'Begin' }
     );
     return { action: 'new', mode: 'profile', game };
+  }
+
+
+  /**
+   * Title Changelog: fetch CHANGELOG.md, pick a version, page through notes.
+   */
+  async showChangelog(dialog) {
+    let entries;
+    try {
+      entries = await loadChangelog();
+    } catch (err) {
+      await dialog.show(
+        'Could not load the changelog. Check your connection and try again.',
+        { title: 'Changelog' }
+      );
+      return;
+    }
+
+    let offset = 0;
+    while (true) {
+      const slice = entries.slice(offset, offset + CHANGELOG_MENU_PAGE);
+      const opts = slice.map((e) => ({ label: e.label, value: e.id }));
+      if (offset > 0) {
+        opts.push({ label: '← Newer', value: '__newer' });
+      }
+      if (offset + CHANGELOG_MENU_PAGE < entries.length) {
+        opts.push({ label: 'Older →', value: '__older' });
+      }
+      opts.push({ label: 'Back', value: null });
+
+      const pick = await dialog.menu(
+        'Release notes (newest first):',
+        opts,
+        { title: 'Changelog' }
+      );
+      if (pick == null) return;
+      if (pick === '__newer') {
+        offset = Math.max(0, offset - CHANGELOG_MENU_PAGE);
+        continue;
+      }
+      if (pick === '__older') {
+        offset = Math.min(
+          Math.max(0, entries.length - CHANGELOG_MENU_PAGE),
+          offset + CHANGELOG_MENU_PAGE
+        );
+        continue;
+      }
+
+      const entry = entries.find((e) => e.id === pick);
+      if (!entry) continue;
+      await this.showChangelogEntry(dialog, entry);
+    }
+  }
+
+  /**
+   * Page through one version section with Next / Previous / Back.
+   */
+  async showChangelogEntry(dialog, entry) {
+    const pages = paginateChangelogText(entry.body);
+    let page = 0;
+    while (true) {
+      const opts = [];
+      if (page < pages.length - 1) opts.push({ label: 'Next', value: 'next' });
+      if (page > 0) opts.push({ label: 'Previous', value: 'prev' });
+      opts.push({ label: 'Back', value: 'back' });
+
+      const title =
+        pages.length > 1
+          ? `${entry.title} (${page + 1}/${pages.length})`
+          : entry.title;
+      const nav = await dialog.menu(pages[page], opts, { title });
+      if (nav === 'next') {
+        page = Math.min(pages.length - 1, page + 1);
+        continue;
+      }
+      if (nav === 'prev') {
+        page = Math.max(0, page - 1);
+        continue;
+      }
+      return;
+    }
   }
 
   async manageProfiles(dialog) {

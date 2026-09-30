@@ -10,6 +10,21 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
+## [0.5.10] — 2026-09-29
+
+### Added
+- Title **Changelog**: open release notes from the startup menu (near How to Play); fetches `CHANGELOG.md` at runtime, lists versions newest-first, and pages through each section in LTTP dialogs
+- Decision Rooms entered after a Hallway of Time gain a **west-wall center door** that returns to that prior Hallway timeline node (same instance / year stretch), mirroring the hallway south-return-to-Decision-Room pattern; the root/start Decision Room has no west return door
+- Hallway of Time **mortgage paid-off milestone**: when a home’s mortgage clears during year projection, a one-shot aura portal / banner fires per home (e.g. “Mortgage paid off: Primary Residence”)
+
+### Fixed
+- Returning from a post-first Decision Room no longer requires inventing a new hallway — `jumpToHallwayNode` re-enters the existing hallway node recorded by `commitHallwayNode`
+- Mortgage amortization final year now clears residual principal (same pattern as other loans), so payoff events actually fire instead of leaving `mortgageOwed` crumbs with `remainingTerm` at 0
+- After mortgage payoff, baked-in `spendingBreakdown.mortgage` is removed from `annualSpending` so later years / Spend HUD no longer charge P&I (property tax unchanged); default path that bills via live `mortgagePaid` already stopped charging once term ended
+
+### Changed
+- Cache-bust / `GAME_VERSION` bumped to **0.5.10**
+
 ## [0.5.9] — 2026-09-29
 
 ### Added

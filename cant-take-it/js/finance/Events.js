@@ -44,9 +44,11 @@ export function applyAutoEvents(state, difficulty, opts = {}) {
     }
   }
 
-  // Mortgage payoff detection (after payment loop in Engine)
+  // Mortgage payoff milestones are emitted in Engine.projectOneYear after the
+  // amortization / residual-clear step (Hallway aura portals read those events).
+  // Tiny pre-existing crumbs only:
   for (const home of state.homes || []) {
-    if (home.mortgageOwed > 0 && home.mortgageOwed < 1) {
+    if ((home.mortgageOwed || 0) > 0 && home.mortgageOwed < 1) {
       home.mortgageOwed = 0;
       home.remainingTerm = 0;
       log.push(`Mortgage paid off: ${home.label || home.type}.`);

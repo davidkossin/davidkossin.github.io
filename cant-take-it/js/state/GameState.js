@@ -354,6 +354,26 @@ export function jumpToHallwayNode(game, nodeId) {
   return true;
 }
 
+/**
+ * Walk parent links from the current (or given) node to find the nearest
+ * Hallway of Time timeline node. Root Decision Room has none.
+ * @param {object} game
+ * @param {string} [fromNodeId]
+ * @returns {object|null}
+ */
+export function findPriorHallwayNode(game, fromNodeId) {
+  let id = fromNodeId || game.timeline?.currentNodeId;
+  const guard = new Set();
+  while (id && !guard.has(id)) {
+    guard.add(id);
+    const n = game.timeline?.nodes?.[id];
+    if (!n) break;
+    if (n.type === 'hallway') return n;
+    id = n.parentId;
+  }
+  return null;
+}
+
 export function listTimelineNodes(game) {
   return Object.values(game.timeline.nodes || {}).sort((a, b) => {
     if (a.year !== b.year) return a.year - b.year;

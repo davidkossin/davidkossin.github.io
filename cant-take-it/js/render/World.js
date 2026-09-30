@@ -6,9 +6,14 @@ import { TILE, VIEW_W, VIEW_H, PALETTE } from '../config.js';
 import { makeTile, makeDoor, makeLamp, makeBlueTorch, makeTellerWindow, makeTellerIcon } from './Assets.js';
 
 /**
- * Decision Room — north wall is doorway only; tellers on E / S / W walls (2 each).
+ * Decision Room — north wall is doorway to a (new) Hallway of Time; tellers on
+ * E / S / W walls (2 each). After the first room, west-wall center also has a
+ * return door to the prior Hallway of Time timeline node.
+ *
+ * @param {{ hasWestReturn?: boolean }} [opts]
  */
-export function buildDecisionRoom() {
+export function buildDecisionRoom(opts = {}) {
+  const hasWestReturn = !!opts.hasWestReturn;
   const cols = 20;
   const rows = 14;
   const map = [];
@@ -25,7 +30,11 @@ export function buildDecisionRoom() {
   map[0][9] = 'floor';
   map[0][10] = 'floor';
 
-  // Teller windows on east / south / west (2 + 2 + 2). North = door alone.
+  // West tellers: shift apart when the center return door is present
+  const westHomeY = hasWestReturn ? 2 * TILE : 3 * TILE;
+  const westStockY = hasWestReturn ? 10 * TILE : 8 * TILE;
+
+  // Teller windows on east / south / west (2 + 2 + 2). North = forward hallway door.
   const interactables = [
     {
       id: 'door-hallway',
@@ -36,11 +45,11 @@ export function buildDecisionRoom() {
       label: 'Hallway of Time',
       kind: 'door',
     },
-    // West wall (2)
+    // West wall (2 tellers; optional center return door inserted below)
     {
       id: 'teller-home',
       x: 0 * TILE + 2,
-      y: 3 * TILE,
+      y: westHomeY,
       w: 20,
       h: 32,
       label: 'Buy/Sell Home',
@@ -53,7 +62,7 @@ export function buildDecisionRoom() {
     {
       id: 'teller-stock',
       x: 0 * TILE + 2,
-      y: 8 * TILE,
+      y: westStockY,
       w: 20,
       h: 32,
       label: 'Buy/Sell Stock',
@@ -63,6 +72,30 @@ export function buildDecisionRoom() {
       sideways: true,
       wallSide: 'west',
     },
+  ];
+
+  if (hasWestReturn) {
+    // West-wall center → prior Hallway of Time instance (timeline node)
+    const doorH = 28;
+    const priorYear = opts.priorHallwayYear;
+    const label =
+      priorYear != null ? `Hallway after ${priorYear}` : 'Previous Hallway';
+    interactables.push({
+      id: 'west-return-door',
+      x: 0 * TILE + 2,
+      y: Math.floor(rows / 2) * TILE - Math.floor(doorH / 2),
+      w: 14,
+      h: doorH,
+      label,
+      kind: 'west-door',
+      wall: true,
+      sideways: true,
+      wallSide: 'west',
+      priorYear: priorYear ?? null,
+    });
+  }
+
+  interactables.push(
     // South wall (2)
     {
       id: 'teller-kid',
@@ -114,8 +147,8 @@ export function buildDecisionRoom() {
       wall: true,
       sideways: true,
       wallSide: 'east',
-    },
-  ];
+    }
+  );
 
   return {
     cols,
@@ -126,6 +159,7 @@ export function buildDecisionRoom() {
     width: cols * TILE,
     height: rows * TILE,
     theme: 'room',
+    hasWestReturn,
   };
 }
 
@@ -373,7 +407,7 @@ export function drawWorld(ctx, world, camX, camY, animTime = 0) {
         ctx.drawImage(icon, sx + 9, sy + 4);
       }
       // No wall text — full name shows in [E] prompt only
-    } else if (obj.kind === 'year-door' || obj.kind === 'door' || obj.kind === 'end-door' || obj.kind === 'south-door') {
+    } else if (obj.kind === 'year-door' || obj.kind === 'door' || obj.kind === 'end-door' || obj.kind === 'south-door' || obj.kind === 'west-door') {
       ctx.drawImage(doorSpr, sx, sy - 4);
     } else if (obj.kind === 'lamp') {
       const isBlue = obj.style === 'blue';

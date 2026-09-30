@@ -188,19 +188,44 @@ export function projectOneYear(state, difficultyId, opts = {}) {
   }
 
   // Mortgage amortization (one year of payments)
+  // Final year clears residual principal (same pattern as otherLoans) so payoff
+  // events actually fire — annual-step amortization otherwise leaves crumbs and
+  // remainingTerm hits 0 with mortgageOwed stuck > $1 (no portal, no clear).
   let mortgagePaid = 0;
+  /** @type {{label:string, payment:number}[]} */
+  const mortgagePayoffs = [];
   for (const home of next.homes || []) {
-    if ((home.mortgageOwed || 0) <= 0 || (home.remainingTerm || 0) <= 0) continue;
-    const annual = annualMortgagePayment(home);
+    if ((home.mortgageOwed || 0) <= 0) {
+      home.mortgageOwed = 0;
+      home.remainingTerm = 0;
+      continue;
+    }
+    // Term already exhausted with leftover principal (legacy / prior-year crumb):
+    // forgive residual and fire the hallway milestone — do not re-bill.
+    if ((home.remainingTerm || 0) <= 0) {
+      home.mortgageOwed = 0;
+      home.remainingTerm = 0;
+      const label = home.label || home.type;
+      events.push(`Mortgage paid off: ${label}.`);
+      mortgagePayoffs.push({ label, payment: 0 });
+      continue;
+    }
     const interest = (home.mortgageOwed || 0) * (home.rate || 0);
-    const principal = Math.min(home.mortgageOwed, Math.max(0, annual - interest));
+    let annual = annualMortgagePayment(home);
+    let principal = Math.min(home.mortgageOwed, Math.max(0, annual - interest));
+    if ((home.remainingTerm || 0) <= 1) {
+      principal = home.mortgageOwed;
+      annual = principal + interest;
+    }
     home.mortgageOwed = Math.max(0, home.mortgageOwed - principal);
     home.remainingTerm = Math.max(0, (home.remainingTerm || 0) - 1);
     mortgagePaid += annual;
     if (home.mortgageOwed < 1) {
       home.mortgageOwed = 0;
       home.remainingTerm = 0;
-      events.push(`Mortgage paid off: ${home.label || home.type}.`);
+      const label = home.label || home.type;
+      events.push(`Mortgage paid off: ${label}.`);
+      mortgagePayoffs.push({ label, payment: annual });
     }
   }
 
@@ -354,6 +379,29 @@ export function projectOneYear(state, difficultyId, opts = {}) {
 
   // Securities-backed loan maintenance (margin call if over SB_LTV)
   applySecuritiesMarginCall(next, events);
+
+  // After cashflow: if mortgage P&I was baked into annualSpending / spendingBreakdown,
+  // drop the paid-off portion so next year (and HUD Spend) no longer charges it.
+  // Property tax stays in Tax.js / outflow separately — only the mortgage line is cut.
+  // (Default / Standard setups keep breakdown.mortgage at 0 and bill via mortgagePaid;
+  // this path matters when setup or a prior edit put P&I inside annualSpending.)
+  if (mortgagePayoffs.length && next.spendingBreakdown && (next.spendingBreakdown.mortgage || 0) > 0) {
+    const stillMortgaged = (next.homes || []).some(
+      (h) => (h.mortgageOwed || 0) > 0 && (h.remainingTerm || 0) > 0
+    );
+    if (!stillMortgaged) {
+      const remove = next.spendingBreakdown.mortgage || 0;
+      next.spendingBreakdown.mortgage = 0;
+      next.annualSpending = Math.max(0, (next.annualSpending || 0) - remove);
+    } else {
+      for (const po of mortgagePayoffs) {
+        const cut = Math.min(next.spendingBreakdown.mortgage || 0, Math.round(po.payment || 0));
+        if (cut <= 0) continue;
+        next.spendingBreakdown.mortgage = Math.max(0, (next.spendingBreakdown.mortgage || 0) - cut);
+        next.annualSpending = Math.max(0, (next.annualSpending || 0) - cut);
+      }
+    }
+  }
 
   // Inflate discretionary spending baseline for next year
   next.annualSpending = Math.round((next.annualSpending || 0) * (1 + difficulty.inflation));

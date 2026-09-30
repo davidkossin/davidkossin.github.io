@@ -36,7 +36,7 @@ import {
   annualLoanPayment,
 } from '../finance/Engine.js';
 import { getDifficulty } from '../finance/Difficulty.js';
-import { commitRoomDecisions, currentNode } from '../state/GameState.js';
+import { commitRoomDecisions, currentNode, findPriorHallwayNode, jumpToHallwayNode } from '../state/GameState.js';
 import { autoSave } from '../state/SaveSystem.js';
 import { formatMoneyDisplay } from '../render/Dialog.js';
 import { log as debugLog } from '../debug/Logger.js';
@@ -49,10 +49,17 @@ export class RoomScene {
     this.prompt = null;
     this.locked = false;
     this.animTime = 0;
+    /** @type {object|null} prior Hallway of Time timeline node, if any */
+    this.priorHallway = null;
   }
 
   enter(game, spawnNearDoor = false) {
-    this.world = buildDecisionRoom();
+    // Prior hallway ancestor → west return door (root begin has none)
+    this.priorHallway = findPriorHallwayNode(game);
+    this.world = buildDecisionRoom({
+      hasWestReturn: !!this.priorHallway,
+      priorHallwayYear: this.priorHallway?.year,
+    });
     const sp = this.world.spawn;
     this.player = new Player(sp.x, spawnNearDoor ? 2 * 16 : sp.y, { speed: 1.5 });
     this.player.bindInput();
@@ -72,6 +79,8 @@ export class RoomScene {
     if (!alreadyBegin) {
       commitRoomDecisions(game, 'begin');
     }
+    // Re-resolve after any begin commit (parent chain still reaches the hallway)
+    this.priorHallway = findPriorHallwayNode(game);
     autoSave(game, 'begin');
   }
 
@@ -126,6 +135,46 @@ export class RoomScene {
       }
       this.setInputBlocked(false);
       return null;
+    }
+
+    if (obj.kind === 'west-door') {
+      // Return to the Hallway of Time instance this Decision Room was entered from
+      const prior =
+        this.priorHallway ||
+        findPriorHallwayNode(game) ||
+        null;
+      if (!prior) {
+        await dialog.show('There is no prior Hallway of Time to return to.', {
+          title: 'Hallway of Time',
+        });
+        this.setInputBlocked(false);
+        return null;
+      }
+      const ok = await dialog.confirm(
+        `Return to the Hallway of Time after ${prior.year}?\n` +
+          `Restores finances from that hallway (this room's changes are left on the branch).`,
+        { title: 'Hallway of Time', yes: 'Return', no: 'Stay' }
+      );
+      if (!ok) {
+        this.setInputBlocked(false);
+        return null;
+      }
+      debugLog('west_door_return', {
+        hallwayId: prior.id,
+        year: prior.year,
+        age: prior.age,
+        fromYear: game.portfolio?.year,
+        fromAge: game.portfolio?.age,
+      });
+      const jumped = jumpToHallwayNode(game, prior.id);
+      if (!jumped) {
+        await dialog.show('Could not restore that hallway.', { title: 'Hallway of Time' });
+        this.setInputBlocked(false);
+        return null;
+      }
+      autoSave(game, 'end');
+      this.leave();
+      return { goto: 'hallway' };
     }
 
     if (obj.kind === 'teller') {
