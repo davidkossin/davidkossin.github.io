@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Weather comparison: Los Angeles 90045 vs Lake Oswego 97034." />
+  <meta name="description" content="Weather comparison by ZIP code. Defaults: Los Angeles 90045 vs Lake Oswego 97034." />
   <title>Weather Tracker · Macinapp</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -29,12 +29,52 @@
     <header class="weather-hero">
       <p class="eyebrow">Daily comparison</p>
       <h1>Weather Tracker</h1>
-      <p class="tagline">
+      <p class="tagline" id="tagline">
         Los Angeles <span class="zip">90045</span> vs Lake Oswego <span class="zip">97034</span>,
         from the start of 2026 through today.
       </p>
       <p class="meta" id="meta">Loading weather data…</p>
     </header>
+
+    <form class="zip-picker" id="zip-form" novalidate>
+      <div class="zip-fields">
+        <div class="zip-field">
+          <label for="zip-a"><span class="swatch swatch-a" aria-hidden="true"></span> ZIP A</label>
+          <input
+            id="zip-a"
+            name="zipA"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]{5}"
+            maxlength="5"
+            autocomplete="postal-code"
+            value="90045"
+            required
+          />
+          <p class="zip-resolved" id="zip-a-resolved">Los Angeles, CA</p>
+        </div>
+        <div class="zip-field">
+          <label for="zip-b"><span class="swatch swatch-b" aria-hidden="true"></span> ZIP B</label>
+          <input
+            id="zip-b"
+            name="zipB"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]{5}"
+            maxlength="5"
+            autocomplete="postal-code"
+            value="97034"
+            required
+          />
+          <p class="zip-resolved" id="zip-b-resolved">Lake Oswego, OR</p>
+        </div>
+      </div>
+      <div class="zip-actions">
+        <button type="submit" class="btn primary" id="zip-compare">Compare</button>
+        <button type="button" class="btn ghost" id="zip-reset">Reset to defaults</button>
+      </div>
+      <p class="zip-error" id="zip-error" role="alert" hidden></p>
+    </form>
 
     <section class="chart-grid" aria-live="polite">
       <article class="chart-card">
@@ -80,7 +120,7 @@
   </main>
 
   <footer>
-    <span>Data from Open-Meteo · Updated daily via GitHub Actions</span>
+    <span>Data from Open-Meteo · Defaults updated daily via GitHub Actions</span>
   </footer>
 
   <script src="../stars.js"></script>
