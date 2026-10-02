@@ -10,6 +10,17 @@ Unpublished work stays under **[Unreleased]** until David says to publish.
 
 ## [Unreleased]
 
+## [0.5.11] — 2026-10-01
+
+### Added
+- Custom setup now asks whether to save the completed answers as a reusable profile before starting the game
+
+### Fixed
+- Creating a custom profile now confirms before returning to the main menu from the initial name prompt; choosing No keeps the prompt open
+
+### Changed
+- Cache-bust / `GAME_VERSION` bumped to **0.5.11**
+
 ## [0.5.10] — 2026-09-29
 
 ### Added

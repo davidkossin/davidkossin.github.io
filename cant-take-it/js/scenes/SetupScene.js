@@ -4,6 +4,7 @@
 
 import { CURRENT_YEAR, HOME_TYPES, VIEW_W, VIEW_H, CANVAS_H, PALETTE } from '../config.js';
 import { createDefaultSetup, createGameFromSetup } from '../state/GameState.js';
+import { saveProfile } from '../state/ProfileSystem.js';
 import { listDifficulties } from '../finance/Difficulty.js';
 import { makeTile } from '../render/Assets.js';
 
@@ -70,7 +71,13 @@ export class SetupScene {
           defaultValue: s.playerName,
         });
         if (result == null) {
-          if (allowCancelAtStart) return null;
+          if (allowCancelAtStart) {
+            const exit = await dialog.confirm(
+              'Do you want to return to the main menu? Current profile will not be saved',
+              { title: 'Create a Profile' }
+            );
+            if (exit) return null;
+          }
           /* game mode: first step cancel stays */
           continue;
         }
@@ -486,6 +493,11 @@ export class SetupScene {
         if (mode === 'profile') {
           return s;
         }
+        const saveAsProfile = await dialog.confirm(
+          'Save this as a profile for later?',
+          { title: 'Custom Setup' }
+        );
+        if (saveAsProfile) saveProfile(s);
         await dialog.show(
           `Welcome, ${s.playerName}. Year ${s.year}, age ${s.age}. Your Decision Room awaits.`,
           { title: 'Begin' }
