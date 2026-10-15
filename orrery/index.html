@@ -32,6 +32,13 @@
   </section>
 
   <div class="controls" id="controls">
+    <div class="viewmode">
+      <span class="vm-label" id="vmLabel">View Mode</span>
+      <div class="seg" id="viewMode" role="radiogroup" aria-labelledby="vmLabel">
+        <button type="button" role="radio" aria-checked="true" data-view="orrery">Orrery</button>
+        <button type="button" role="radio" aria-checked="false" tabindex="-1" data-view="cartographic">Cartographic</button>
+      </div>
+    </div>
     <button class="switch" id="scaleSwitch" type="button" role="switch" aria-checked="false">
       <span class="track"><span class="thumb"></span></span>
       <span class="switch-label">To Scale</span>
@@ -56,6 +63,12 @@
   <aside class="panel" id="panel" aria-label="Planet information" hidden></aside>
   <div class="moon-card" id="moonCard" hidden></div>
   <div class="tip" id="tip" hidden></div>
+
+  <div class="timebox" id="timebox">
+    <div class="tb-ends"><span>Present</span><span>+100 Years</span></div>
+    <input type="range" id="timeSlider" min="0" max="36525" step="1" value="0" aria-label="Time projection, from present to plus 100 years" aria-valuetext="Present" />
+    <div class="tb-date" id="tbDate" aria-live="off">Present</div>
+  </div>
 
   <footer class="key" id="key">
     <div class="key-bar" id="keyBar"><span class="bar-line" id="barLine"></span><span class="bar-label" id="barLabel"></span></div>

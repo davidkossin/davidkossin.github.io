@@ -259,6 +259,8 @@
   var sel = -1;                           // selected planet
   var loc = -1, lTarget = 0, l = 0;       // local (moon) view
   var selMoon = -1;
+  var cartT = 0, cartA = 0, prevScale = false;   // View Mode: cartographic target / animated value
+  var cv = { k: 1, x: 0, y: 0 }, CV_MAX = 8;
   var cam = { x: 0, y: 0, ppa: 10 }, tween = null;
   var cz = { k: 1, x: 0, y: 0 }, lz = { k: 1, x: 0, y: 0 }, vtween = null, frameDt = 0.016, uiR = [];
   var CZ_MAX = 14, LZ_MIN = 0.6, LZ_MAX = 12;
@@ -396,7 +398,7 @@
 
   function uiRects() {
     var out = [];
-    [elControls, elZoomCtl, elBack, $("heading"), elPanel, $("key")].forEach(function (e) {
+    [elControls, elZoomCtl, elBack, $("heading"), elPanel, $("key"), $("timebox")].forEach(function (e) {
       if (!e || e.hidden) return;
       var r = e.getBoundingClientRect();
       if (r.width > 0 && r.height > 0) out.push({ x0: r.left, x1: r.right, y0: r.top, y1: r.bottom });
@@ -549,6 +551,160 @@
     return items;
   }
 
+  /* ---------- drawing: cartographic scene ---------- */
+  var CART = { sunX: -15, sunR: 85, end: 960, step: 26, x: { Mercury: 110, Venus: 170, Earth: 232, Mars: 318, Jupiter: 490, Saturn: 630, Uranus: 755, Neptune: 880 }, belt: 385 };
+  var BELT_DOTS = (function () {
+    var rnd = mulberry(4242), out = [];
+    for (var i = 0; i < 46; i++) { var u = (rnd() + rnd()) / 2; out.push({ x: (u - 0.5) * 46 + (rnd() - 0.5) * 6, y: (rnd() - 0.5) * 26 * (1 - Math.abs(u - 0.5)), r: 0.6 + rnd() * 1.2 }); }
+    return out;
+  })();
+  function cartR(P) { return 5 + 24 * Math.sqrt(P.req / 71492); }
+  function cartMoonR(m) { return 2.4 + 3.2 * Math.sqrt(m.r / 2634); }
+  function cartBottom() { // world extent below the baseline
+    var b = 40;
+    PLANETS.forEach(function (P) {
+      var n = P.moons.length; if (!n) return;
+      var extra = MOON_TOTAL[P.name] - n > 0 ? 22 : 0;
+      b = Math.max(b, cartR(P) + 28 + (n - 1) * CART.step + 16 + extra);
+    });
+    return b;
+  }
+  var cartG = { k: 1, bx: 0, by: 0 };
+  function cartLayout() {
+    var mob = isMobile(), bottom = cartBottom() + 10;
+    var by = vr.y0 + (mob ? 120 : 0.42 * vrH());
+    var kw = (vrW() - (mob ? 14 : 84)) / CART.end;
+    var kh = (vr.y1 - by - 6) / bottom;
+    cartG.k = Math.max(0.2, Math.min(kw, kh, 2.2)); cartG.bx = vr.x0 + 2; cartG.by = by;
+    return cartG;
+  }
+  function cartXY(wx, wy, o) {
+    var g = cartG, ax = g.bx + wx * g.k, ay = g.by + wy * g.k;
+    o[0] = cx0() + (ax - cx0()) * cv.k + cv.x; o[1] = cy0() + (ay - cy0()) * cv.k + cv.y;
+    return o;
+  }
+  function cartPlanetX(i) { return CART.x[PLANETS[i].name]; }
+  function cartPlanetPos(i, o) { return cartXY(cartPlanetX(i), 0, o); }
+
+  function drawCart(alpha, ce, forHits) {
+    var ks = cartG.k * cv.k, mob = isMobile(), i, j, o = [0, 0], base = [0, 0], q;
+    var LF = mob ? "400 11px Outfit, sans-serif" : "400 12.5px Outfit, sans-serif";
+    var MF = mob ? "400 10px Outfit, sans-serif" : "400 11.5px Outfit, sans-serif";
+    var fe = ease(Math.max(0, Math.min(1, ce))), pa = alpha * Math.min(1, ce * 5), la = alpha * Math.max(0, (ce - 0.35) / 0.65);
+    var colsA = la * la;
+    // baseline
+    var p0 = cartXY(CART.sunX, 0, [0, 0]), p1 = cartXY(CART.end, 0, [0, 0]);
+    ctx.globalAlpha = colsA; ctx.strokeStyle = "rgba(190,205,255,0.38)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(Math.max(0, p0[0]), p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.stroke();
+    // sun
+    var sunO = [0, 0]; toScreen(0, 0, sunO);
+    var sunC = cartXY(CART.sunX, 0, [0, 0]);
+    var sx = lerp(sunO[0], sunC[0], fe), sy = lerp(sunO[1], sunC[1], fe), sr = lerp(11, CART.sunR * ks, fe);
+    var gr = sr * 1.9 + 20;
+    ctx.globalAlpha = alpha * Math.max(ce, 0);
+    var g = ctx.createRadialGradient(sx, sy, 0, sx, sy, gr);
+    g.addColorStop(0, "rgba(255,226,160,0.6)"); g.addColorStop(Math.min(0.99, sr / gr), "rgba(255,200,110,0.34)"); g.addColorStop(1, "rgba(255,170,80,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, gr, 0, TAU); ctx.fill();
+    g = ctx.createRadialGradient(sx + sr * 0.35, sy, sr * 0.1, sx, sy, sr);
+    g.addColorStop(0, "#fff3d0"); g.addColorStop(0.75, "#ffd98a"); g.addColorStop(1, "#ffb860");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, TAU); ctx.fill();
+    // asteroid belt
+    var bp = cartXY(CART.belt, 0, [0, 0]);
+    ctx.globalAlpha = colsA; ctx.fillStyle = "rgba(200,208,235,0.75)";
+    for (i = 0; i < BELT_DOTS.length; i++) {
+      q = BELT_DOTS[i]; ctx.beginPath(); ctx.arc(bp[0] + q.x * ks, bp[1] + q.y * ks, Math.max(0.7, q.r * Math.sqrt(ks)), 0, TAU); ctx.fill();
+    }
+    // planets, labels
+    var bodies = [], bi = 0;
+    var order = ["Mercury", "Venus", "Earth", "Mars", "#belt", "Jupiter", "Saturn", "Uranus", "Neptune"];
+    var rects = [[], [], []];
+    function addLabel(text, x, topY, id) { // topY = screen y of the top of the body
+      var tw = measure(LF, text), lev = 0, r;
+      while (lev < 2) {
+        r = { x0: x - tw / 2 - 3, x1: x + tw / 2 + 3 };
+        var clash = rects[lev].some(function (e) { return r.x0 < e.x1 && r.x1 > e.x0; });
+        if (!clash) break; lev++;
+      }
+      rects[lev].push(r);
+      return { text: text, x: x, y: topY - 8 - lev * 15, lev: lev, top: topY, id: id };
+    }
+    var labs = [];
+    order.forEach(function (nm) {
+      if (nm === "#belt") { labs.push(addLabel("Asteroids", bp[0], bp[1] - 14 * ks - 3, "belt")); return; }
+      var idx = PLANETS.map(function (P) { return P.name; }).indexOf(nm), P = PLANETS[idx];
+      var pc = cartPlanetPos(idx, [0, 0]), po = toScreen(pl[idx].x, pl[idx].y, [0, 0]);
+      var x = lerp(po[0], pc[0], fe), y = lerp(po[1], pc[1], fe);
+      var rO = 2.4 + 6.4 * Math.sqrt(P.req / 71492), r = Math.max(2.2, lerp(rO, cartR(P) * ks, fe));
+      var hv = hAmt("c" + idx, (hover && hover.type === "planet" && hover.i === idx) ? 1 : 0);
+      var selF = sel === idx;
+      bodies.push({ i: idx, P: P, x: x, y: y, r: r, h: selF ? 1 : hv });
+      if (ce > 0.6) labs.push(addLabel(P.name, x, y - r - (P.rings ? 2 : 0), idx));
+    });
+    // moon columns (below baseline)
+    ctx.textBaseline = "middle"; ctx.textAlign = "left";
+    bodies.forEach(function (B) {
+      var P = B.P, n = P.moons.length; if (!n || la < 0.02) return;
+      var moons = P.moons.slice().sort(function (a, b) { return a.a - b.a; });
+      var y0 = B.y + B.r + 6, step = CART.step * ks, yl = y0 + 14 * ks + (n - 1) * step;
+      var y1 = y0 + 14 * ks + (n - 1) * step;
+      ctx.globalAlpha = colsA * 0.9; ctx.strokeStyle = "rgba(190,205,255,0.35)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(B.x, B.y + B.r); ctx.lineTo(B.x, y1); ctx.stroke();
+      var showLab = ks * 0 + 1;
+      moons.forEach(function (m, j2) {
+        var my = y0 + 14 * ks + j2 * step, mr = Math.max(1.8, cartMoonR(m) * Math.sqrt(ks) * 1.0);
+        ctx.globalAlpha = colsA;
+        ctx.fillStyle = "#d9dcec"; ctx.beginPath(); ctx.arc(B.x, my, mr, 0, TAU); ctx.fill();
+        ctx.font = MF; ctx.lineJoin = "round"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(5,8,22,0.75)";
+        ctx.globalAlpha = colsA * 0.9;
+        ctx.strokeText(m.name, B.x + mr + 5, my + 0.5);
+        ctx.fillStyle = "rgba(226,231,255,0.9)"; ctx.fillText(m.name, B.x + mr + 5, my + 0.5);
+      });
+      var more = MOON_TOTAL[P.name] - n;
+      if (more > 0) {
+        ctx.globalAlpha = colsA * 0.75; ctx.font = MF; ctx.fillStyle = "#9aa3c7"; ctx.fillText("+" + more + " more", B.x - 3, y1 + 17);
+      }
+    });
+    // planet discs
+    bodies.forEach(function (B) {
+      var P = B.P, r = B.r, h = B.h, pa2 = pa;
+      ctx.globalAlpha = pa2;
+      if (h > 0.01 || sel === B.i) {
+        var ha = Math.max(h, sel === B.i ? 0.55 : 0);
+        var gg = ctx.createRadialGradient(B.x, B.y, r, B.x, B.y, r + 14);
+        gg.addColorStop(0, hexA(P.color, 0.45 * ha)); gg.addColorStop(1, hexA(P.color, 0));
+        ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(B.x, B.y, r + 14, 0, TAU); ctx.fill();
+        ctx.strokeStyle = hexA("#ffffff", 0.7 * ha); ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(B.x, B.y, r + 4 + 1.5 * h, 0, TAU); ctx.stroke();
+      }
+      if (P.rings && r > 2.5) {
+        ctx.strokeStyle = hexA(P.color, 0.5); ctx.lineWidth = Math.max(1, r * 0.16);
+        ctx.beginPath(); ctx.ellipse(B.x, B.y, r * 1.95, r * 0.42, -0.18, Math.PI, TAU); ctx.stroke();
+      }
+      var grd = ctx.createRadialGradient(B.x - r * 0.35, B.y - r * 0.35, r * 0.1, B.x, B.y, r);
+      grd.addColorStop(0, lighten(P.color, 0.35)); grd.addColorStop(1, P.color);
+      ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(B.x, B.y, r, 0, TAU); ctx.fill();
+      if (P.rings && r > 2.5) {
+        ctx.strokeStyle = hexA(P.color, 0.7); ctx.lineWidth = Math.max(1, r * 0.16);
+        ctx.beginPath(); ctx.ellipse(B.x, B.y, r * 1.95, r * 0.42, -0.18, 0, Math.PI); ctx.stroke();
+      }
+    });
+    // names
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.font = LF;
+    labs.forEach(function (L) {
+      var B = bodies.filter(function (b) { return b.i === L.id; })[0], h = B ? B.h : 0;
+      ctx.globalAlpha = la;
+      if (L.lev > 0) { ctx.strokeStyle = "rgba(190,205,255,0.35)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(L.x, L.y + 3); ctx.lineTo(L.x, L.top - 1); ctx.stroke(); }
+      ctx.lineJoin = "round"; ctx.lineWidth = 3; ctx.strokeStyle = "rgba(5,8,22,0.75)"; ctx.strokeText(L.text, L.x, L.y);
+      ctx.fillStyle = h > 0.05 ? "#ffffff" : (L.id === "belt" ? "rgba(190,198,230,0.85)" : "rgba(226,231,255,0.92)"); ctx.fillText(L.text, L.x, L.y);
+      if (B) B.lab = { x0: L.x - measure(LF, L.text) / 2, x1: L.x + measure(LF, L.text) / 2, y0: L.y - 13, y1: L.y + 3 };
+    });
+    ctx.globalAlpha = 1; ctx.textAlign = "left";
+    if (forHits) {
+      hits = [];
+      bodies.forEach(function (B) { hits.push({ type: "planet", i: B.i, x: B.x, y: B.y, r: Math.max(B.r + 6, 13), lab: B.lab }); });
+    }
+  }
+
   /* ---------- drawing: local (moon) scene ---------- */
   function localLayout() {
     var P = PLANETS[loc], w = vrW(), h = vrH(), m = Math.min(w, h);
@@ -688,12 +844,14 @@
   function zoomBy(mx, my, f) {
     if (lTarget === 1) { if (l < 0.9) return; vtween = null; zoomView(lz, mx, my, f, LZ_MIN, LZ_MAX, localE()); }
     else if (l > 0.02) return;
+    else if (cartT === 1) { if (mx === cx0() && my === cy0()) my = cartXY(0, 0, [0, 0])[1]; vtween = null; zoomView(cv, mx, my, f, 1, CV_MAX, vrW() / 2); }
     else if (scaleOn) zoomAt(mx, my, f);
     else { vtween = null; zoomView(cz, mx, my, f, 1, CZ_MAX, Rc()); }
   }
   function panBy(dx, dy) {
     if (lTarget === 1) { if (l < 0.9) return; vtween = null; lz.x += dx; lz.y += dy; clampView(lz, localE()); }
     else if (l > 0.02) return;
+    else if (cartT === 1) { vtween = null; cv.x += dx; cv.y += dy; clampView(cv, vrW() / 2); }
     else if (scaleOn) { tween = null; cam.x -= dx / cam.ppa; cam.y += dy / cam.ppa; clampCam(); }
     else { vtween = null; cz.x += dx; cz.y += dy; clampView(cz, Rc()); }
   }
@@ -716,9 +874,10 @@
     elPanel.innerHTML =
       '<div class="sheet-grip" aria-hidden="true"></div>' +
       '<div class="panel-head"><span class="dot" style="background:' + P.color + ';color:' + P.color + '"></span><h2>' + P.name + '</h2><button class="close" type="button" aria-label="Close">&times;</button></div>' +
+      '<button class="zoom-btn" type="button" id="zoomBtn"></button>' +
       "<dl>" + rows.map(function (r) { return '<div class="row"><dt>' + r[0] + "</dt><dd>" + r[1] + "</dd></div>"; }).join("") + "</dl>" +
       '<p class="facts">' + esc(P.fact) + "</p>" +
-      '<button class="zoom-btn" type="button" id="zoomBtn"></button>';
+      '';
     elPanel.querySelector(".close").addEventListener("click", closePanel);
     $("zoomBtn").addEventListener("click", function () { if (loc === i && lTarget === 1) endLocal(); else startLocal(i); });
     updatePanelButton();
@@ -791,16 +950,44 @@
   /* ---------- toggle ---------- */
   function setScale(on) {
     scaleOn = on; elSwitch.setAttribute("aria-checked", on ? "true" : "false");
-    elChips.hidden = !on;
+    elChips.hidden = !on || cartT === 1;
     if (!on) { pinned = null; cz.k = 1; cz.x = 0; cz.y = 0; vtween = null; }
     if (on) { tween = null; if (s < 0.01) { cam.x = 0; cam.y = 0; cam.ppa = ppaFit(); } }
   }
+  var elView = $("viewMode"), viewBtns = Array.prototype.slice.call(elView.querySelectorAll("[role=radio]"));
+  function setView(mode, noUrl) {
+    var on = mode === "cartographic";
+    if (on === (cartT === 1)) { syncView(); return; }
+    cartT = on ? 1 : 0; pinned = null; hover = null; vtween = null; cv.k = 1; cv.x = 0; cv.y = 0;
+    if (on) { prevScale = scaleOn; if (scaleOn) setScale(false); }
+    else if (prevScale) { setScale(true); prevScale = false; }
+    syncView();
+    if (!noUrl && window.history && history.replaceState) {
+      var u = new URLSearchParams(location.search); if (on) u.set("view", "cartographic"); else u.delete("view");
+      var qs = u.toString(); history.replaceState(null, "", location.pathname + (qs ? "?" + qs : "") + location.hash);
+    }
+  }
+  function syncView() {
+    var on = cartT === 1;
+    viewBtns.forEach(function (b) { var a = (b.getAttribute("data-view") === "cartographic") === on; b.setAttribute("aria-checked", a ? "true" : "false"); b.tabIndex = a ? 0 : -1; });
+    elSwitch.hidden = on; elChips.hidden = on || !scaleOn;
+    document.body.classList.toggle("cartographic", on);
+  }
+  viewBtns.forEach(function (b, i) {
+    b.addEventListener("click", function () { setView(b.getAttribute("data-view")); });
+    b.addEventListener("keydown", function (e) {
+      var d = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+      if (!d) return; e.preventDefault();
+      var n = viewBtns[(i + d + viewBtns.length) % viewBtns.length]; n.focus(); setView(n.getAttribute("data-view"));
+    });
+  });
   elSwitch.addEventListener("click", function () { setScale(!scaleOn); });
   elChips.addEventListener("click", function (e) { var b = e.target.closest("[data-jump]"); if (b) jump(b.getAttribute("data-jump")); });
   $("zin").addEventListener("click", function () { zoomBy(cx0(), cy0(), 1.7); });
   $("zout").addEventListener("click", function () { zoomBy(cx0(), cy0(), 1 / 1.7); });
   $("zfit").addEventListener("click", function () {
     if (lTarget === 1) viewTo(lz, 1, 0, 0, 600);
+    else if (cartT === 1) viewTo(cv, 1, 0, 0, 600);
     else if (scaleOn) jump("fit");
     else viewTo(cz, 1, 0, 0, 600);
   });
@@ -896,12 +1083,18 @@
   /* ---------- key ---------- */
   var keyBuilt = "";
   function updateKey() {
-    var mode = lTarget === 1 || l > 0.5 ? "local" : (s > 0.5 ? "scale" : "comp");
+    var mode = lTarget === 1 || l > 0.5 ? "local" : (cartT === 1 ? "cart" : (s > 0.5 ? "scale" : "comp"));
     var html = "";
     if (mode === "comp") {
       elKeyBar.hidden = true;
       html = PLANETS.map(function (P, i) {
         return '<span class="k' + (hover && hover.type === "planet" && hover.i === i ? " on" : "") + '"><i style="background:' + P.color + '"></i>' + P.name + " " + fmtAU(pl[i].r) + " AU</span>";
+      }).join("");
+    } else if (mode === "cart") {
+      elKeyBar.hidden = true;
+      html = PLANETS.map(function (P, i) {
+        var a = P.el[0], lm = a * LIGHT_MIN_PER_AU;
+        return '<span class="k' + (hover && hover.type === "planet" && hover.i === i ? " on" : "") + '"><i style="background:' + P.color + '"></i>' + P.name + " " + fmtAU(a) + " AU · " + (lm < 10 ? lm.toFixed(1) : Math.round(lm)) + " min</span>";
       }).join("");
     } else if (mode === "scale") {
       elKeyBar.hidden = false;
@@ -935,14 +1128,14 @@
   }
   function targetRect() {
     var mob = isMobile();
-    var top = mob ? 150 : 76, bottom = H - (mob ? 74 : 62);
+    var top = mob ? 150 : 76, bottom = H - (keyH + tbH + 16);
     var r = { x0: 0, y0: top, x1: W, y1: bottom };
     if (!elPanel.hidden) {
-      if (mob) r.y1 = Math.min(bottom, H * 0.54 - 10); else r.x1 = W - 360;
+      if (mob) r.y1 = Math.min(bottom, H * 0.54 - 10 + 0 * tbH); else r.x1 = W - 360;
     }
     if (!mob) r.x0 = 150; // leave room for controls on the left
     else r.x0 = 0;
-    if (!mob && elPanel.hidden) r.x0 = 0;
+    if (!mob && (elPanel.hidden || cartT === 1)) r.x0 = 0;
     return r;
   }
 
@@ -954,11 +1147,31 @@
     if (t !== clockTxt) { elClock.textContent = t; clockTxt = t; }
   }
 
+  var elSlider = $("timeSlider"), elTbDate = $("tbDate"), elTimebox = $("timebox"), elKeyFoot = $("key"), tbShown = "";
+  function simOffsetMs() { return (parseFloat(elSlider.value) || 0) * 86400000; }
+  function updateTimeUI() {
+    var v = elSlider.value, txt;
+    if (v === tbShown) return; tbShown = v;
+    var days = parseFloat(v) || 0;
+    if (days <= 0) txt = "Present";
+    else { var d = new Date(nowMs() + days * 86400000); txt = d.getUTCFullYear() + " \u00b7 " + d.getUTCDate() + " " + ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getUTCMonth()]; }
+    elTbDate.textContent = txt; elSlider.setAttribute("aria-valuetext", txt);
+  }
+  elSlider.addEventListener("input", function () { tbShown = ""; updateTimeUI(); });
+  var tbH = 90, keyH = 50;
+  function layoutBottom() {
+    var mob = isMobile(), pOpen = !elPanel.hidden;
+    keyH = (mob && pOpen) ? 0 : elKeyFoot.offsetHeight;
+    tbH = elTimebox.offsetHeight;
+    var st = document.documentElement.style;
+    st.setProperty("--keyh", (keyH + 6) + "px"); st.setProperty("--tbh", tbH + "px");
+  }
   var lastKey = 0, lastPanel = 0;
   function frame(ts) {
     var dt = Math.min(0.1, (ts - (lastTs || ts)) / 1000); lastTs = ts;
     resize(); frameDt = dt || 0.016; uiR = uiRects();
-    var ms = nowMs(); jd = julian(ms);
+    var ms = nowMs() + simOffsetMs(); jd = julian(ms);
+    updateTimeUI(); layoutBottom();
     pl = planetState(jd); vy = voyagerState(jd);
 
     // rect smoothing
@@ -970,6 +1183,7 @@
     var st = scaleOn ? 1 : 0;
     if (s !== st) { s += Math.sign(st - s) * dt / 1.4; if ((st - s) * Math.sign(st - s) < 0) s = st; }
     var sE = s; // eased by use below
+    if (cartA !== cartT) { cartA += Math.sign(cartT - cartA) * dt / 0.9; if ((cartT - cartA) * Math.sign(cartT - cartA) < 0) cartA = cartT; }
     if (l !== lTarget) { l += Math.sign(lTarget - l) * dt / 1.0; if ((lTarget - l) * Math.sign(lTarget - l) < 0) l = lTarget; if (l === 0) { loc = lTarget === 0 ? -1 : loc; } }
     if (tween) {
       var tt = Math.min(1, (performance.now() - tween.t0) / tween.dur), e = ease(tt);
@@ -993,12 +1207,15 @@
     if (le < 0.999) {
       ctx.save();
       if (le > 0 && loc >= 0) {
-        var pp = [0, 0]; toScreen(pl[loc].x, pl[loc].y, pp);
+        var pp = [0, 0]; if (cartT === 1) cartPlanetPos(loc, pp); else toScreen(pl[loc].x, pl[loc].y, pp);
         var sc = 1 + le * 7, ccx = cx0(), ccy = cy0();
         ctx.translate(pp[0] + (ccx - pp[0]) * le, pp[1] + (ccy - pp[1]) * le);
         ctx.scale(sc, sc); ctx.translate(-pp[0], -pp[1]);
       }
-      drawSolar(1 - le, le < 0.02);
+      var ceA = ease(Math.max(0, Math.min(1, cartA)));
+      cartLayout();
+      if (ceA < 0.2) drawSolar((1 - le) * (1 - ceA * 5), le < 0.02 && cartA < 0.5);
+      if (cartA > 0.001) drawCart(1 - le, cartA, le < 0.02 && cartA >= 0.5);
       ctx.restore();
     }
     if (le > 0.001 && loc >= 0) {
@@ -1019,6 +1236,7 @@
     requestAnimationFrame(frame);
   }
 
+  if ((q.get("view") || "").toLowerCase() === "cartographic") { setView("cartographic", true); cartA = 1; }
   window.addEventListener("resize", function () { resize(); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { measureCache = {}; });
   resize();
@@ -1040,5 +1258,8 @@
     }
     return res;
   };
+  window.__orrery.cartPos = function (n) { for (var i = 0; i < PLANETS.length; i++) if (PLANETS[i].name === n) return cartPlanetPos(i, [0, 0]); };
+  window.__orrery.jd = function () { return jd; };
+  window.__orrery.pl = function () { return pl; };
   window.__orrery.dbg = function () { return { s: s, l: l, loc: loc, sel: sel, cam: cam, scaleOn: scaleOn }; };
 })();
