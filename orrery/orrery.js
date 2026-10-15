@@ -653,7 +653,7 @@
     var rows = [
       ["Diameter", st.diameter], ["Mass", st.mass], ["Distance from Sun (average)", st.avg],
       ["Distance from Sun (now)", '<span id="pNow"></span>'], ["Orbital period", st.period], ["Day length", st.day],
-      ["Moons", st.moons], ["Surface gravity", st.gravity], ["Average temperature", st.temp]
+      ["Natural Satellites", st.moons], ["Surface gravity", st.gravity], ["Average temperature", st.temp]
     ];
     elPanel.innerHTML =
       '<div class="sheet-grip" aria-hidden="true"></div>' +
