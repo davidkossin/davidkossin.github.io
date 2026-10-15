@@ -161,6 +161,56 @@
     });
   }
 
+  /* ---------- additional small moons (drawn as unlabeled points) ---------- */
+  var MOON_GM = { Jupiter: 1.26687e8, Saturn: 3.7931e7, Uranus: 5.794e6, Neptune: 6.8365e6 };
+  var MOON_TOTAL = { Earth: 1, Mars: 2, Jupiter: 95, Saturn: 274, Uranus: 29, Neptune: 16 };
+  // [a km, period days (negative = retrograde)] for moons with known orbits
+  var KNOWN_SMALL = {
+    Jupiter: [[128000, 0.295], [129000, 0.298], [221900, 0.6745], [7393000, 130], [11165000, 240.9], [11460000, 250.6], [11717000, 259.2], [11741000, 259.6], [17144000, 456], [18928000, 533]],
+    Saturn: [[133584, 0.575], [136505, 0.594], [137670, 0.602], [139380, 0.613], [141720, 0.629], [151422, 0.694], [151472, 0.695], [167500, 0.808], [194440, 1.01], [197700, 1.037], [212280, 1.154], [294710, 1.888], [294710, 1.888], [377200, 2.737], [377396, 2.737], [1481100, 21.28], [12947780, -550.3],
+      [11111000, 449], [11442000, 451], [15200000, 687], [17538000, 896], [18239000, 926], [16393000, 783], [17343000, 871], [15541000, -728], [18628000, -952], [19007000, -1004], [19459000, -1017], [20314000, -1088], [23040000, -1315]],
+    Uranus: [[49770, 0.335], [53790, 0.376], [59170, 0.435], [61780, 0.464], [62680, 0.474], [64350, 0.493], [66090, 0.513], [69940, 0.558], [74800, 0.618], [75260, 0.624], [76400, 0.638], [86010, 0.762], [97700, 0.923],
+      [4276000, -267], [7231000, -580], [7948000, -677], [8504000, -749], [12179000, -1288], [14345000, 1661], [16256000, -1978], [17418000, -2225], [20901000, -2887]],
+    Neptune: [[48227, 0.294], [50075, 0.311], [52526, 0.335], [61953, 0.429], [73548, 0.555], [105283, 0.95], [5513400, 360.1], [16681000, -1879], [22422000, 2914], [23571000, 3168], [46695000, -9074], [48387000, -9740]]
+  };
+  // [count (0 = fill remainder), a min, a max, direction] bands for moons without individual data
+  var FILL_BANDS = {
+    Jupiter: [[5, 11.1e6, 12.0e6, 1], [20, 20.7e6, 22.0e6, -1], [28, 22.7e6, 23.9e6, -1], [20, 23.0e6, 24.8e6, -1], [0, 18.5e6, 29.0e6, -1]],
+    Saturn: [[25, 11.0e6, 18.0e6, 1], [20, 16.5e6, 19.5e6, 1], [0, 12.0e6, 25.0e6, -1]],
+    Uranus: [[0, 7.0e6, 20.5e6, -1]],
+    Neptune: [[0, 15.0e6, 50.0e6, -1]]
+  };
+  function mulberry(seed) {
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  PLANETS.forEach(function (P, pi) {
+    P.extras = [];
+    var known = KNOWN_SMALL[P.name]; if (!known) return;
+    var rnd = mulberry(1234 + pi * 977), gm = MOON_GM[P.name];
+    function add(a, Pd, dir) {
+      var per = Pd ? Pd : dir * 2 * Math.PI * Math.sqrt(a * a * a / gm) / 86400;
+      P.extras.push({ a: a, P: per, L0: rnd() * 360 });
+    }
+    known.forEach(function (k) { add(k[0], k[1]); });
+    var want = MOON_TOTAL[P.name] - P.moons.length - P.extras.length;
+    var bands = FILL_BANDS[P.name], used = 0, b, n, i;
+    for (b = 0; b < bands.length; b++) {
+      n = bands[b][0] || Math.max(0, want - used);
+      n = Math.min(n, want - used);
+      for (i = 0; i < n; i++) {
+        // radii cluster toward the middle of each band
+        var u = (rnd() + rnd()) / 2;
+        add(bands[b][1] + (bands[b][2] - bands[b][1]) * u, 0, bands[b][3]);
+      }
+      used += n;
+    }
+  });
+
   function moonAngle(m, jd) {
     return (m.L0 + 360 * (jd - J2000) / m.P) * D2R;
   }
@@ -474,8 +524,12 @@
     var amax = P.moons.length ? P.moons[P.moons.length - 1].a : 6 * P.req;
     var base = 1.5 * P.req;
     var den = Math.log(amax / base);
+    var aout = amax;
+    P.extras.forEach(function (e) { if (e.a > aout) aout = e.a; });
+    var Rout = Math.min(m * 0.465, Rmax + 0.075 * m), denO = Math.log(aout / amax);
     function map(a) {
       if (a <= base) return Rp * a / P.req;
+      if (a > amax) return denO > 0 ? Rmax + (Rout - Rmax) * Math.log(a / amax) / denO : Rmax;
       return 1.5 * Rp + (Rmax - 1.5 * Rp) * Math.log(a / base) / den;
     }
     return { P: P, Rp: Rp, Rmax: Rmax, map: map, cx: cx0(), cy: cy0() };
@@ -519,6 +573,13 @@
     grd.addColorStop(0, lighten(P.color, 0.35)); grd.addColorStop(1, P.color);
     ctx.fillStyle = grd; ctx.beginPath(); ctx.arc(cx, cy, L.Rp, 0, TAU); ctx.fill();
 
+    if (P.extras.length) {
+      ctx.fillStyle = "rgba(200,208,235,0.5)";
+      for (i = 0; i < P.extras.length; i++) {
+        var e = P.extras[i], te = moonAngle(e, jd), re = L.map(e.a);
+        ctx.beginPath(); ctx.arc(cx + re * Math.cos(te), cy - re * Math.sin(te), 1.25, 0, TAU); ctx.fill();
+      }
+    }
     var items = [{ id: "lp", text: P.name, x: cx, y: cy, r: P.rings ? L.map(P.rings[2][1]) : L.Rp, out: [-1, -1], h: 0, force: true }];
     moonItems = [];
     P.moons.forEach(function (m, j) {
