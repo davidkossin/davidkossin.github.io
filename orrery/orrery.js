@@ -238,8 +238,9 @@
   var KUIPER = makeBelt(1800, 30, 50, 777, [], function (u) { return Math.pow(u, 1.3) * 0.75 + u * 0.25 * u; });
 
   /* ---------- view mapping ---------- */
-  var COMP_K = Math.log(1 + 31 / 0.3);
-  function compR(r) { return Math.log(1 + r / 0.3) / COMP_K; }
+  var COMP_C = 0.6;
+  var COMP_K = Math.log(1 + 31 / COMP_C);
+  function compR(r) { return Math.log(1 + r / COMP_C) / COMP_K; }
   function vrW() { return vr.x1 - vr.x0; }
   function vrH() { return vr.y1 - vr.y0; }
   function cx0() { return (vr.x0 + vr.x1) / 2; }
@@ -894,5 +895,21 @@
   resize();
   requestAnimationFrame(frame);
 
+  window.__orrery.probe = function () {
+    var res = [];
+    for (var i = 0; i < PLANETS.length; i++) {
+      var o = pl[i].o, best = 1e9, N = 2000, a = [0, 0], c = [0, 0], d = [0, 0];
+      toScreen(pl[i].x, pl[i].y, a);
+      for (var k = 0; k < N; k++) {
+        var E = o.E + (k / N) * TAU, E2 = o.E + ((k + 1) / N) * TAU;
+        orbitXY(o, E, orbitBuf); toScreen(orbitBuf[0], orbitBuf[1], c);
+        orbitXY(o, E2, orbitBuf); toScreen(orbitBuf[0], orbitBuf[1], d);
+        var vx = d[0] - c[0], vy = d[1] - c[1], L = vx * vx + vy * vy, t = L ? Math.max(0, Math.min(1, ((a[0] - c[0]) * vx + (a[1] - c[1]) * vy) / L)) : 0;
+        best = Math.min(best, Math.hypot(a[0] - c[0] - t * vx, a[1] - c[1] - t * vy));
+      }
+      res.push(+best.toFixed(4));
+    }
+    return res;
+  };
   window.__orrery.dbg = function () { return { s: s, l: l, loc: loc, sel: sel, cam: cam, scaleOn: scaleOn }; };
 })();
