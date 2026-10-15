@@ -801,6 +801,7 @@
     ctx.globalAlpha = 1;
     if (forHits) {
       hits = [];
+      hits.push({ type: "planet", i: loc, x: cx, y: cy, r: Math.max(Rp + 6, 13) });
       moonItems.forEach(function (it) { hits.push({ type: "moon", j: it.j, x: it.x, y: it.y, r: Math.max(it.r + 6, 13), lab: it.rect }); });
     }
     return L;
@@ -885,7 +886,7 @@
     elPanel.scrollTop = 0;
   }
   function updatePanelButton() {
-    var b = $("zoomBtn"); if (!b) return;
+    var b = $("zoomBtn"); if (!b || sel < 0) return;
     b.textContent = (lTarget === 1 && loc === sel) ? "Back to solar system" : "Zoom into " + PLANETS[sel].name;
   }
   function updatePanelLive() {
@@ -901,8 +902,9 @@
     buildPanel(i);
   }
   function closePanel() {
-    sel = -1; elPanel.hidden = true; document.body.classList.remove("panel-open");
-    if (lTarget === 1) endLocal();
+    elPanel.hidden = true; document.body.classList.remove("panel-open");
+    if (lTarget === 1) return;   // local view: X only closes the panel; click the planet to reopen
+    sel = -1;
   }
   function startLocal(i) {
     loc = i; lTarget = 1; selMoon = -1; elMoonCard.hidden = true;
@@ -916,6 +918,7 @@
     lTarget = 0; selMoon = -1; elMoonCard.hidden = true;
     elControls.hidden = false; elBack.hidden = true;
     document.body.classList.remove("local");
+    if (elPanel.hidden) sel = -1;   // panel was closed in local view: leave nothing selected
     updatePanelButton();
   }
   elBack.addEventListener("click", endLocal);
