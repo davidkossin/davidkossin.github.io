@@ -249,7 +249,7 @@
   /* ---------- DOM ---------- */
   var $ = function (id) { return document.getElementById(id); };
   var canvas = $("orrery"), ctx = canvas.getContext("2d");
-  var elClock = $("clock"), elSwitch = $("scaleSwitch"), elChips = $("chips"), elZoomCtl = $("zoomctl"), elBack = $("back");
+  var elClock = $("clock"), elSwitch = $("scaleSwitch"), elZoomCtl = $("zoomctl"), elBack = $("back");
   var elPanel = $("panel"), elMoonCard = $("moonCard"), elTip = $("tip"), elKeyBar = $("keyBar"), elBarLine = $("barLine"), elBarLabel = $("barLabel"), elKeyText = $("keyText");
   var elControls = $("controls");
 
@@ -856,13 +856,7 @@
     else if (scaleOn) { tween = null; cam.x -= dx / cam.ppa; cam.y += dy / cam.ppa; clampCam(); }
     else { vtween = null; cz.x += dx; cz.y += dy; clampView(cz, Rc()); }
   }
-  function jump(id) {
-    if (id === "fit") { camTo(0, 0, ppaFit(), 1000); return; }
-    var idx = id === "v1" ? 0 : 1, v = vy[idx];
-    var rp = Math.hypot(v.x, v.y);
-    var ppa = Math.min(vrW(), vrH()) * 0.5 / (rp / 2 * 1.45);
-    camTo(v.x / 2, v.y / 2, ppa, 1300);
-  }
+  function jumpFit() { camTo(0, 0, ppaFit(), 1000); }
 
   /* ---------- mobile bottom sheet (hidden / default / expanded) ---------- */
   var sheetState = "default", sheetDrag = null, sheetKey = "", sheetTop = 0, SHEET_PEEK = 28;
@@ -1045,7 +1039,6 @@
   /* ---------- toggle ---------- */
   function setScale(on) {
     scaleOn = on; elSwitch.setAttribute("aria-checked", on ? "true" : "false");
-    elChips.hidden = !on || cartT === 1;
     if (!on) { pinned = null; cz.k = 1; cz.x = 0; cz.y = 0; vtween = null; }
     if (on) { tween = null; if (s < 0.01) { cam.x = 0; cam.y = 0; cam.ppa = ppaFit(); } }
   }
@@ -1065,7 +1058,7 @@
   function syncView() {
     var on = cartT === 1;
     viewBtns.forEach(function (b) { var a = (b.getAttribute("data-view") === "cartographic") === on; b.setAttribute("aria-checked", a ? "true" : "false"); b.tabIndex = a ? 0 : -1; });
-    elSwitch.hidden = on; elChips.hidden = on || !scaleOn;
+    elSwitch.hidden = on;
     document.body.classList.toggle("cartographic", on);
   }
   viewBtns.forEach(function (b, i) {
@@ -1077,13 +1070,12 @@
     });
   });
   elSwitch.addEventListener("click", function () { setScale(!scaleOn); });
-  elChips.addEventListener("click", function (e) { var b = e.target.closest("[data-jump]"); if (b) jump(b.getAttribute("data-jump")); });
   $("zin").addEventListener("click", function () { zoomBy(cx0(), cy0(), 1.7); });
   $("zout").addEventListener("click", function () { zoomBy(cx0(), cy0(), 1 / 1.7); });
   $("zfit").addEventListener("click", function () {
     if (lTarget === 1) viewTo(lz, 1, 0, 0, 600);
     else if (cartT === 1) viewTo(cv, 1, 0, 0, 600);
-    else if (scaleOn) jump("fit");
+    else if (scaleOn) jumpFit();
     else viewTo(cz, 1, 0, 0, 600);
   });
 
