@@ -71,7 +71,7 @@ body.panel-open .key { right: 360px; }
 .panel dd { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; }
 .panel .facts { margin: 1.1rem 0 1.2rem; font-weight: 300; font-size: 0.92rem; line-height: 1.65; color: var(--muted); }
 .panel .zoom-btn { width: 100%; margin-bottom: 0.9rem; padding: 0.7rem 1rem; font-size: 0.92rem; background: linear-gradient(135deg, rgba(56,189,248,.22), rgba(129,140,248,.22)); border-color: rgba(125,211,252,.5); }
-.sheet-grip { display: none; }
+.sheet-grip, .sheet-handle { display: none; }
 
 #timeSlider { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 34px; margin: 0; background: transparent; cursor: pointer; touch-action: none; }
 #timeSlider::-webkit-slider-runnable-track { height: 2px; background: rgba(232,236,255,0.4); border-radius: 2px; }
@@ -98,12 +98,19 @@ body.panel-open .timebox { right: 360px; }
   .zoomctl button { width: 2.2rem; height: 2.2rem; }
   .key { padding: 0.8rem 1rem calc(0.9rem + env(safe-area-inset-bottom)); gap: 0.9rem; font-size: 0.72rem; flex-wrap: wrap; }
   body.panel-open .key { right: 0; visibility: hidden; }
-  body.panel-open.local .key { visibility: visible; bottom: calc(46dvh + 0.9rem); }
+  body.panel-open.local .key { visibility: visible; bottom: calc(var(--sheet-top, 46dvh + 0.9rem) + 0.2rem); }
   .key-text { max-height: 5rem; overflow: hidden; gap: 0.1rem 0.8rem; }
   .panel { top: auto; width: auto; left: 0; right: 0; bottom: 0; height: 46vh; height: 46dvh; padding: 1.5rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom)); border-left: 0; border-top: 1px solid rgba(232,236,255,0.18); border-radius: 18px 18px 0 0; animation: slideUp .35s ease; }
   @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
   .sheet-grip { display: block; position: absolute; top: 0.55rem; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 2px; background: rgba(232,236,255,0.3); }
   .panel-head h2 { font-size: 1.15rem; }
+  .panel { transition: bottom .28s cubic-bezier(.2,.8,.2,1), height .28s cubic-bezier(.2,.8,.2,1), border-radius .28s; overscroll-behavior: contain; }
+  .panel.dragging { transition: none; }
+  .panel-head { touch-action: none; cursor: grab; }
+  .sheet-handle { display: block; position: absolute; top: 0; left: 0; right: 0; height: 2.2rem; touch-action: none; cursor: grab; z-index: 1; }
+  .sheet-handle .sheet-grip { top: 0.55rem; }
+  body.sheet-hidden .panel { overflow: hidden; padding-bottom: 0; }
+  body.sheet-hidden .key { bottom: 28px; }
   .moon-card { width: 13.5rem; }
 }
 [hidden] { display: none !important; }

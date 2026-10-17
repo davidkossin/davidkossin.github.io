@@ -864,6 +864,94 @@
     camTo(v.x / 2, v.y / 2, ppa, 1300);
   }
 
+  /* ---------- mobile bottom sheet (hidden / default / expanded) ---------- */
+  var sheetState = "default", sheetDrag = null, sheetKey = "", sheetTop = 0, SHEET_PEEK = 28;
+  var safeProbe = document.createElement("div");
+  safeProbe.style.cssText = "position:fixed;left:0;bottom:0;width:0;height:0;visibility:hidden;padding-bottom:env(safe-area-inset-bottom)";
+  document.body.appendChild(safeProbe);
+  function safeBottom() { return parseFloat(getComputedStyle(safeProbe).paddingBottom) || 0; }
+  function vh() { return window.innerHeight; }
+  // snap geometry: T = top edge of the sheet measured up from the viewport bottom; b = gap under sheet
+  function sheetSnaps() {
+    var sb = safeBottom(), B0 = tbH + 14.4 + sb;
+    return { peek: SHEET_PEEK, def: Math.round(vh() * 0.46 + 14.4 + sb), full: Math.round(vh() * 0.70), B0: B0, sb: sb };
+  }
+  function sheetGeom(T, S) {
+    var b;
+    if (T <= S.def) b = S.B0 * Math.max(0, (T - S.peek) / (S.def - S.peek)); else b = S.B0 * Math.max(0, (S.full - T) / (S.full - S.def));
+    b = Math.round(b * 10) / 10;
+    return { b: b, h: Math.max(0, Math.round((T - b) * 10) / 10) };
+  }
+  function sheetApply(T, S) {
+    var g = sheetGeom(T, S);
+    elPanel.style.bottom = g.b + "px"; elPanel.style.height = g.h + "px";
+    elPanel.style.borderRadius = g.b > 1 ? "18px" : "18px 18px 0 0";
+    sheetTop = T;
+  }
+  function syncSheet(force) {
+    var mob = isMobile(), on = !elPanel.hidden;
+    var hid = mob && on && sheetState === "hidden";
+    document.body.classList.toggle("sheet-hidden", hid);
+    document.body.classList.toggle("sheet-full", mob && on && sheetState === "full");
+    document.body.classList.toggle("panel-open", on && !hid);
+    if (!mob || !on) {
+      if (elPanel.style.height) { elPanel.style.bottom = elPanel.style.height = elPanel.style.borderRadius = ""; }
+      sheetKey = ""; return;
+    }
+    if (sheetDrag && sheetDrag.active) return;
+    var S = sheetSnaps(), T = sheetState === "hidden" ? S.peek : sheetState === "full" ? S.full : S.def;
+    var key = sheetState + "|" + T + "|" + Math.round(S.B0);
+    if (key === sheetKey && !force) return;
+    sheetKey = key; sheetApply(T, S);
+    document.documentElement.style.setProperty("--sheet-top", (T + 14) + "px");
+  }
+  function bindSheetDrag(el) {
+    if (!el) return;
+    el.addEventListener("pointerdown", function (e) {
+      if (!isMobile() || (e.pointerType === "mouse" && e.button !== 0)) return;
+      if (e.target.closest && e.target.closest(".close") ) return;
+      var S = sheetSnaps();
+      sheetDrag = { id: e.pointerId, el: el, y0: e.clientY, T0: sheetTop || S.def, S: S, active: false, samples: [[performance.now(), e.clientY]], startState: sheetState };
+    });
+    el.addEventListener("pointermove", function (e) {
+      var d = sheetDrag; if (!d || d.id !== e.pointerId) return;
+      var dy = e.clientY - d.y0;
+      if (!d.active) {
+        if (Math.abs(dy) < 5) return;
+        d.active = true; elPanel.classList.add("dragging");
+        try { el.setPointerCapture(e.pointerId); } catch (x) {}
+      }
+      var now = performance.now(); d.samples.push([now, e.clientY]);
+      while (d.samples.length > 2 && now - d.samples[0][0] > 120) d.samples.shift();
+      var T = Math.max(d.S.peek, Math.min(d.S.full, d.T0 - dy));
+      sheetApply(T, d.S); d.T = T;
+      e.preventDefault();
+    });
+    function end(e) {
+      var d = sheetDrag; if (!d || d.id !== e.pointerId) return;
+      sheetDrag = null;
+      elPanel.classList.remove("dragging");
+      try { el.releasePointerCapture(e.pointerId); } catch (x) {}
+      if (!d.active) {
+        if (e.type === "pointerup" && d.startState === "hidden") { sheetState = "default"; syncSheet(true); }
+        return;
+      }
+      var s0 = d.samples[0], s1 = d.samples[d.samples.length - 1];
+      var v = s1[0] > s0[0] ? -(s1[1] - s0[1]) / (s1[0] - s0[0]) : 0;   // px/ms, positive = upward
+      var S = d.S, T = d.T, snaps = [["hidden", S.peek], ["default", S.def], ["full", S.full]], pick;
+      if (Math.abs(v) > 0.5) {   // flick: move to the next snap in that direction
+        if (v > 0) pick = snaps.filter(function (x) { return x[1] > T + 4; })[0] || snaps[2];
+        else pick = snaps.filter(function (x) { return x[1] < T - 4; }).pop() || snaps[0];
+      } else {
+        var P = T + v * 150; pick = snaps[0];
+        snaps.forEach(function (x) { if (Math.abs(x[1] - P) < Math.abs(pick[1] - P)) pick = x; });
+      }
+      sheetState = pick[0]; sheetKey = ""; syncSheet(true);
+      if (sheetState === "hidden") elPanel.scrollTop = 0;
+    }
+    el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end);
+  }
+
   /* ---------- panel ---------- */
   function buildPanel(i) {
     var P = PLANETS[i], st = P.stats;
@@ -873,13 +961,14 @@
       ["Natural Satellites", st.moons], ["Surface gravity", st.gravity], ["Average temperature", st.temp]
     ];
     elPanel.innerHTML =
-      '<div class="sheet-grip" aria-hidden="true"></div>' +
+      '<div class="sheet-handle" aria-hidden="true"><div class="sheet-grip"></div></div>' +
       '<div class="panel-head"><span class="dot" style="background:' + P.color + ';color:' + P.color + '"></span><h2>' + P.name + '</h2><button class="close" type="button" aria-label="Close">&times;</button></div>' +
       '<button class="zoom-btn" type="button" id="zoomBtn"></button>' +
       "<dl>" + rows.map(function (r) { return '<div class="row"><dt>' + r[0] + "</dt><dd>" + r[1] + "</dd></div>"; }).join("") + "</dl>" +
       '<p class="facts">' + esc(P.fact) + "</p>" +
       '';
     elPanel.querySelector(".close").addEventListener("click", closePanel);
+    bindSheetDrag(elPanel.querySelector(".sheet-handle")); bindSheetDrag(elPanel.querySelector(".panel-head"));
     $("zoomBtn").addEventListener("click", function () { if (loc === i && lTarget === 1) endLocal(); else startLocal(i); });
     updatePanelButton();
     updatePanelLive();
@@ -898,11 +987,14 @@
     var wasOpen = sel >= 0;
     sel = i;
     if (lTarget === 1 && loc !== i) { /* switching planet while zoomed is not exposed */ }
+    var wasHidden = elPanel.hidden;
     elPanel.hidden = false; document.body.classList.add("panel-open");
+    if (wasHidden || sheetState === "hidden") sheetState = "default";   // clicking the selected planet again brings the sheet back
     buildPanel(i);
+    syncSheet(true);
   }
   function closePanel() {
-    elPanel.hidden = true; document.body.classList.remove("panel-open");
+    elPanel.hidden = true; document.body.classList.remove("panel-open", "sheet-hidden"); sheetState = "default";
     if (lTarget === 1) return;   // local view: X only closes the panel; click the planet to reopen
     sel = -1;
   }
@@ -1129,16 +1221,17 @@
       canvas.width = Math.floor(W * dpr); canvas.height = Math.floor(H * dpr);
     }
   }
+  function panelShown() { return !elPanel.hidden && !(isMobile() && sheetState === "hidden"); }
   function targetRect() {
     var mob = isMobile();
     var top = mob ? 150 : 76, bottom = H - (keyH + tbH + 16);
     var r = { x0: 0, y0: top, x1: W, y1: bottom };
-    if (!elPanel.hidden) {
-      if (mob) r.y1 = Math.min(bottom, H * 0.54 - 10 + 0 * tbH); else r.x1 = W - 360;
+    if (panelShown()) {
+      if (mob) r.y1 = Math.min(bottom, H - (sheetTop || H * 0.46) - 10); else r.x1 = W - 360;
     }
     if (!mob) r.x0 = 150; // leave room for controls on the left
     else r.x0 = 0;
-    if (!mob && (elPanel.hidden || cartT === 1)) r.x0 = 0;
+    if (!mob && (!panelShown() || cartT === 1)) r.x0 = 0;
     return r;
   }
 
@@ -1163,8 +1256,9 @@
   elSlider.addEventListener("input", function () { tbShown = ""; updateTimeUI(); });
   var tbH = 90, keyH = 50;
   function layoutBottom() {
-    var mob = isMobile(), pOpen = !elPanel.hidden;
-    keyH = (mob && pOpen) ? 0 : elKeyFoot.offsetHeight;
+    var mob = isMobile(), pOpen = panelShown();
+    syncSheet();
+    keyH = (mob && pOpen) ? 0 : elKeyFoot.offsetHeight + ((mob && !elPanel.hidden) ? SHEET_PEEK : 0);
     tbH = elTimebox.offsetHeight;
     var st = document.documentElement.style;
     st.setProperty("--keyh", (keyH + 6) + "px"); st.setProperty("--tbh", tbH + "px");
