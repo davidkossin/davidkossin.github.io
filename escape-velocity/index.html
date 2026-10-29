@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Escape Velocity — upcoming orbital launches with countdowns and launch vehicle graphics." />
+  <title>Escape Velocity · Objects In Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://dkossin.com/styles.css" />
+  <link rel="stylesheet" href="escape-velocity.css" />
+  <script src="escape-velocity.js" defer></script>
+  <!-- Cloudflare Web Analytics --><script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "ed4660d74de24898991981cdb05e73b9"}'></script><!-- End Cloudflare Web Analytics -->
+</head>
+<body class="ev-page">
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="nebula" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="https://dkossin.com/">Objects In Space</a>
+    <nav>
+      <a href="https://dkossin.com/">Home</a>
+      <a class="active" href="./">Escape Velocity</a>
+      <a href="https://dkossin.com/stellar-events/">Stellar Events</a>
+      <a href="https://dkossin.com/orrery/">Orrery</a>
+    </nav>
+  </header>
+
+  <main class="ev-main">
+    <header class="ev-hero-head">
+      <p class="eyebrow">Launch calendar</p>
+      <h1>Escape Velocity</h1>
+      <p class="tagline">Upcoming orbital launches — countdowns, missions, and vehicles.</p>
+    </header>
+
+    <p class="data-status" id="data-status" aria-live="polite"></p>
+
+    <section class="featured" id="featured" aria-live="polite">
+      <div class="featured-visual">
+        <canvas id="featured-canvas" width="480" height="560" role="img" aria-label="Illustrated launch vehicle"></canvas>
+        <p class="vehicle-scale" id="vehicle-scale" hidden></p>
+      </div>
+      <div class="featured-copy">
+        <div class="featured-badges">
+          <p class="featured-kicker" id="featured-kicker">Next launch</p>
+          <span class="status-pill" id="featured-status"></span>
+          <span class="badge vandy" id="featured-vandy" hidden>Vandenberg SFB, California</span>
+        </div>
+        <h2 id="featured-title">—</h2>
+        <p class="featured-when" id="featured-when"></p>
+        <p class="countdown" id="featured-countdown" aria-live="off"></p>
+        <p class="featured-mission-desc" id="featured-mission-desc"></p>
+        <p class="featured-vehicle-desc" id="featured-vehicle-desc"></p>
+        <dl class="featured-meta" id="featured-meta"></dl>
+        <p class="webcast-wrap" id="featured-webcast" hidden></p>
+      </div>
+    </section>
+
+    <section class="timeline" aria-labelledby="timeline-heading">
+      <h2 id="timeline-heading">Upcoming</h2>
+      <div class="launch-grid" id="launch-grid"></div>
+    </section>
+
+    <footer class="ev-credits">
+      <p>Launch data: The Space Devs Launch Library 2. Times shown in your local timezone.</p>
+    </footer>
+  </main>
+
+  <script src="https://dkossin.com/stars.js"></script>
+</body>
+</html>

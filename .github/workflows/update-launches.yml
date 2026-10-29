@@ -1,0 +1,42 @@
+name: Update Escape Velocity launches
+
+on:
+  schedule:
+    # Every 2 hours — stays well under LL2 free-tier ~15 req/hour/IP
+    - cron: "20 */2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-escape-velocity-launches
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch launches
+        run: python3 escape-velocity/scripts/fetch_launches.py
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- escape-velocity/data/launches.json; then
+            echo "No launch data changes"
+            exit 0
+          fi
+          UPDATED=$(python3 -c 'import json; print(json.load(open("escape-velocity/data/launches.json"))["updated"])')
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add escape-velocity/data/launches.json
+          git commit -m "Update Escape Velocity launches (${UPDATED})"
+          git push
