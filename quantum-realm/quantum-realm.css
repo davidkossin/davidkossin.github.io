@@ -201,9 +201,11 @@ body.qr-page {
     grid-template-columns: 1fr;
     min-height: 0;
   }
+  .stage-stack {
+    order: -1;
+  }
   .demo-stage {
     min-height: 52vh;
-    order: -1;
   }
 }
 
@@ -412,4 +414,34 @@ body.qr-page {
   .nebula {
     animation: none !important;
   }
+}
+
+.stage-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.stage-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.pattern-hist {
+  display: block;
+  width: 100%;
+  height: 72px;
+  border-radius: 0.75rem;
+  border: 1px solid var(--qr-border);
+  background: rgba(7, 9, 26, 0.95);
+}
+
+.pattern-hist-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.15rem 0.15rem;
 }
