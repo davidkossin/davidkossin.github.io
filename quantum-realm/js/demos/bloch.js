@@ -92,9 +92,33 @@ export function mount(root) {
     ]);
     scene.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color: c })));
   }
-  axis([0, -1.15, 0], [0, 1.15, 0], 0xfbbf24); // z
+  axis([0, -1.15, 0], [0, 1.15, 0], 0xfbbf24); // z (up)
   axis([-1.15, 0, 0], [1.15, 0, 0], 0x38bdf8); // x
-  axis([0, 0, -1.15], [0, 0, 1.15], 0xa78bfa); // y
+  axis([0, 0, -1.15], [0, 0, 1.15], 0xa78bfa); // y (into/out of screen)
+
+  function axisLabel(text, pos, color) {
+    const c = document.createElement("canvas");
+    c.width = 128; c.height = 64;
+    const ctx = c.getContext("2d");
+    ctx.clearRect(0, 0, 128, 64);
+    ctx.fillStyle = color;
+    ctx.font = "bold 36px system-ui,sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, 64, 32);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+    spr.scale.set(0.55, 0.275, 1);
+    spr.position.set(...pos);
+    scene.add(spr);
+  }
+  // Visual Y = Bloch z; visual X = Bloch x; visual Z = −Bloch y
+  axisLabel("|0⟩", [0, 1.35, 0], "#fbbf24");
+  axisLabel("|1⟩", [0, -1.35, 0], "#fbbf24");
+  axisLabel("x", [1.35, 0, 0], "#38bdf8");
+  axisLabel("y", [0, 0, 1.35], "#a78bfa");
+  axisLabel("z", [0.42, 1.15, 0], "#fbbf24");
 
   const arrow = new THREE.ArrowHelper(
     new THREE.Vector3(0, 1, 0),
@@ -130,8 +154,7 @@ export function mount(root) {
 
   function refresh() {
     const v = blochVector(state);
-    arrow.setDirection(new THREE.Vector3(v.x, v.z, v.y).normalize()); // map Bloch y→z visual depth
-    // Use x,z,y so z is up on screen
+    // Visual: Y↑ = Bloch z, X = Bloch x, Z = −Bloch y
     arrow.setDirection(new THREE.Vector3(v.x, v.z, -v.y).normalize());
     const p0 = bornProb0(prepared.theta);
     ui.querySelector("#p0").textContent = p0.toFixed(3);

@@ -88,6 +88,25 @@ export function mount(root) {
   const detA = makeDetector(-1.6, 0x38bdf8);
   const detB = makeDetector(1.6, 0xfb923c);
 
+  function detLabel(text, x, color) {
+    const c = document.createElement("canvas");
+    c.width = 128; c.height = 64;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = color;
+    ctx.font = "bold 44px system-ui,sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, 64, 32);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+    spr.scale.set(0.5, 0.25, 1);
+    spr.position.set(x, 1.25, 0);
+    scene.add(spr);
+  }
+  detLabel("A", -1.6, "#38bdf8");
+  detLabel("B", 1.6, "#fb923c");
+
   // Pair source
   const src = new THREE.Mesh(
     new THREE.SphereGeometry(0.15, 16, 16),
