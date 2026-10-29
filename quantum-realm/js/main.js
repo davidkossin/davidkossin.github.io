@@ -88,7 +88,7 @@ function renderHub() {
       <p class="eyebrow">Interactive physics</p>
       <h1>The Quantum Realm</h1>
       <p class="tagline">Seven mini labs where the math of quantum mechanics becomes something you can poke, tune, and score.</p>
-      ${prefersReducedMotion() ? "" : '<p class="hint-line">Tip: drag to orbit · scroll to zoom · demos pause when this tab is hidden.</p>'}
+      ${prefersReducedMotion() ? "" : '<p class="hint-line">Drag to orbit · scroll or pinch to zoom</p>'}
     </header>
     <div class="subject-grid" role="list">
       ${SUBJECTS.map(cardHTML).join("")}
@@ -126,7 +126,7 @@ async function openSubject(id) {
     unmount = mod.mount(demoRoot);
   } catch (err) {
     console.error(err);
-    demoRoot.innerHTML = `<p class="demo-error">Could not load this lab. Check the console for details.</p>`;
+    demoRoot.innerHTML = `<p class="demo-error">Could not load this lab. Try refreshing the page.</p>`;
   }
 }
 

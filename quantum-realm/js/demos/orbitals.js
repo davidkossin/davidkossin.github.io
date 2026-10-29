@@ -33,7 +33,7 @@ export function mount(root) {
       <aside class="demo-panel">
         <p class="demo-kicker">Key idea</p>
         <p class="demo-key">Electrons in atoms don’t follow tiny planetary orbits — the cloud is a probability map from a quantized wavefunction.</p>
-        <p class="demo-intro">Points are sampled from |ψ<sub>nlm</sub>|² for hydrogen. Energy depends only on n: E<sub>n</sub> = −13.6 eV / n². Fire a photon with the right energy to climb a level; emission can show Balmer colors.</p>
+        <p class="demo-intro">The cloud shows |ψ<sub>nlm</sub>|² for hydrogen. Energy depends only on n: E<sub>n</sub> = −13.6 eV / n². Fire a photon with the right energy to climb a level; emission can show Balmer colors.</p>
         <div class="control-grid">
           <label>Orbital
             <select id="orb"></select>

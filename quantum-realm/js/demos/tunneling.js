@@ -22,7 +22,7 @@ export function mount(root) {
       <aside class="demo-panel">
         <p class="demo-kicker">Key idea</p>
         <p class="demo-key">A quantum particle can appear on the far side of a barrier even when its energy is below the barrier height — with a precise transmission probability.</p>
-        <p class="demo-intro">The glowing sheet is |ψ|² for a wave packet. The orange block is a rectangular potential. Theory T uses the exact rectangular-barrier formula; the animation is a split-step Schrödinger evolution (ℏ = m = 1 units).</p>
+        <p class="demo-intro">The glowing sheet is |ψ|² for a wave packet. The orange block is a rectangular potential. The listed transmission probability T uses the exact formula for that barrier.</p>
         <div class="control-grid">
           <label>Particle energy E <span data-v="E"></span>
             <input type="range" id="E" min="0.5" max="8" step="0.1" value="2.5" />
@@ -36,8 +36,8 @@ export function mount(root) {
           <button type="button" class="btn-primary" id="run">Launch packet</button>
         </div>
         <div class="stats">
-          <p>Exact T(E) = <strong id="T">—</strong></p>
-          <p>Simulated transmission ≈ <strong id="Tsim">—</strong></p>
+          <p>Transmission T(E) = <strong id="T">—</strong></p>
+          <p>Through-barrier fraction ≈ <strong id="Tsim">—</strong></p>
         </div>
         <div class="challenge">
           <strong>Try this</strong>
@@ -46,7 +46,7 @@ export function mount(root) {
         </div>
         <details class="math">
           <summary>The math</summary>
-          <p>For E &lt; V₀, width L (ℏ, m as set):</p>
+          <p>For E &lt; V₀, width L:</p>
           <p class="eq">T = [1 + V₀² sinh²(κL) / (4E(V₀−E))]⁻¹, κ = √(2m(V₀−E))/ℏ</p>
           <p>Tunneling is not a classical “borrow energy” trick — the wavefunction is nonzero inside the forbidden region.</p>
         </details>

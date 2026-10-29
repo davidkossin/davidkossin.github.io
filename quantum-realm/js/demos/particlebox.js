@@ -26,7 +26,7 @@ export function mount(root) {
             <input type="range" id="n" min="1" max="6" step="1" value="1" />
           </label>
           <label class="check"><input type="checkbox" id="showP" checked /> Show |ψ|²</label>
-          <label class="check"><input type="checkbox" id="animate" checked /> Phase animation</label>
+          <label class="check"><input type="checkbox" id="animate" checked /> Animate phase</label>
         </div>
         <div class="stats">
           <p>E<sub>n</sub> / E<sub>1</sub> = <strong id="Er">1</strong></p>

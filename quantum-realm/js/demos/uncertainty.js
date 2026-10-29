@@ -21,7 +21,7 @@ export function mount(root) {
       <aside class="demo-panel">
         <p class="demo-kicker">Key idea</p>
         <p class="demo-key">The more tightly you localize a particle in space, the broader its momentum spread must be — a Fourier fact, not “clumsy measurement.”</p>
-        <p class="demo-intro">Left: |ψ(x)|². Right: |φ(p)|². For a minimum-uncertainty Gaussian, Δx Δp = ħ/2 (here ħ = 1 so the product is ½).</p>
+        <p class="demo-intro">Left: |ψ(x)|². Right: |φ(p)|². For a minimum-uncertainty Gaussian, Δx Δp = ħ/2.</p>
         <div class="control-grid">
           <label>Position width σₓ <span data-v="sx"></span>
             <input type="range" id="sx" min="0.25" max="2.5" step="0.05" value="1" />
