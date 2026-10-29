@@ -8,7 +8,14 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-API = "https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=30&mode=detailed"
+API_UPCOMING = "https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=30&mode=detailed"
+# Also pull anything with NET in the last ~25 minutes so the page can keep a
+# just-launched mission featured through T+15m even after it leaves "upcoming".
+API_RECENT = (
+    "https://ll.thespacedevs.com/2.3.0/launches/"
+    "?mode=detailed&limit=10&ordering=-net"
+    "&net__gte={gte}&net__lte={lte}"
+)
 OUT = Path(__file__).resolve().parents[1] / "data" / "launches.json"
 
 # Fallback vehicle blurbs when LL2 configuration.description is empty.
@@ -169,13 +176,39 @@ def trim_launch(r: dict) -> dict:
     }
 
 
-def fetch() -> dict:
-    req = urllib.request.Request(API, headers={"User-Agent": "ObjectsInSpace-EscapeVelocity/1.0"})
+def _get(url: str) -> dict:
+    req = urllib.request.Request(url, headers={"User-Agent": "ObjectsInSpace-EscapeVelocity/1.0"})
     with urllib.request.urlopen(req, timeout=60) as resp:
-        raw = json.load(resp)
-    launches = [trim_launch(r) for r in raw.get("results") or []]
+        return json.load(resp)
+
+
+def fetch() -> dict:
+    now = datetime.now(timezone.utc)
+    raw = _get(API_UPCOMING)
+    by_id = {}
+    for r in raw.get("results") or []:
+        if r.get("id"):
+            by_id[r["id"]] = r
+    # Recent window: 25 minutes behind to 2 minutes ahead of "now"
+    gte = (now.timestamp() - 25 * 60)
+    lte = (now.timestamp() + 2 * 60)
+    from datetime import datetime as _dt
+    gte_s = _dt.fromtimestamp(gte, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    lte_s = _dt.fromtimestamp(lte, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    try:
+        recent = _get(API_RECENT.format(gte=gte_s, lte=lte_s))
+        for r in recent.get("results") or []:
+            rid = r.get("id")
+            if rid and rid not in by_id:
+                by_id[rid] = r
+    except Exception as exc:
+        print(f"Recent launches fetch skipped: {exc}")
+    launches = [trim_launch(r) for r in by_id.values()]
+    launches.sort(key=lambda L: L.get("net") or "")
+    # Cap at ~35
+    launches = launches[:35]
     return {
-        "updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "updated": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "https://ll.thespacedevs.com/2.3.0/",
         "count": len(launches),
         "launches": launches,

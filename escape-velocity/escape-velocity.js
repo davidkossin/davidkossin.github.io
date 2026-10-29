@@ -37,6 +37,76 @@
   /** @type {number|null} */
   let animRaf = null;
   let featuredAnimT = 0;
+  /** @type {number|null} ms override from ?now= ISO */
+  let clockOffsetMs = null; // added to Date.now when set via absolute override
+  let clockFixedMs = null;  // absolute "now" if ?now= provided
+  let forceLiftoffDemo = false;
+  let liftoffStartMs = null; // when liftoff anim began
+  const LIFTOFF_ANIM_MS = 16000;
+  const FEATURED_HOLD_MS = 15 * 60 * 1000;
+
+  function parseClockParams() {
+    try {
+      const q = new URLSearchParams(location.search);
+      if (q.get("liftoff") === "1" || q.get("liftoff") === "true") {
+        forceLiftoffDemo = true;
+      }
+      const nowParam = q.get("now");
+      if (nowParam) {
+        const t = Date.parse(nowParam);
+        if (!Number.isNaN(t)) clockFixedMs = t;
+      }
+    } catch (_) {}
+  }
+
+  function nowMs() {
+    if (clockFixedMs != null) return clockFixedMs;
+    return Date.now();
+  }
+
+  function liftoffProgressFor(launch, now) {
+    if (!launch || !launch.net) return 0;
+    const status = (launch.status || "").toLowerCase();
+    // Don't animate for hold / scrub / TBD
+    if (/hold|scrub|to be determined|^tbd$/.test(status)) return 0;
+    if (forceLiftoffDemo) {
+      if (liftoffStartMs == null) liftoffStartMs = now;
+      return Math.min(1, (now - liftoffStartMs) / LIFTOFF_ANIM_MS);
+    }
+    const net = new Date(launch.net).getTime();
+    if (Number.isNaN(net)) return 0;
+    // Only liftoff path for Go / TBC / in flight / success / unknown go-ish
+    const allow =
+      !status ||
+      /go|to be confirmed|^tbc$|in flight|success|liftoff/.test(status) ||
+      status.indexOf("go") === 0;
+    if (!allow) return 0;
+    if (now < net) return 0;
+    const elapsed = now - net;
+    if (elapsed >= LIFTOFF_ANIM_MS) return 1;
+    return elapsed / LIFTOFF_ANIM_MS;
+  }
+
+  function isStillFeaturedWindow(launch, now) {
+    if (!launch || !launch.net) return false;
+    const net = new Date(launch.net).getTime();
+    if (Number.isNaN(net)) return true;
+    return now < net + FEATURED_HOLD_MS;
+  }
+
+  function selectFeaturedAndUpcoming(list, now) {
+    const sorted = list.slice().sort((a, b) => {
+      const ta = a.net ? new Date(a.net).getTime() : Infinity;
+      const tb = b.net ? new Date(b.net).getTime() : Infinity;
+      return ta - tb;
+    });
+    // Keep launches until NET+15m in the active set
+    const active = sorted.filter((L) => isStillFeaturedWindow(L, now));
+    const pool = active.length ? active : sorted;
+    return { featured: pool[0] || null, upcoming: pool.slice(1) };
+  }
+
+  parseClockParams();
 
   const els = {
     status: document.getElementById("data-status"),
@@ -247,409 +317,780 @@
 
   /* ---------- Rocket drawing ---------- */
 
+  /* ---------- Rocket drawing (accurate silhouettes) ---------- */
+
+  /** Approximate real heights (m) for scale bar + relative drawing */
+  const VEHICLE_HEIGHT_M_DRAW = {
+    falcon9: 70,
+    falconheavy: 70,
+    starship: 121,
+    electron: 18,
+    neutron: 43,
+    vulcan: 61.6,
+    atlasv: 58.3,
+    newglenn: 98,
+    ariane6: 63,
+    vegac: 35,
+    h3: 57,
+    pslv: 44,
+    gslv: 49.1,
+    lvm3: 43.4,
+    longmarch: 57,
+    soyuz: 46.1,
+    generic: 50,
+  };
+
+  function prefersReducedMotion() {
+    try {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * opts: { anim, mini, name, liftoffProgress 0..1, liftoffActive, nowMs }
+   * liftoffProgress: 0 at pad, 1 fully off-screen
+   */
   function drawRocket(ctx, w, h, key, opts) {
     opts = opts || {};
     const anim = opts.anim || 0;
     const mini = !!opts.mini;
+    const reduced = prefersReducedMotion();
+    const lift = Math.max(0, Math.min(1, opts.liftoffProgress || 0));
+    const name = opts.name || "";
+
     ctx.clearRect(0, 0, w, h);
 
-    // Starfield / sky
+    // Sky
     if (!mini) {
       const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, "#05060f");
-      g.addColorStop(0.55, "#0a1028");
-      g.addColorStop(1, "#12182e");
+      g.addColorStop(0, "#03040a");
+      g.addColorStop(0.45, "#0a1024");
+      g.addColorStop(0.78, "#141c32");
+      g.addColorStop(1, "#1a2238");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
 
-      ctx.fillStyle = "rgba(255,255,255,0.55)";
-      for (let i = 0; i < 60; i++) {
-        const sx = ((i * 97 + anim * 4) % w + w) % w;
-        const sy = ((i * 53) % (h * 0.72));
-        const r = (i % 3 === 0 ? 1.2 : 0.7) * (0.6 + 0.4 * Math.sin(anim * 0.02 + i));
+      // Slow starfield — ~8x slower than before; twinkle only if motion OK
+      const drift = reduced ? 0 : anim * 0.35;
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
+      for (let i = 0; i < 70; i++) {
+        const sx = ((i * 97 + drift * 0.15) % w + w) % w;
+        const sy = ((i * 53 + drift * 0.04) % (h * 0.78));
+        const tw = reduced
+          ? 0.75
+          : 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(anim * 0.008 + i * 1.7));
+        const r = (i % 5 === 0 ? 1.15 : 0.65) * tw;
+        ctx.globalAlpha = 0.35 + tw * 0.5;
         ctx.beginPath();
         ctx.arc(sx, sy, r, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.globalAlpha = 1;
     } else {
-      ctx.fillStyle = "rgba(5,6,15,0.2)";
+      ctx.fillStyle = "rgba(5,6,15,0.15)";
       ctx.fillRect(0, 0, w, h);
     }
 
     const cx = w * 0.5;
     const groundY = mini ? h * 0.92 : h * 0.88;
-    const rocketH = mini ? h * 0.78 : h * 0.72;
-    const baseY = groundY - (mini ? 2 : 8);
+    // Scale rocket so tallest (Starship ~121m) fits; others proportional
+    const refH = 121;
+    const realH = VEHICLE_HEIGHT_M_DRAW[key] || VEHICLE_HEIGHT_M_DRAW.generic;
+    const maxRocketPx = mini ? h * 0.78 : h * 0.7;
+    const rocketH = maxRocketPx * (realH / refH);
+    // Liftoff: translate upward with ease-in acceleration
+    const liftPx = lift > 0 ? Math.pow(lift, 1.65) * (h * 1.15) : 0;
+    const baseY = groundY - (mini ? 2 : 8) - liftPx;
 
     if (!mini) {
-      // Pad / ground glow
-      const padG = ctx.createRadialGradient(cx, groundY, 4, cx, groundY, w * 0.42);
-      padG.addColorStop(0, "rgba(251,146,60,0.35)");
-      padG.addColorStop(0.4, "rgba(99,102,241,0.12)");
+      // Pad glow
+      const padG = ctx.createRadialGradient(cx, groundY, 4, cx, groundY, w * 0.4);
+      padG.addColorStop(0, lift > 0 ? `rgba(251,146,60,${0.45 + lift * 0.35})` : "rgba(251,146,60,0.28)");
+      padG.addColorStop(0.45, "rgba(99,102,241,0.1)");
       padG.addColorStop(1, "transparent");
       ctx.fillStyle = padG;
-      ctx.fillRect(0, groundY - 40, w, 80);
+      ctx.fillRect(0, groundY - 50, w, 90);
 
-      // Pad platform
-      ctx.fillStyle = "rgba(80,90,120,0.55)";
-      ctx.fillRect(cx - w * 0.22, groundY - 4, w * 0.44, 8);
-      ctx.fillStyle = "rgba(40,48,70,0.7)";
-      ctx.fillRect(cx - w * 0.18, groundY + 4, w * 0.36, 6);
+      // Pad deck
+      ctx.fillStyle = "rgba(70,80,110,0.65)";
+      ctx.fillRect(cx - w * 0.2, groundY - 3, w * 0.4, 7);
+      ctx.fillStyle = "rgba(35,42,65,0.8)";
+      ctx.fillRect(cx - w * 0.16, groundY + 4, w * 0.32, 5);
 
-      // Vapor
-      ctx.save();
+      // Tower (simple)
+      ctx.strokeStyle = "rgba(148,163,184,0.45)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx + w * 0.14, groundY);
+      ctx.lineTo(cx + w * 0.14, groundY - rocketH * 0.85);
+      ctx.stroke();
       for (let i = 0; i < 5; i++) {
-        const vx = cx + Math.sin(anim * 0.03 + i * 1.2) * (18 + i * 8);
-        const vy = groundY - 10 - i * 6;
-        const vr = 10 + i * 4 + Math.sin(anim * 0.05 + i) * 3;
-        ctx.fillStyle = `rgba(200,220,255,${0.06 + i * 0.02})`;
+        const ty = groundY - (rocketH * 0.85 * i) / 5;
         ctx.beginPath();
-        ctx.ellipse(vx, vy, vr, vr * 0.55, 0, 0, Math.PI * 2);
+        ctx.moveTo(cx + w * 0.14, ty);
+        ctx.lineTo(cx + w * 0.1, ty + 8);
+        ctx.stroke();
+      }
+
+      // Ambient vapor
+      if (lift < 0.85) {
+        for (let i = 0; i < 6; i++) {
+          const vx = cx + Math.sin((reduced ? 0 : anim) * 0.012 + i * 1.1) * (20 + i * 10);
+          const vy = groundY - 8 - i * 5 - lift * 30;
+          const vr = 12 + i * 5;
+          ctx.fillStyle = `rgba(200,220,255,${0.05 + i * 0.015})`;
+          ctx.beginPath();
+          ctx.ellipse(vx, vy, vr * (1 + lift), vr * 0.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // Exhaust / plume during liftoff
+    if (!mini && lift > 0 && lift < 1) {
+      drawExhaust(ctx, cx, Math.min(baseY + rocketH * 0.02, groundY - 2), rocketH, lift, anim);
+      // Billowing smoke at pad
+      for (let i = 0; i < 8; i++) {
+        const ang = (i / 8) * Math.PI - Math.PI / 2;
+        const dist = 18 + lift * 70 + i * 6;
+        const sx = cx + Math.cos(ang) * dist * (0.4 + lift);
+        const sy = groundY - 5 + Math.sin(anim * 0.02 + i) * 4;
+        ctx.fillStyle = `rgba(180,190,210,${0.12 * (1 - lift)})`;
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, 22 + i * 3, 10 + i, 0, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.restore();
     }
 
     const drawer = DRAWERS[key] || DRAWERS.generic;
-    drawer(ctx, cx, baseY, rocketH, anim, mini);
+    if (lift < 0.98 || mini) {
+      drawer(ctx, cx, baseY, rocketH, anim, mini, name, lift);
+    }
 
-    if (!mini) {
-      // Soft glow around vehicle
+    if (!mini && lift < 0.5) {
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const glow = ctx.createRadialGradient(cx, baseY - rocketH * 0.45, 4, cx, baseY - rocketH * 0.45, rocketH * 0.35);
-      glow.addColorStop(0, "rgba(125,211,252,0.12)");
+      const glow = ctx.createRadialGradient(
+        cx,
+        baseY - rocketH * 0.45,
+        4,
+        cx,
+        baseY - rocketH * 0.45,
+        rocketH * 0.35
+      );
+      glow.addColorStop(0, "rgba(125,211,252,0.1)");
       glow.addColorStop(1, "transparent");
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, w, h);
       ctx.restore();
     }
+
+    // Liftoff caption
+    if (!mini && lift > 0.05 && lift < 0.95) {
+      ctx.fillStyle = "rgba(253,186,116,0.95)";
+      ctx.font = '600 13px "Orbitron", sans-serif';
+      ctx.textAlign = "center";
+      ctx.fillText("LIFTOFF", cx, 28);
+    }
+  }
+
+  function drawExhaust(ctx, cx, y, H, lift, anim) {
+    const len = H * (0.15 + lift * 0.9);
+    const plume = ctx.createLinearGradient(cx, y, cx, y + len);
+    plume.addColorStop(0, "rgba(255,255,255,0.95)");
+    plume.addColorStop(0.15, "rgba(253,224,71,0.9)");
+    plume.addColorStop(0.4, "rgba(251,146,60,0.75)");
+    plume.addColorStop(0.7, "rgba(239,68,68,0.35)");
+    plume.addColorStop(1, "transparent");
+    ctx.fillStyle = plume;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, y);
+    ctx.quadraticCurveTo(cx - 18 - lift * 10, y + len * 0.4, cx - 6, y + len);
+    ctx.quadraticCurveTo(cx, y + len * 1.05, cx + 6, y + len);
+    ctx.quadraticCurveTo(cx + 18 + lift * 10, y + len * 0.4, cx + 8, y);
+    ctx.closePath();
+    ctx.fill();
+    // Core
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.beginPath();
+    ctx.moveTo(cx - 3, y);
+    ctx.lineTo(cx - 2, y + len * 0.45);
+    ctx.lineTo(cx + 2, y + len * 0.45);
+    ctx.lineTo(cx + 3, y);
+    ctx.closePath();
+    ctx.fill();
   }
 
   function bodyGrad(ctx, x0, y0, x1, y1, c1, c2) {
     const g = ctx.createLinearGradient(x0, y0, x1, y1);
     g.addColorStop(0, c1);
-    g.addColorStop(1, c2);
+    g.addColorStop(0.5, c2);
+    g.addColorStop(1, c1);
     return g;
   }
 
-  function drawNoseCone(ctx, cx, tipY, baseY, halfW, color) {
+  function cyl(ctx, cx, top, bot, half, fill) {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(cx - half, top);
+    ctx.lineTo(cx + half, top);
+    ctx.lineTo(cx + half, bot);
+    ctx.lineTo(cx - half, bot);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function nose(ctx, cx, tipY, baseY, half, color) {
     ctx.beginPath();
     ctx.moveTo(cx, tipY);
-    ctx.quadraticCurveTo(cx + halfW * 1.05, tipY + (baseY - tipY) * 0.55, cx + halfW, baseY);
-    ctx.lineTo(cx - halfW, baseY);
-    ctx.quadraticCurveTo(cx - halfW * 1.05, tipY + (baseY - tipY) * 0.55, cx, tipY);
+    ctx.bezierCurveTo(cx + half * 0.15, tipY, cx + half, tipY + (baseY - tipY) * 0.55, cx + half, baseY);
+    ctx.lineTo(cx - half, baseY);
+    ctx.bezierCurveTo(cx - half, tipY + (baseY - tipY) * 0.55, cx - half * 0.15, tipY, cx, tipY);
     ctx.closePath();
-    ctx.fillStyle = color || "#e8ecff";
+    ctx.fillStyle = color;
     ctx.fill();
   }
 
-  function drawCylinder(ctx, cx, top, bot, halfW, fill) {
-    ctx.fillStyle = fill;
-    ctx.fillRect(cx - halfW, top, halfW * 2, bot - top);
-  }
-
-  function drawFins(ctx, cx, y, halfW, finH, finOut, color) {
-    ctx.fillStyle = color || "#9aa3c0";
-    // left
+  function ogive(ctx, cx, tipY, baseY, half, color) {
     ctx.beginPath();
-    ctx.moveTo(cx - halfW, y);
-    ctx.lineTo(cx - halfW - finOut, y + finH * 0.85);
-    ctx.lineTo(cx - halfW, y + finH);
+    ctx.moveTo(cx, tipY);
+    ctx.quadraticCurveTo(cx + half * 1.05, tipY + (baseY - tipY) * 0.7, cx + half, baseY);
+    ctx.lineTo(cx - half, baseY);
+    ctx.quadraticCurveTo(cx - half * 1.05, tipY + (baseY - tipY) * 0.7, cx, tipY);
     ctx.closePath();
-    ctx.fill();
-    // right
-    ctx.beginPath();
-    ctx.moveTo(cx + halfW, y);
-    ctx.lineTo(cx + halfW + finOut, y + finH * 0.85);
-    ctx.lineTo(cx + halfW, y + finH);
-    ctx.closePath();
+    ctx.fillStyle = color;
     ctx.fill();
   }
 
-  function drawEngineBell(ctx, cx, y, r, color) {
+  function panelLines(ctx, cx, top, bot, half, n, color) {
+    ctx.strokeStyle = color || "rgba(15,23,42,0.2)";
+    ctx.lineWidth = 1;
+    for (let i = 1; i < n; i++) {
+      const y = top + ((bot - top) * i) / n;
+      ctx.beginPath();
+      ctx.moveTo(cx - half + 1, y);
+      ctx.lineTo(cx + half - 1, y);
+      ctx.stroke();
+    }
+  }
+
+  function engineBell(ctx, cx, y, r, color) {
     ctx.beginPath();
-    ctx.moveTo(cx - r * 0.55, y);
-    ctx.lineTo(cx - r, y + r * 1.1);
-    ctx.lineTo(cx + r, y + r * 1.1);
-    ctx.lineTo(cx + r * 0.55, y);
+    ctx.moveTo(cx - r * 0.45, y);
+    ctx.quadraticCurveTo(cx - r * 1.05, y + r * 0.55, cx - r, y + r * 1.15);
+    ctx.lineTo(cx + r, y + r * 1.15);
+    ctx.quadraticCurveTo(cx + r * 1.05, y + r * 0.55, cx + r * 0.45, y);
     ctx.closePath();
-    ctx.fillStyle = color || "#6b7280";
+    ctx.fillStyle = color || "#57534e";
     ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+    ctx.stroke();
+  }
+
+  function gridFin(ctx, x, y, w, h, flip) {
+    ctx.save();
+    ctx.translate(x, y);
+    if (flip) ctx.scale(-1, 1);
+    ctx.fillStyle = "#64748b";
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = "#94a3b8";
+    ctx.lineWidth = 0.8;
+    for (let i = 1; i < 4; i++) {
+      ctx.beginPath();
+      ctx.moveTo((w * i) / 4, 0);
+      ctx.lineTo((w * i) / 4, h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, (h * i) / 4);
+      ctx.lineTo(w, (h * i) / 4);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function landingLegs(ctx, cx, y, half, len) {
+    ctx.strokeStyle = "#94a3b8";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    // Folded-ish along body then out
+    ctx.beginPath();
+    ctx.moveTo(cx - half * 0.9, y - len * 0.3);
+    ctx.lineTo(cx - half - len * 0.35, y + len * 0.55);
+    ctx.lineTo(cx - half - len * 0.7, y + len);
+    ctx.moveTo(cx + half * 0.9, y - len * 0.3);
+    ctx.lineTo(cx + half + len * 0.35, y + len * 0.55);
+    ctx.lineTo(cx + half + len * 0.7, y + len);
+    ctx.stroke();
+    // Feet
+    ctx.fillStyle = "#64748b";
+    ctx.fillRect(cx - half - len * 0.85, y + len - 2, len * 0.35, 3);
+    ctx.fillRect(cx + half + len * 0.5, y + len - 2, len * 0.35, 3);
+  }
+
+  function srb(ctx, cx, top, bot, half, noseColor, bodyColor) {
+    ogive(ctx, cx, top - (bot - top) * 0.08, top, half, noseColor || "#f1f5f9");
+    cyl(ctx, cx, top, bot, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, bodyColor || "#e2e8f0", "#94a3b8"));
+    engineBell(ctx, cx, bot, half * 0.75, "#44403c");
+  }
+
+  function parseAtlasSrbs(name) {
+    // Atlas V 401 = 0 SRBs, 411=1, ... 551=5
+    const m = String(name || "").match(/atlas\s*v\s*(\d)(\d)(\d)/i);
+    if (!m) return 0;
+    return parseInt(m[2], 10) || 0;
+  }
+
+  function parseArianeBoosters(name) {
+    if (/ariane\s*64|a64/i.test(name || "")) return 4;
+    if (/ariane\s*62|a62/i.test(name || "")) return 2;
+    return 2;
+  }
+
+  function parseVulcanSrbs(name) {
+    const m = String(name || "").match(/vc\s*([246])/i) || String(name || "").match(/vulcan.*?(\d)\s*s/i);
+    if (m) return parseInt(m[1], 10);
+    if (/vc4|4s/i.test(name || "")) return 4;
+    if (/vc6|6s/i.test(name || "")) return 6;
+    return 2;
+  }
+
+  function longMarchVariant(name) {
+    const n = String(name || "").toLowerCase();
+    if (/long\s*march\s*5|cz[- ]?5|chang zheng 5/.test(n)) return "lm5";
+    if (/long\s*march\s*7|cz[- ]?7/.test(n)) return "lm7";
+    if (/long\s*march\s*3|cz[- ]?3/.test(n)) return "lm3";
+    if (/long\s*march\s*2|cz[- ]?2/.test(n)) return "lm2";
+    if (/long\s*march\s*8|cz[- ]?8/.test(n)) return "lm8";
+    if (/long\s*march\s*12|cz[- ]?12/.test(n)) return "lm12";
+    return "lm3";
   }
 
   const DRAWERS = {
-    falcon9(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.055;
+    falcon9(ctx, cx, base, H, anim, mini, name) {
+      // Real: ~70×3.7 m — white stages, black interstage, octaweb, grid fins, legs
+      const half = H * (3.7 / 70) * 0.5; // radius in px
       const tip = base - H;
-      const fairingBot = tip + H * 0.22;
-      const interstage = tip + H * 0.55;
-      drawNoseCone(ctx, cx, tip, fairingBot, half * 1.05, "#f1f5f9");
-      drawCylinder(ctx, cx, fairingBot, interstage, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#e2e8f0", "#94a3b8"));
-      // black stripe
+      const fairingBot = tip + H * 0.18;
+      const s2bot = tip + H * 0.32;
+      const interTop = s2bot;
+      const interBot = tip + H * 0.36;
+      // Fairing (white ogive, two halves seam)
+      ogive(ctx, cx, tip, fairingBot, half * 1.02, "#f8fafc");
+      ctx.strokeStyle = "rgba(148,163,184,0.5)";
+      ctx.beginPath();
+      ctx.moveTo(cx, tip + 2);
+      ctx.lineTo(cx, fairingBot);
+      ctx.stroke();
+      // S2 white
+      cyl(ctx, cx, fairingBot, interTop, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f1f5f9", "#cbd5e1"));
+      panelLines(ctx, cx, fairingBot, interTop, half, 3);
+      // Black interstage
+      cyl(ctx, cx, interTop, interBot, half * 1.02, "#0f172a");
+      // S1 white
+      cyl(ctx, cx, interBot, base - H * 0.055, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#e2e8f0", "#94a3b8"));
+      panelLines(ctx, cx, interBot, base - H * 0.055, half, 6, "rgba(15,23,42,0.15)");
+      // Dark raceway / conduit
       ctx.fillStyle = "#1e293b";
-      ctx.fillRect(cx - half, interstage - H * 0.02, half * 2, H * 0.04);
-      drawCylinder(ctx, cx, interstage, base - H * 0.04, half * 0.95, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#cbd5e1", "#64748b"));
-      // SpaceX-ish black chevron mark
+      ctx.fillRect(cx + half * 0.55, interBot, half * 0.22, H * 0.5);
+      // SpaceX chevron-ish mark (simple dark band — not a logo)
       ctx.fillStyle = "#0f172a";
-      ctx.fillRect(cx - half * 0.35, tip + H * 0.38, half * 0.7, H * 0.08);
-      drawFins(ctx, cx, base - H * 0.12, half * 0.95, H * 0.1, half * 0.9, "#475569");
-      drawEngineBell(ctx, cx, base - H * 0.04, half * 0.7, "#78716c");
-      if (!mini) drawLandingLegs(ctx, cx, base - H * 0.08, half, H * 0.06);
-    },
-
-    falconheavy(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.048;
-      const tip = base - H;
-      // side boosters
-      const off = half * 2.15;
-      drawBoosterStick(ctx, cx - off, tip + H * 0.18, base, half * 0.9);
-      drawBoosterStick(ctx, cx + off, tip + H * 0.18, base, half * 0.9);
-      DRAWERS.falcon9(ctx, cx, base, H, anim, true);
-      if (!mini) {
-        drawLandingLegs(ctx, cx - off, base - H * 0.08, half * 0.9, H * 0.05);
-        drawLandingLegs(ctx, cx + off, base - H * 0.08, half * 0.9, H * 0.05);
-      }
-    },
-
-    starship(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.07;
-      const tip = base - H;
-      // stainless steel look
-      const steel = bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f8fafc", "#94a3b8");
-      drawNoseCone(ctx, cx, tip, tip + H * 0.18, half, "#e2e8f0");
-      drawCylinder(ctx, cx, tip + H * 0.18, tip + H * 0.48, half, steel);
-      // flap hinges / heat tiles hint
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(cx - half, tip + H * 0.48, half * 2, H * 0.02);
-      drawCylinder(ctx, cx, tip + H * 0.5, base - H * 0.05, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#cbd5e1", "#64748b"));
-      // forward flaps
-      ctx.fillStyle = "#64748b";
-      ctx.fillRect(cx - half * 1.55, tip + H * 0.28, half * 0.55, H * 0.08);
-      ctx.fillRect(cx + half, tip + H * 0.28, half * 0.55, H * 0.08);
-      // aft flaps
-      ctx.fillRect(cx - half * 1.7, base - H * 0.22, half * 0.7, H * 0.12);
-      ctx.fillRect(cx + half, base - H * 0.22, half * 0.7, H * 0.12);
-      // engines
+      ctx.beginPath();
+      ctx.moveTo(cx - half * 0.35, tip + H * 0.42);
+      ctx.lineTo(cx, tip + H * 0.4);
+      ctx.lineTo(cx + half * 0.35, tip + H * 0.42);
+      ctx.lineTo(cx + half * 0.35, tip + H * 0.48);
+      ctx.lineTo(cx, tip + H * 0.46);
+      ctx.lineTo(cx - half * 0.35, tip + H * 0.48);
+      ctx.closePath();
+      ctx.fill();
+      // Grid fins (deployed look, gray)
+      const finY = tip + H * 0.38;
+      gridFin(ctx, cx - half - H * 0.035, finY, H * 0.032, H * 0.045, false);
+      gridFin(ctx, cx + half, finY, H * 0.032, H * 0.045, true);
+      // Landing legs folded
+      if (!mini) landingLegs(ctx, cx, base - H * 0.08, half, H * 0.055);
+      // Octaweb / engines (show 3 of 9 in silhouette)
       for (let i = -1; i <= 1; i++) {
-        drawEngineBell(ctx, cx + i * half * 0.7, base - H * 0.05, half * 0.35, "#78716c");
+        engineBell(ctx, cx + i * half * 0.55, base - H * 0.055, half * 0.32, "#57534e");
       }
     },
 
-    electron(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.07;
+    falconheavy(ctx, cx, base, H, anim, mini, name) {
+      const half = H * (3.7 / 70) * 0.5;
       const tip = base - H;
-      drawNoseCone(ctx, cx, tip, tip + H * 0.2, half, "#f8fafc");
-      drawCylinder(ctx, cx, tip + H * 0.2, tip + H * 0.55, half, "#1e3a5f");
-      // carbon-composite look with accent band
-      ctx.fillStyle = "#38bdf8";
-      ctx.fillRect(cx - half, tip + H * 0.55, half * 2, H * 0.03);
-      drawCylinder(ctx, cx, tip + H * 0.58, base - H * 0.05, half * 0.95, "#0f172a");
-      drawFins(ctx, cx, base - H * 0.14, half * 0.95, H * 0.1, half * 0.7, "#334155");
-      drawEngineBell(ctx, cx, base - H * 0.05, half * 0.55, "#64748b");
+      const off = half * 2.15;
+      // Side boosters with nose cones (no fairing)
+      for (const sx of [cx - off, cx + off]) {
+        ogive(ctx, sx, tip + H * 0.16, tip + H * 0.28, half * 0.95, "#e2e8f0");
+        cyl(ctx, sx, tip + H * 0.28, tip + H * 0.36, half * 0.95, "#0f172a");
+        cyl(ctx, sx, tip + H * 0.36, base - H * 0.055, half * 0.95, bodyGrad(ctx, sx - half, 0, sx + half, 0, "#e2e8f0", "#94a3b8"));
+        if (!mini) landingLegs(ctx, sx, base - H * 0.08, half * 0.95, H * 0.05);
+        engineBell(ctx, sx, base - H * 0.055, half * 0.45, "#57534e");
+      }
+      DRAWERS.falcon9(ctx, cx, base, H, anim, true, name);
+      if (!mini) landingLegs(ctx, cx, base - H * 0.08, half, H * 0.055);
     },
 
-    neutron(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.085;
+    starship(ctx, cx, base, H, anim, mini, name) {
+      // Super Heavy + Starship — stainless, flaps, hot-staging ring
+      const half = H * (9 / 121) * 0.5;
       const tip = base - H;
-      // distinctive fairing / reusable first stage
-      drawNoseCone(ctx, cx, tip, tip + H * 0.22, half * 1.1, "#e2e8f0");
-      drawCylinder(ctx, cx, tip + H * 0.22, tip + H * 0.5, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#94a3b8", "#475569"));
-      ctx.fillStyle = "#38bdf8";
-      ctx.fillRect(cx - half, tip + H * 0.5, half * 2, H * 0.025);
-      drawCylinder(ctx, cx, tip + H * 0.525, base - H * 0.06, half * 0.95, "#1e293b");
-      drawFins(ctx, cx, base - H * 0.16, half * 0.95, H * 0.12, half * 1.1, "#64748b");
-      drawEngineBell(ctx, cx, base - H * 0.06, half * 0.65, "#78716c");
-    },
-
-    vulcan(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.06;
-      const tip = base - H;
-      drawNoseCone(ctx, cx, tip, tip + H * 0.18, half, "#f8fafc");
-      // Centaur upper
-      drawCylinder(ctx, cx, tip + H * 0.18, tip + H * 0.42, half * 0.85, "#cbd5e1");
-      // orange foam / white core
-      drawCylinder(ctx, cx, tip + H * 0.42, base - H * 0.08, half, "#f97316");
-      ctx.fillStyle = "rgba(255,255,255,0.25)";
-      ctx.fillRect(cx - half * 0.3, tip + H * 0.5, half * 0.6, H * 0.3);
-      // SRBs
-      const off = half * 1.85;
-      drawCylinder(ctx, cx - off, tip + H * 0.48, base - H * 0.06, half * 0.45, "#e2e8f0");
-      drawCylinder(ctx, cx + off, tip + H * 0.48, base - H * 0.06, half * 0.45, "#e2e8f0");
-      drawNoseCone(ctx, cx - off, tip + H * 0.42, tip + H * 0.48, half * 0.45, "#f1f5f9");
-      drawNoseCone(ctx, cx + off, tip + H * 0.42, tip + H * 0.48, half * 0.45, "#f1f5f9");
-      drawEngineBell(ctx, cx, base - H * 0.08, half * 0.6, "#57534e");
-    },
-
-    atlasv(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.055;
-      const tip = base - H;
-      drawNoseCone(ctx, cx, tip, tip + H * 0.2, half * 1.05, "#f8fafc");
-      drawCylinder(ctx, cx, tip + H * 0.2, tip + H * 0.4, half * 0.9, "#e2e8f0");
-      // Centaur
+      const shipBot = tip + H * (50 / 121); // ship ~50m of 121
+      const ringTop = shipBot;
+      const ringBot = shipBot + H * 0.02;
+      const steel = bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f8fafc", "#94a3b8");
+      const steelDark = bodyGrad(ctx, cx - half, 0, cx + half, 0, "#e2e8f0", "#64748b");
+      // Ship nose
+      ogive(ctx, cx, tip, tip + H * 0.08, half, "#e2e8f0");
+      // Heat-tile belly hint (darker strip)
+      cyl(ctx, cx, tip + H * 0.08, shipBot, half, steel);
+      ctx.fillStyle = "#1e293b";
+      ctx.fillRect(cx - half, tip + H * 0.1, half * 0.35, shipBot - tip - H * 0.12);
+      // Forward flaps
       ctx.fillStyle = "#64748b";
-      ctx.fillRect(cx - half * 0.9, tip + H * 0.38, half * 1.8, H * 0.03);
-      // orange core
-      drawCylinder(ctx, cx, tip + H * 0.41, base - H * 0.07, half, "#ea580c");
-      drawEngineBell(ctx, cx, base - H * 0.07, half * 0.65, "#57534e");
+      ctx.fillRect(cx - half * 1.55, tip + H * 0.14, half * 0.55, H * 0.06);
+      ctx.fillRect(cx + half, tip + H * 0.14, half * 0.55, H * 0.06);
+      // Aft flaps on ship
+      ctx.fillRect(cx - half * 1.65, shipBot - H * 0.08, half * 0.65, H * 0.07);
+      ctx.fillRect(cx + half, shipBot - H * 0.08, half * 0.65, H * 0.07);
+      // Hot-staging ring
+      cyl(ctx, cx, ringTop, ringBot, half * 1.08, "#334155");
+      // Super Heavy
+      cyl(ctx, cx, ringBot, base - H * 0.04, half, steelDark);
+      panelLines(ctx, cx, ringBot, base - H * 0.04, half, 8, "rgba(15,23,42,0.18)");
+      // Grid fins on booster
+      gridFin(ctx, cx - half - H * 0.03, tip + H * 0.55, H * 0.028, H * 0.04, false);
+      gridFin(ctx, cx + half, tip + H * 0.55, H * 0.028, H * 0.04, true);
+      // Raptor bells
+      for (let i = -2; i <= 2; i++) {
+        engineBell(ctx, cx + i * half * 0.35, base - H * 0.04, half * 0.22, "#57534e");
+      }
     },
 
-    newglenn(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.075;
+    electron(ctx, cx, base, H, anim, mini, name) {
+      // ~18×1.2 m black carbon composite, Rutherford, small fins
+      const half = H * (1.2 / 18) * 0.5;
       const tip = base - H;
-      drawNoseCone(ctx, cx, tip, tip + H * 0.16, half, "#f1f5f9");
-      drawCylinder(ctx, cx, tip + H * 0.16, tip + H * 0.4, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#e2e8f0", "#94a3b8"));
+      ogive(ctx, cx, tip, tip + H * 0.16, half * 1.05, "#e2e8f0");
+      cyl(ctx, cx, tip + H * 0.16, tip + H * 0.42, half, "#0f172a");
+      // Kick stage / green band accent (Rocket Lab teal-ish)
+      ctx.fillStyle = "#2dd4bf";
+      ctx.fillRect(cx - half, tip + H * 0.42, half * 2, H * 0.025);
+      cyl(ctx, cx, tip + H * 0.445, base - H * 0.06, half * 0.98, "#020617");
+      panelLines(ctx, cx, tip + H * 0.445, base - H * 0.06, half, 4, "rgba(45,212,191,0.15)");
+      // Battery packs hint
+      ctx.fillStyle = "#134e4a";
+      ctx.fillRect(cx - half * 0.7, tip + H * 0.55, half * 1.4, H * 0.08);
+      // Fins
+      ctx.fillStyle = "#334155";
+      ctx.beginPath();
+      ctx.moveTo(cx - half, base - H * 0.14);
+      ctx.lineTo(cx - half - half * 1.2, base - H * 0.02);
+      ctx.lineTo(cx - half, base - H * 0.06);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx + half, base - H * 0.14);
+      ctx.lineTo(cx + half + half * 1.2, base - H * 0.02);
+      ctx.lineTo(cx + half, base - H * 0.06);
+      ctx.fill();
+      engineBell(ctx, cx, base - H * 0.06, half * 0.7, "#64748b");
+    },
+
+    neutron(ctx, cx, base, H, anim, mini, name) {
+      const half = H * (7 / 43) * 0.42;
+      const tip = base - H;
+      // Hungry Hippo fairing concept — wider upper
+      ogive(ctx, cx, tip, tip + H * 0.2, half * 1.25, "#e2e8f0");
+      cyl(ctx, cx, tip + H * 0.2, tip + H * 0.48, half * 1.15, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#cbd5e1", "#64748b"));
+      ctx.fillStyle = "#2dd4bf";
+      ctx.fillRect(cx - half * 1.15, tip + H * 0.48, half * 2.3, H * 0.02);
+      cyl(ctx, cx, tip + H * 0.5, base - H * 0.06, half, "#0f172a");
+      // Landing fins
+      ctx.fillStyle = "#475569";
+      ctx.fillRect(cx - half * 1.6, base - H * 0.2, half * 0.6, H * 0.12);
+      ctx.fillRect(cx + half, base - H * 0.2, half * 0.6, H * 0.12);
+      engineBell(ctx, cx, base - H * 0.06, half * 0.7, "#57534e");
+    },
+
+    vulcan(ctx, cx, base, H, anim, mini, name) {
+      // Orange-tan BE-4 core, white Centaur, white GEM 63XL, wide fairing
+      const half = H * (5.4 / 61.6) * 0.5;
+      const tip = base - H;
+      const nSrb = parseVulcanSrbs(name);
+      ogive(ctx, cx, tip, tip + H * 0.16, half * 1.15, "#f8fafc"); // wide fairing
+      // Centaur V (silver/white)
+      cyl(ctx, cx, tip + H * 0.16, tip + H * 0.38, half * 0.85, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f1f5f9", "#94a3b8"));
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(cx - half * 0.85, tip + H * 0.38, half * 1.7, H * 0.015);
+      // Orange foam core (BE-4)
+      cyl(ctx, cx, tip + H * 0.395, base - H * 0.07, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#fdba74", "#c2410c"));
+      panelLines(ctx, cx, tip + H * 0.395, base - H * 0.07, half, 5, "rgba(69,26,3,0.2)");
+      // GEM SRBs
+      const positions = [];
+      if (nSrb <= 2) positions.push(-1.85, 1.85);
+      else if (nSrb <= 4) positions.push(-2.05, -1.15, 1.15, 2.05);
+      else positions.push(-2.15, -1.3, -0.45, 0.45, 1.3, 2.15);
+      positions.slice(0, nSrb).forEach((f) => {
+        srb(ctx, cx + half * f, tip + H * 0.42, base - H * 0.05, half * 0.38, "#f8fafc", "#e2e8f0");
+      });
+      engineBell(ctx, cx - half * 0.4, base - H * 0.07, half * 0.4, "#44403c");
+      engineBell(ctx, cx + half * 0.4, base - H * 0.07, half * 0.4, "#44403c");
+    },
+
+    atlasv(ctx, cx, base, H, anim, mini, name) {
+      const half = H * (3.81 / 58.3) * 0.5;
+      const tip = base - H;
+      const nSrb = parseAtlasSrbs(name);
+      ogive(ctx, cx, tip, tip + H * 0.17, half * 1.05, "#f8fafc");
+      // Centaur
+      cyl(ctx, cx, tip + H * 0.17, tip + H * 0.36, half * 0.88, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f1f5f9", "#94a3b8"));
+      ctx.fillStyle = "#475569";
+      ctx.fillRect(cx - half * 0.88, tip + H * 0.36, half * 1.76, H * 0.02);
+      // Copper-orange RD-180 stage
+      cyl(ctx, cx, tip + H * 0.38, base - H * 0.07, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#fb923c", "#9a3412"));
+      panelLines(ctx, cx, tip + H * 0.38, base - H * 0.07, half, 4, "rgba(69,26,3,0.25)");
+      const offs = [];
+      for (let i = 0; i < nSrb; i++) {
+        const side = i % 2 === 0 ? -1 : 1;
+        const row = Math.floor(i / 2);
+        offs.push(side * (1.7 + row * 0.15));
+      }
+      offs.forEach((f) => srb(ctx, cx + half * f, tip + H * 0.45, base - H * 0.05, half * 0.36, "#f8fafc", "#e2e8f0"));
+      engineBell(ctx, cx, base - H * 0.07, half * 0.65, "#44403c");
+    },
+
+    newglenn(ctx, cx, base, H, anim, mini, name) {
+      // ~98m, 7m fairing, blue first stage, white upper, landing fins
+      const half = H * (7 / 98) * 0.5;
+      const tip = base - H;
+      ogive(ctx, cx, tip, tip + H * 0.14, half, "#f8fafc");
+      cyl(ctx, cx, tip + H * 0.14, tip + H * 0.36, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f1f5f9", "#94a3b8"));
+      ctx.fillStyle = "#1d4ed8";
+      ctx.fillRect(cx - half, tip + H * 0.36, half * 2, H * 0.02);
+      cyl(ctx, cx, tip + H * 0.38, base - H * 0.05, half * 0.98, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#60a5fa", "#1e3a8a"));
+      panelLines(ctx, cx, tip + H * 0.38, base - H * 0.05, half, 6, "rgba(30,58,138,0.35)");
+      // Landing fins
+      ctx.fillStyle = "#1e40af";
+      ctx.beginPath();
+      ctx.moveTo(cx - half * 0.98, base - H * 0.18);
+      ctx.lineTo(cx - half * 1.7, base - H * 0.04);
+      ctx.lineTo(cx - half * 0.98, base - H * 0.06);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx + half * 0.98, base - H * 0.18);
+      ctx.lineTo(cx + half * 1.7, base - H * 0.04);
+      ctx.lineTo(cx + half * 0.98, base - H * 0.06);
+      ctx.fill();
+      for (let i = -1; i <= 1; i++) engineBell(ctx, cx + i * half * 0.45, base - H * 0.05, half * 0.28, "#475569");
+    },
+
+    ariane6(ctx, cx, base, H, anim, mini, name) {
+      const half = H * (5.4 / 63) * 0.5;
+      const tip = base - H;
+      const n = parseArianeBoosters(name);
+      ogive(ctx, cx, tip, tip + H * 0.18, half, "#f8fafc");
+      cyl(ctx, cx, tip + H * 0.18, tip + H * 0.42, half * 0.95, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f8fafc", "#cbd5e1"));
+      // Black ESA band
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(cx - half * 0.95, tip + H * 0.42, half * 1.9, H * 0.035);
+      // Blue accent line
+      ctx.fillStyle = "#2563eb";
+      ctx.fillRect(cx - half * 0.95, tip + H * 0.455, half * 1.9, H * 0.008);
+      cyl(ctx, cx, tip + H * 0.463, base - H * 0.07, half, "#f8fafc");
+      panelLines(ctx, cx, tip + H * 0.463, base - H * 0.07, half, 4);
+      const pos = n >= 4 ? [-2.0, -1.15, 1.15, 2.0] : [-1.85, 1.85];
+      pos.forEach((f) => srb(ctx, cx + half * f, tip + H * 0.48, base - H * 0.05, half * 0.4, "#e2e8f0", "#f1f5f9"));
+      engineBell(ctx, cx, base - H * 0.07, half * 0.55, "#44403c");
+    },
+
+    vegac(ctx, cx, base, H, anim, mini, name) {
+      const half = H * (3.4 / 35) * 0.5;
+      const tip = base - H;
+      ogive(ctx, cx, tip, tip + H * 0.2, half, "#f8fafc");
+      cyl(ctx, cx, tip + H * 0.2, tip + H * 0.5, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#e2e8f0", "#94a3b8"));
+      ctx.fillStyle = "#0ea5e9";
+      ctx.fillRect(cx - half, tip + H * 0.5, half * 2, H * 0.025);
+      cyl(ctx, cx, tip + H * 0.525, base - H * 0.06, half * 0.92, "#cbd5e1");
+      ctx.fillStyle = "#64748b";
+      ctx.beginPath();
+      ctx.moveTo(cx - half * 0.92, base - H * 0.14);
+      ctx.lineTo(cx - half * 1.5, base - H * 0.04);
+      ctx.lineTo(cx - half * 0.92, base - H * 0.06);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx + half * 0.92, base - H * 0.14);
+      ctx.lineTo(cx + half * 1.5, base - H * 0.04);
+      ctx.lineTo(cx + half * 0.92, base - H * 0.06);
+      ctx.fill();
+      engineBell(ctx, cx, base - H * 0.06, half * 0.55, "#57534e");
+    },
+
+    h3(ctx, cx, base, H, anim, mini, name) {
+      const half = H * (5.2 / 57) * 0.5;
+      const tip = base - H;
+      ogive(ctx, cx, tip, tip + H * 0.17, half, "#f8fafc");
+      cyl(ctx, cx, tip + H * 0.17, tip + H * 0.4, half, "#f1f5f9");
+      // JAXA blue + orange markings
       ctx.fillStyle = "#1d4ed8";
       ctx.fillRect(cx - half, tip + H * 0.4, half * 2, H * 0.03);
-      drawCylinder(ctx, cx, tip + H * 0.43, base - H * 0.06, half * 0.98, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#93c5fd", "#1e3a8a"));
-      // landing fins
-      drawFins(ctx, cx, base - H * 0.15, half * 0.98, H * 0.1, half * 0.85, "#1e40af");
-      for (let i = -1; i <= 1; i++) {
-        drawEngineBell(ctx, cx + i * half * 0.55, base - H * 0.06, half * 0.35, "#64748b");
-      }
+      ctx.fillStyle = "#f97316";
+      ctx.fillRect(cx - half, tip + H * 0.43, half * 2, H * 0.012);
+      cyl(ctx, cx, tip + H * 0.442, base - H * 0.07, half * 0.95, "#f8fafc");
+      srb(ctx, cx - half * 1.75, tip + H * 0.48, base - H * 0.05, half * 0.38, "#e2e8f0", "#fdba74");
+      srb(ctx, cx + half * 1.75, tip + H * 0.48, base - H * 0.05, half * 0.38, "#e2e8f0", "#fdba74");
+      engineBell(ctx, cx, base - H * 0.07, half * 0.5, "#57534e");
     },
 
-    ariane6(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.055;
+    pslv(ctx, cx, base, H, anim, mini, name) {
+      // PSLV with up to 6 PSOM strap-ons
+      const half = H * (2.8 / 44) * 0.5;
       const tip = base - H;
-      drawNoseCone(ctx, cx, tip, tip + H * 0.2, half, "#f8fafc");
-      drawCylinder(ctx, cx, tip + H * 0.2, tip + H * 0.45, half * 0.95, "#e2e8f0");
-      // black / white ESA banding
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(cx - half * 0.95, tip + H * 0.45, half * 1.9, H * 0.04);
-      drawCylinder(ctx, cx, tip + H * 0.49, base - H * 0.08, half, "#f8fafc");
-      // P120C boosters
-      const off = half * 1.9;
-      drawCylinder(ctx, cx - off, tip + H * 0.5, base - H * 0.06, half * 0.42, "#e2e8f0");
-      drawCylinder(ctx, cx + off, tip + H * 0.5, base - H * 0.06, half * 0.42, "#e2e8f0");
-      drawNoseCone(ctx, cx - off, tip + H * 0.44, tip + H * 0.5, half * 0.42, "#cbd5e1");
-      drawNoseCone(ctx, cx + off, tip + H * 0.44, tip + H * 0.5, half * 0.42, "#cbd5e1");
-      drawEngineBell(ctx, cx, base - H * 0.08, half * 0.55, "#57534e");
-    },
-
-    vegac(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.065;
-      const tip = base - H;
-      drawNoseCone(ctx, cx, tip, tip + H * 0.22, half, "#f8fafc");
-      drawCylinder(ctx, cx, tip + H * 0.22, tip + H * 0.55, half * 0.95, "#e2e8f0");
-      ctx.fillStyle = "#0ea5e9";
-      ctx.fillRect(cx - half * 0.95, tip + H * 0.55, half * 1.9, H * 0.03);
-      drawCylinder(ctx, cx, tip + H * 0.58, base - H * 0.05, half * 0.9, "#cbd5e1");
-      drawFins(ctx, cx, base - H * 0.12, half * 0.9, H * 0.08, half * 0.6, "#64748b");
-      drawEngineBell(ctx, cx, base - H * 0.05, half * 0.5, "#57534e");
-    },
-
-    h3(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.06;
-      const tip = base - H;
-      drawNoseCone(ctx, cx, tip, tip + H * 0.2, half, "#f8fafc");
-      drawCylinder(ctx, cx, tip + H * 0.2, tip + H * 0.48, half, "#e2e8f0");
-      // JAXA blue/white
-      ctx.fillStyle = "#1d4ed8";
-      ctx.fillRect(cx - half, tip + H * 0.48, half * 2, H * 0.035);
-      drawCylinder(ctx, cx, tip + H * 0.515, base - H * 0.07, half * 0.95, "#f1f5f9");
-      const off = half * 1.75;
-      drawCylinder(ctx, cx - off, tip + H * 0.52, base - H * 0.05, half * 0.4, "#e2e8f0");
-      drawCylinder(ctx, cx + off, tip + H * 0.52, base - H * 0.05, half * 0.4, "#e2e8f0");
-      drawEngineBell(ctx, cx, base - H * 0.07, half * 0.55, "#57534e");
-    },
-
-    pslv(ctx, cx, base, H, anim, mini) {
-      DRAWERS._isroSolid(ctx, cx, base, H, "#ea580c");
-    },
-    gslv(ctx, cx, base, H, anim, mini) {
-      DRAWERS._isroSolid(ctx, cx, base, H, "#f97316");
-    },
-    lvm3(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.065;
-      const tip = base - H;
-      drawNoseCone(ctx, cx, tip, tip + H * 0.18, half, "#f8fafc");
-      drawCylinder(ctx, cx, tip + H * 0.18, tip + H * 0.4, half, "#e2e8f0");
-      drawCylinder(ctx, cx, tip + H * 0.4, base - H * 0.08, half, "#f97316");
-      const off = half * 1.85;
-      drawCylinder(ctx, cx - off, tip + H * 0.42, base - H * 0.06, half * 0.45, "#ea580c");
-      drawCylinder(ctx, cx + off, tip + H * 0.42, base - H * 0.06, half * 0.45, "#ea580c");
-      drawEngineBell(ctx, cx, base - H * 0.08, half * 0.55, "#57534e");
-    },
-    _isroSolid(ctx, cx, base, H, coreColor) {
-      const half = H * 0.055;
-      const tip = base - H;
-      drawNoseCone(ctx, cx, tip, tip + H * 0.18, half, "#f8fafc");
-      drawCylinder(ctx, cx, tip + H * 0.18, tip + H * 0.45, half * 0.9, "#e2e8f0");
-      drawCylinder(ctx, cx, tip + H * 0.45, base - H * 0.06, half, coreColor);
-      drawFins(ctx, cx, base - H * 0.12, half, H * 0.08, half * 0.55, "#64748b");
-      drawEngineBell(ctx, cx, base - H * 0.06, half * 0.5, "#57534e");
-    },
-
-    longmarch(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.055;
-      const tip = base - H;
-      drawNoseCone(ctx, cx, tip, tip + H * 0.18, half, "#f8fafc");
-      // distinctive green
-      drawCylinder(ctx, cx, tip + H * 0.18, base - H * 0.07, half, "#4d7c0f");
-      ctx.fillStyle = "#fef08a";
-      ctx.fillRect(cx - half, tip + H * 0.4, half * 2, H * 0.025);
-      ctx.fillRect(cx - half, tip + H * 0.55, half * 2, H * 0.025);
-      const off = half * 1.8;
-      drawCylinder(ctx, cx - off, tip + H * 0.35, base - H * 0.05, half * 0.42, "#65a30d");
-      drawCylinder(ctx, cx + off, tip + H * 0.35, base - H * 0.05, half * 0.42, "#65a30d");
-      drawEngineBell(ctx, cx, base - H * 0.07, half * 0.55, "#57534e");
-    },
-
-    soyuz(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.05;
-      const tip = base - H;
-      // ogive fairing
-      drawNoseCone(ctx, cx, tip, tip + H * 0.22, half * 1.15, "#f8fafc");
-      drawCylinder(ctx, cx, tip + H * 0.22, tip + H * 0.4, half, "#e2e8f0");
-      // Korolev cross boosters
-      const angles = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
-      angles.forEach((a, i) => {
-        const ox = Math.cos(a + Math.PI / 4) * half * 1.65;
-        const oy = 0;
-        // only draw L/R visually distinct for 2D
-        if (i % 2 === 0) {
-          const bx = cx + (i === 0 ? -half * 1.7 : half * 1.7);
-          drawCylinder(ctx, bx, tip + H * 0.38, base - H * 0.05, half * 0.55, "#ea580c");
-          drawNoseCone(ctx, bx, tip + H * 0.32, tip + H * 0.38, half * 0.55, "#f97316");
-        }
+      ogive(ctx, cx, tip, tip + H * 0.14, half * 1.05, "#f8fafc");
+      cyl(ctx, cx, tip + H * 0.14, tip + H * 0.35, half, "#e2e8f0");
+      // Solid stages white/orange bands
+      cyl(ctx, cx, tip + H * 0.35, tip + H * 0.55, half, "#f97316");
+      cyl(ctx, cx, tip + H * 0.55, base - H * 0.06, half, "#ea580c");
+      panelLines(ctx, cx, tip + H * 0.35, base - H * 0.06, half, 4, "rgba(69,26,3,0.25)");
+      const pos = [-2.1, -1.25, -0.4, 0.4, 1.25, 2.1];
+      pos.forEach((f, i) => {
+        const top = tip + H * (0.48 + (i % 2) * 0.04);
+        srb(ctx, cx + half * f, top, base - H * 0.05, half * 0.32, "#f8fafc", "#fdba74");
       });
-      drawCylinder(ctx, cx, tip + H * 0.4, base - H * 0.08, half, "#c2410c");
-      // gray equipment bay band
-      ctx.fillStyle = "#64748b";
-      ctx.fillRect(cx - half, tip + H * 0.38, half * 2, H * 0.04);
-      drawEngineBell(ctx, cx, base - H * 0.08, half * 0.55, "#57534e");
+      engineBell(ctx, cx, base - H * 0.06, half * 0.55, "#57534e");
     },
 
-    generic(ctx, cx, base, H, anim, mini) {
-      const half = H * 0.06;
+    gslv(ctx, cx, base, H, anim, mini, name) {
+      // GSLV Mk II: core + 4 L40H liquid strap-ons, ogive fairing, cryogenic upper
+      const half = H * (2.8 / 49.1) * 0.5;
       const tip = base - H;
-      drawNoseCone(ctx, cx, tip, tip + H * 0.2, half, "#e2e8f0");
-      drawCylinder(ctx, cx, tip + H * 0.2, tip + H * 0.55, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#94a3b8", "#475569"));
+      ogive(ctx, cx, tip, tip + H * 0.16, half * 1.1, "#f8fafc");
+      // Cryogenic upper (shorter, white)
+      cyl(ctx, cx, tip + H * 0.16, tip + H * 0.34, half * 0.9, "#e2e8f0");
+      ctx.fillStyle = "#64748b";
+      ctx.fillRect(cx - half * 0.9, tip + H * 0.34, half * 1.8, H * 0.015);
+      // Core orange/brown solids look
+      cyl(ctx, cx, tip + H * 0.355, base - H * 0.07, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#fb923c", "#9a3412"));
+      // 4 L40H liquid strap-ons (thicker, flat tops with small noses)
+      [-1.9, -1.05, 1.05, 1.9].forEach((f) => {
+        const sx = cx + half * f;
+        ogive(ctx, sx, tip + H * 0.38, tip + H * 0.44, half * 0.42, "#fdba74");
+        cyl(ctx, sx, tip + H * 0.44, base - H * 0.05, half * 0.42, bodyGrad(ctx, sx - half, 0, sx + half, 0, "#f97316", "#7c2d12"));
+        engineBell(ctx, sx, base - H * 0.05, half * 0.32, "#44403c");
+      });
+      engineBell(ctx, cx, base - H * 0.07, half * 0.5, "#57534e");
+    },
+
+    lvm3(ctx, cx, base, H, anim, mini, name) {
+      // LVM3: large core + two S200 boosters
+      const half = H * (4 / 43.4) * 0.5;
+      const tip = base - H;
+      ogive(ctx, cx, tip, tip + H * 0.16, half * 1.05, "#f8fafc");
+      cyl(ctx, cx, tip + H * 0.16, tip + H * 0.38, half, "#e2e8f0");
+      cyl(ctx, cx, tip + H * 0.38, base - H * 0.07, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#fb923c", "#c2410c"));
+      // Huge S200s
+      srb(ctx, cx - half * 1.95, tip + H * 0.32, base - H * 0.04, half * 0.55, "#f8fafc", "#ea580c");
+      srb(ctx, cx + half * 1.95, tip + H * 0.32, base - H * 0.04, half * 0.55, "#f8fafc", "#ea580c");
+      engineBell(ctx, cx, base - H * 0.07, half * 0.55, "#57534e");
+    },
+
+    longmarch(ctx, cx, base, H, anim, mini, name) {
+      const v = longMarchVariant(name);
+      const half = H * 0.045;
+      const tip = base - H;
+      if (v === "lm5") {
+        // Large white 5m core + 4 boosters
+        const h5 = H * (5 / 57) * 0.5;
+        ogive(ctx, cx, tip, tip + H * 0.14, h5, "#f8fafc");
+        cyl(ctx, cx, tip + H * 0.14, base - H * 0.06, h5, bodyGrad(ctx, cx - h5, 0, cx + h5, 0, "#f8fafc", "#cbd5e1"));
+        panelLines(ctx, cx, tip + H * 0.14, base - H * 0.06, h5, 6);
+        [-1.85, -1.05, 1.05, 1.85].forEach((f) =>
+          srb(ctx, cx + h5 * f, tip + H * 0.28, base - H * 0.04, h5 * 0.42, "#f1f5f9", "#e2e8f0")
+        );
+        engineBell(ctx, cx, base - H * 0.06, h5 * 0.5, "#57534e");
+        return;
+      }
+      if (v === "lm7" || v === "lm8" || v === "lm12") {
+        ogive(ctx, cx, tip, tip + H * 0.15, half * 1.1, "#f8fafc");
+        cyl(ctx, cx, tip + H * 0.15, base - H * 0.06, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f8fafc", "#94a3b8"));
+        // Light green band common on some CZ
+        ctx.fillStyle = "#4d7c0f";
+        ctx.fillRect(cx - half, tip + H * 0.4, half * 2, H * 0.02);
+        [-1.8, 1.8].forEach((f) => srb(ctx, cx + half * f, tip + H * 0.35, base - H * 0.04, half * 0.4, "#f1f5f9", "#e2e8f0"));
+        engineBell(ctx, cx, base - H * 0.06, half * 0.5, "#57534e");
+        return;
+      }
+      // LM-2 / LM-3 classic green with yellow bands + strap-ons
+      ogive(ctx, cx, tip, tip + H * 0.14, half, "#f8fafc");
+      cyl(ctx, cx, tip + H * 0.14, base - H * 0.06, half, "#3f6212");
+      ctx.fillStyle = "#fde047";
+      ctx.fillRect(cx - half, tip + H * 0.32, half * 2, H * 0.02);
+      ctx.fillRect(cx - half, tip + H * 0.5, half * 2, H * 0.02);
+      ctx.fillRect(cx - half, tip + H * 0.68, half * 2, H * 0.02);
+      [-1.75, 1.75].forEach((f) => srb(ctx, cx + half * f, tip + H * 0.3, base - H * 0.04, half * 0.4, "#fef9c3", "#4d7c0f"));
+      engineBell(ctx, cx, base - H * 0.06, half * 0.5, "#57534e");
+    },
+
+    soyuz(ctx, cx, base, H, anim, mini, name) {
+      // Korolev cross: central core + 4 tapered strap-ons, ogive fairing, gray equipment bay
+      const half = H * (2.95 / 46.1) * 0.5;
+      const tip = base - H;
+      // Fairing / payload
+      ogive(ctx, cx, tip, tip + H * 0.2, half * 1.2, "#f8fafc");
+      // Escape tower stub for crewed — skip for generic sat
+      // Instrument / equipment bay (gray cylinder)
+      cyl(ctx, cx, tip + H * 0.2, tip + H * 0.28, half * 1.05, "#64748b");
+      // Third stage
+      cyl(ctx, cx, tip + H * 0.28, tip + H * 0.4, half, "#e2e8f0");
+      // Core (orange/green-gray)
+      cyl(ctx, cx, tip + H * 0.4, base - H * 0.08, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#fb923c", "#9a3412"));
+      // 4 tapered boosters — draw L/R clearly; hint front/back with narrower
+      const boosters = [
+        { x: -1.7, z: 1 },
+        { x: 1.7, z: 1 },
+        { x: -0.95, z: 0.75 },
+        { x: 0.95, z: 0.75 },
+      ];
+      boosters.forEach(({ x, z }) => {
+        const sx = cx + half * x;
+        const bh = half * 0.55 * z;
+        const bTop = tip + H * 0.36;
+        // Tapered: wider at bottom
+        ctx.beginPath();
+        ctx.moveTo(sx - bh * 0.7, bTop);
+        ctx.lineTo(sx + bh * 0.7, bTop);
+        ctx.lineTo(sx + bh * 1.15, base - H * 0.05);
+        ctx.lineTo(sx - bh * 1.15, base - H * 0.05);
+        ctx.closePath();
+        ctx.fillStyle = bodyGrad(ctx, sx - bh, 0, sx + bh, 0, "#fdba74", "#7c2d12");
+        ctx.fill();
+        // Nose cone tip
+        ogive(ctx, sx, bTop - H * 0.05, bTop, bh * 0.7, "#f97316");
+        engineBell(ctx, sx, base - H * 0.05, bh * 0.7, "#44403c");
+      });
+      // Fregat / upper hint
+      ctx.fillStyle = "#334155";
+      ctx.fillRect(cx - half, tip + H * 0.26, half * 2, H * 0.02);
+      engineBell(ctx, cx, base - H * 0.08, half * 0.5, "#57534e");
+    },
+
+    generic(ctx, cx, base, H, anim, mini, name) {
+      const half = H * 0.04;
+      const tip = base - H;
+      ogive(ctx, cx, tip, tip + H * 0.18, half, "#e2e8f0");
+      cyl(ctx, cx, tip + H * 0.18, tip + H * 0.5, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#94a3b8", "#475569"));
       ctx.fillStyle = "#7dd3fc";
-      ctx.fillRect(cx - half, tip + H * 0.55, half * 2, H * 0.025);
-      drawCylinder(ctx, cx, tip + H * 0.575, base - H * 0.06, half * 0.95, "#334155");
-      drawFins(ctx, cx, base - H * 0.14, half * 0.95, H * 0.1, half * 0.8, "#64748b");
-      drawEngineBell(ctx, cx, base - H * 0.06, half * 0.55, "#57534e");
+      ctx.fillRect(cx - half, tip + H * 0.5, half * 2, H * 0.02);
+      cyl(ctx, cx, tip + H * 0.52, base - H * 0.06, half * 0.95, "#334155");
+      engineBell(ctx, cx, base - H * 0.06, half * 0.5, "#57534e");
     },
   };
 
-  function drawBoosterStick(ctx, cx, top, base, half) {
-    drawNoseCone(ctx, cx, top, top + (base - top) * 0.08, half, "#e2e8f0");
-    drawCylinder(ctx, cx, top + (base - top) * 0.08, base - (base - top) * 0.04, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#cbd5e1", "#64748b"));
-    drawEngineBell(ctx, cx, base - (base - top) * 0.04, half * 0.7, "#78716c");
-  }
-
-  function drawLandingLegs(ctx, cx, y, half, len) {
-    ctx.strokeStyle = "#94a3b8";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(cx - half, y);
-    ctx.lineTo(cx - half - len, y + len);
-    ctx.moveTo(cx + half, y);
-    ctx.lineTo(cx + half + len, y + len);
-    ctx.stroke();
-  }
+  // Expose for contact-sheet / tests
+  window.__evDrawRocket = drawRocket;
+  window.__evDrawers = Object.keys(DRAWERS);
+  window.__evVehicleHeights = VEHICLE_HEIGHT_M_DRAW;
 
   /* ---------- Data loading ---------- */
 
@@ -705,6 +1146,15 @@
         const tb = b.net ? new Date(b.net).getTime() : Infinity;
         return ta - tb;
       });
+
+    // ?liftoff=1 without ?now= → pin clock to featured NET so the anim is visible
+    if (forceLiftoffDemo && clockFixedMs == null && launches[0] && launches[0].net) {
+      const net = new Date(launches[0].net).getTime();
+      if (!Number.isNaN(net)) {
+        clockFixedMs = net;
+        liftoffStartMs = net;
+      }
+    }
 
     const updated = data.updated ? formatLocal(data.updated) : "";
     els.status.textContent = updated
@@ -802,8 +1252,10 @@
 
   function renderAll() {
     if (!launches.length) return;
-    renderFeatured(launches[0]);
-    renderGrid(launches.slice(1));
+    const { featured, upcoming } = selectFeaturedAndUpcoming(launches, nowMs());
+    if (!featured) return;
+    renderFeatured(featured);
+    renderGrid(upcoming);
     updateCountdowns();
   }
 
@@ -855,6 +1307,16 @@
     }
 
     els.canvas.dataset.vehicle = key;
+    els.canvas.dataset.vehicleName = L.vehicle || L.name || "";
+    els.canvas.dataset.net = L.net || "";
+    els.canvas.dataset.status = L.status || "";
+    const now = nowMs();
+    const net = L.net ? new Date(L.net).getTime() : NaN;
+    if (!Number.isNaN(net) && now >= net && now < net + FEATURED_HOLD_MS) {
+      els.kicker.textContent = now < net + LIFTOFF_ANIM_MS ? "Liftoff" : "In flight";
+    } else {
+      els.kicker.textContent = "Next launch";
+    }
     paintFeatured();
   }
 
@@ -870,9 +1332,17 @@
     const ctx = els.canvas.getContext("2d");
     if (!ctx) return;
     const key = els.canvas.dataset.vehicle || "generic";
+    const name = els.canvas.dataset.vehicleName || "";
+    const fakeLaunch = {
+      net: els.canvas.dataset.net,
+      status: els.canvas.dataset.status,
+    };
+    const lift = liftoffProgressFor(fakeLaunch, nowMs());
     drawRocket(ctx, els.canvas.width, els.canvas.height, key, {
       anim: featuredAnimT,
       mini: false,
+      name,
+      liftoffProgress: lift,
     });
   }
 
@@ -927,7 +1397,7 @@
       const canvas = card.querySelector("canvas");
       if (canvas) {
         const cctx = canvas.getContext("2d");
-        if (cctx) drawRocket(cctx, canvas.width, canvas.height, key, { mini: true, anim: 0 });
+        if (cctx) drawRocket(cctx, canvas.width, canvas.height, key, { mini: true, anim: 0, name: L.vehicle || "" });
       }
 
       const btn = card.querySelector(".card-toggle");
@@ -969,10 +1439,40 @@
     }
   }
 
+  let lastFeaturedId = null;
   function updateCountdowns() {
-    const now = Date.now();
-    if (launches[0]) {
-      els.countdown.textContent = formatCountdown(launches[0], now);
+    const now = nowMs();
+    // Demo / ?now= liftoff: advance pinned clock with wall-clock delta
+    if (forceLiftoffDemo && clockFixedMs != null) {
+      if (!updateCountdowns._wall0) {
+        updateCountdowns._wall0 = Date.now();
+        updateCountdowns._pin0 = clockFixedMs;
+      }
+      clockFixedMs = updateCountdowns._pin0 + (Date.now() - updateCountdowns._wall0);
+    }
+    const { featured, upcoming } = selectFeaturedAndUpcoming(launches, now);
+    if (featured) {
+      const fid = featured.id || featured.name;
+      if (fid !== lastFeaturedId) {
+        lastFeaturedId = fid;
+        renderFeatured(featured);
+        renderGrid(upcoming);
+      } else {
+        // Update kicker as we cross liftoff / T+15 boundary
+        const net = featured.net ? new Date(featured.net).getTime() : NaN;
+        if (!Number.isNaN(net) && now >= net && now < net + FEATURED_HOLD_MS) {
+          els.kicker.textContent = now < net + LIFTOFF_ANIM_MS ? "Liftoff" : "In flight";
+        } else if (!Number.isNaN(net) && now < net) {
+          els.kicker.textContent = "Next launch";
+        }
+      }
+      // After T+15m, promote next without full reload
+      if (!isStillFeaturedWindow(featured, now)) {
+        lastFeaturedId = null;
+        renderAll();
+        return;
+      }
+      els.countdown.textContent = formatCountdown(featured, now);
     }
     els.grid.querySelectorAll(".card-eta").forEach((node) => {
       const net = node.getAttribute("data-net");
@@ -999,7 +1499,14 @@
   function startAnim() {
     const step = () => {
       featuredAnimT += 1;
-      if (featuredAnimT % 2 === 0) paintFeatured();
+      // Paint every frame during liftoff; otherwise every 3rd frame (stars are slow)
+      const fakeLaunch = {
+        net: els.canvas && els.canvas.dataset.net,
+        status: els.canvas && els.canvas.dataset.status,
+      };
+      const lift = liftoffProgressFor(fakeLaunch, nowMs());
+      if (lift > 0 && lift < 1) paintFeatured();
+      else if (featuredAnimT % 3 === 0) paintFeatured();
       animRaf = requestAnimationFrame(step);
     };
     if (animRaf) cancelAnimationFrame(animRaf);
