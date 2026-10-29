@@ -36,7 +36,8 @@
       endDate: "2026-11-18T14:00:00Z",
       zhr: 15,
       radiant: { ra: 154, dec: 22, name: "Leo" },
-      desc: "Moderate shower from Comet 55P/Tempel–Tuttle. Best in the hours before dawn after the radiant rises.",
+      parent: "55P/Tempel–Tuttle",
+      desc: "A meteor shower occurs when Earth plows through a stream of dust left by a comet or asteroid; the grains burn up as meteors. The Leonids come from debris shed by Comet 55P/Tempel–Tuttle, and their trails appear to radiate from the constellation Leo. This year’s expected zenithal hourly rate is about 15 under dark skies, with the best viewing in the hours before dawn after the radiant rises.",
       source: "AMS / IMO 2026 calendar",
     },
     {
@@ -45,7 +46,7 @@
       title: "Mercury greatest western elongation",
       date: "2026-11-21T00:00:00Z",
       elongation: 20,
-      desc: "Mercury reaches greatest separation west of the Sun and is best placed in the morning sky.",
+      desc: "Mercury never strays far from the Sun in our sky because its orbit lies inside Earth’s. Greatest western elongation is the morning when that angular separation peaks, so Mercury stands highest before sunrise. At about 20° from the Sun this apparition, look low in the east-southeast during dawn twilight.",
       source: "Planetary elongation ephemeris",
     },
     {
@@ -53,7 +54,7 @@
       type: "planet",
       title: "Uranus at opposition",
       date: "2026-11-25T00:00:00Z",
-      desc: "Uranus is opposite the Sun and visible all night. Binoculars or a small telescope reveal a pale green disk.",
+      desc: "Opposition is when a planet lies opposite the Sun as seen from Earth, so it rises at sunset and is up all night. Uranus reaches that geometry now and is at its closest for the year, shining as a faint magnitude-5.6 “star.” Binoculars or a small telescope can reveal its pale green disk.",
       source: "Planetary opposition ephemeris",
     },
     {
@@ -63,7 +64,8 @@
       date: "2026-12-22T12:00:00Z",
       zhr: 10,
       radiant: { ra: 217, dec: 76, name: "Ursa Minor" },
-      desc: "A short, low-rate shower from Comet 8P/Tuttle. The radiant stays high for northern observers.",
+      parent: "8P/Tuttle",
+      desc: "The Ursids are meteors from dust released by Comet 8P/Tuttle. Earth crosses that stream each December, and the trails appear to radiate from near the bowl of the Little Dipper in Ursa Minor. Rates are modest (zenithal hourly rate near 10), but the radiant stays high all night for northern observers, so a short watch under dark skies can still be rewarding.",
       source: "AMS / IMO 2026 calendar",
     },
     {
@@ -73,7 +75,8 @@
       date: "2026-12-14T07:00:00Z",
       zhr: 120,
       radiant: { ra: 112, dec: 33, name: "Gemini" },
-      desc: "One of the year's richest showers. Bright, medium-speed meteors; the radiant is well up by midevening.",
+      parent: "3200 Phaethon",
+      desc: "The Geminids are among the year’s richest showers. Unlike most major showers, their parent is the asteroid-like body 3200 Phaethon, whose debris stream Earth crosses each mid-December. Bright, medium-speed meteors appear to radiate from Gemini; under ideal conditions the zenithal hourly rate can reach about 120, and the radiant is already well up by midevening.",
       source: "AMS / IMO 2026 calendar",
     },
     {
@@ -82,7 +85,7 @@
       title: "Venus greatest western elongation",
       date: "2027-01-03T00:00:00Z",
       elongation: 47,
-      desc: "Venus stands farthest west of the Sun as a brilliant morning star.",
+      desc: "Venus, an inferior planet, reaches greatest western elongation when its angle from the Sun is largest on the morning side of the sky. At roughly 47° this apparition, it is a brilliant “morning star” high before sunrise. Through a telescope its disk shows a half-lit phase near this date, similar to a first-quarter Moon.",
       source: "Planetary elongation ephemeris",
     },
     {
@@ -92,7 +95,8 @@
       date: "2027-01-03T15:00:00Z",
       zhr: 120,
       radiant: { ra: 230, dec: 49, name: "Boötes" },
-      desc: "A sharp peak lasting only a few hours. Favorable moon; best for northern-hemisphere observers after midnight.",
+      parent: "2003 EH1",
+      desc: "The Quadrantids arise when Earth crosses debris linked to the asteroid 2003 EH1, thought to be a remnant of a defunct comet. Their peak is famously brief—often only a few hours—yet the zenithal hourly rate can approach 120. The radiant lies in northern Boötes (once the obsolete constellation Quadrans Muralis); northern-hemisphere observers after midnight fare best, and the Moon is favorably dark this year.",
       source: "AMS / IMO 2027 calendar",
     },
     {
@@ -101,7 +105,7 @@
       title: "Comet 2P/Encke near perihelion",
       date: "2027-01-24T00:00:00Z",
       mag: 6.5,
-      desc: "Short-period comet expected near binocular brightness around perihelion. Look low in the evening twilight for southern and mid-northern latitudes.",
+      desc: "Comet 2P/Encke is a short-period comet that returns every 3.3 years on a tight orbit around the Sun. Near perihelion it brightens as solar heat drives gas and dust from its nucleus into a coma and tail. Forecasts put it near binocular brightness (about magnitude 6–7) this return; look low in evening twilight from southern and mid-northern latitudes.",
       source: "BAA Comet Section / Seiichi Yoshida ephemeris",
     },
     {
@@ -110,7 +114,7 @@
       title: "Mercury greatest eastern elongation",
       date: "2027-02-03T00:00:00Z",
       elongation: 18,
-      desc: "Mercury is farthest east of the Sun and best seen in evening twilight.",
+      desc: "Greatest eastern elongation places Mercury farthest east of the Sun, so it appears in the western sky after sunset. Mercury’s elongation never exceeds about 28°, and this evening apparition peaks near 18°. Catch it low in bright twilight with a clear western horizon; binoculars help pick it out against the dusk glow.",
       source: "Planetary elongation ephemeris",
     },
     {
@@ -120,10 +124,9 @@
       title: "Annular solar eclipse",
       date: "2027-02-06T16:00:00Z",
       path: "South America, Atlantic, West & Central Africa",
-      desc: "A ring of fire along a path across southern South America and Africa. Outside the path, a partial eclipse is visible across much of South America and Africa.",
+      desc: "A solar eclipse happens when the New Moon passes between Earth and the Sun. In an annular eclipse the Moon is near apogee, so its apparent disk is slightly smaller than the Sun’s and a bright ring—“ring of fire”—remains. The path of annularity crosses southern South America and Africa; outside that path a partial eclipse is visible across much of those continents.",
       source: "NASA GSFC Eclipse Catalog (Espenak)",
       visibility: {
-        // Rough bounding boxes for partial visibility (lat/lon)
         regions: [
           { latMin: -55, latMax: 25, lonMin: -80, lonMax: 40 },
         ],
@@ -134,7 +137,7 @@
       type: "planet",
       title: "Jupiter at opposition",
       date: "2027-02-11T00:00:00Z",
-      desc: "Jupiter is closest and brightest for the year, rising at sunset and visible all night.",
+      desc: "At opposition Jupiter, Earth, and the Sun line up with Earth in the middle, so Jupiter is closest and brightest for the year. It rises near sunset and stays visible all night. Even small telescopes show its cloud belts and the four bright Galilean moons shifting from night to night.",
       source: "Planetary opposition ephemeris",
     },
     {
@@ -142,7 +145,7 @@
       type: "planet",
       title: "Mars at opposition",
       date: "2027-02-19T00:00:00Z",
-      desc: "Mars is opposite the Sun and well placed for telescopic viewing throughout the night.",
+      desc: "Mars reaches opposition when it lies opposite the Sun in our sky—Earth is then between Mars and the Sun, and the planet is near its closest approach of the cycle. It rises at sunset and is observable all night. Telescopes can show the ochre disk, dark markings, and polar caps when the atmosphere is steady.",
       source: "Planetary opposition ephemeris",
     },
     {
@@ -151,7 +154,7 @@
       subtype: "penumbral-lunar",
       title: "Penumbral lunar eclipse · Snow Moon",
       date: "2027-02-20T23:13:00Z",
-      desc: "The Snow Moon passes through Earth's shallow penumbra, producing a subtle shading across the full Moon. Visible wherever the Moon is above the horizon.",
+      desc: "A lunar eclipse occurs when the Full Moon passes through Earth’s shadow. In a penumbral eclipse the Moon only grazes the outer, partial shadow (the penumbra), so the shading is subtle rather than a deep red umbral eclipse. This event coincides with the Snow Moon and is visible from anywhere the Moon is above the horizon during the eclipse.",
       source: "NASA GSFC Eclipse Catalog (Espenak)",
     },
     {
@@ -160,7 +163,7 @@
       title: "Mercury greatest western elongation",
       date: "2027-03-17T00:00:00Z",
       elongation: 28,
-      desc: "Favorable morning apparition of Mercury at greatest western elongation.",
+      desc: "Mercury reaches greatest western elongation—its largest morning separation from the Sun—near 28°, close to the maximum possible. That geometry lifts it higher before sunrise than most apparitions. Look east in morning twilight for a starlike point that does not twinkle as strongly as the background stars.",
       source: "Planetary elongation ephemeris",
     },
     {
@@ -170,7 +173,8 @@
       date: "2027-04-22T16:00:00Z",
       zhr: 18,
       radiant: { ra: 272, dec: 33, name: "Lyra" },
-      desc: "Annual shower from Comet C/1861 G1 (Thatcher). A bright Moon will wash out fainter meteors this year.",
+      parent: "C/1861 G1 (Thatcher)",
+      desc: "The Lyrids are an annual shower produced when Earth crosses dust left by Comet C/1861 G1 (Thatcher). Meteors appear to radiate from Lyra, near the bright star Vega. Typical zenithal hourly rates are near 18; this year a bright Moon will wash out fainter streaks, so expect mainly the brighter members under darker parts of the sky.",
       source: "AMS / IMO 2027 calendar",
     },
   ];
@@ -265,11 +269,22 @@
       const name = MOON_NAMES[month] || "Full Moon";
       const isSuper = dist < SUPERMOON_KM;
       const title = isSuper ? `${name} (supermoon)` : name;
-      let desc = `Full Moon`;
+      const distLabel = Math.round(dist).toLocaleString();
+      let desc;
       if (isSuper) {
-        desc = `Supermoon — the Moon is near perigee (${Math.round(dist).toLocaleString()} km), appearing slightly larger and brighter than average.`;
+        desc =
+          "A supermoon is a Full Moon that occurs near perigee—the closest point in the Moon’s elliptical orbit around Earth. At about " +
+          distLabel +
+          " km, this " +
+          name +
+          " appears roughly 7% larger and about 15% brighter than an average full Moon (and up to ~14% larger / ~30% brighter than a full Moon near apogee). The traditional name marks the season in folklore; the size boost is purely geometric.";
       } else {
-        desc = `Full Moon at about ${Math.round(dist).toLocaleString()} km from Earth.`;
+        desc =
+          "Full Moon happens when the Moon lies opposite the Sun, so its Earth-facing hemisphere is fully illuminated. This " +
+          name +
+          " is about " +
+          distLabel +
+          " km away. Traditional full-Moon names follow the season; the Moon’s changing distance along its elliptical orbit is what makes some full Moons look slightly larger than others.";
       }
       // Skip if this full moon coincides with penumbral eclipse (same day) — eclipse card covers it
       const eclipseDay = "2027-02-20";
@@ -789,7 +804,9 @@
     $("featured-kicker").textContent = event._date > now ? "Next up" : "Now";
     $("featured-title").textContent = event.title;
     $("featured-when").textContent = fmtDateTime(event._date);
-    $("featured-desc").textContent = event.desc;
+    const descEl = $("featured-desc");
+    descEl.textContent = event.desc;
+    descEl.classList.add("has-science");
 
     const meta = $("featured-meta");
     meta.innerHTML = "";
@@ -843,6 +860,39 @@
     el.textContent = bits.join(" ");
   }
 
+  function localDetailRows(event) {
+    const rows = [];
+    if (!event.local) return rows;
+    const L = event.local;
+    if (L.moonIllum != null) rows.push(["Moon", L.moonIllum + "% lit"]);
+    if (L.moonNote) rows.push(["Sky", L.moonNote]);
+    if (L.radiantAlt != null) rows.push(["Radiant alt.", Math.round(L.radiantAlt) + "°"]);
+    if (L.bestHint) rows.push(["Radiant", L.bestHint]);
+    if (L.visibilityNote) rows.push(["Visibility", L.visibilityNote]);
+    if (L.moonrise) rows.push(["Moonrise", fmtTime(L.moonrise)]);
+    if (L.moonset) rows.push(["Moonset", fmtTime(L.moonset)]);
+    if (L.rise) rows.push(["Rise", fmtTime(L.rise)]);
+    if (L.set) rows.push(["Set", fmtTime(L.set)]);
+    if (L.altitude != null && (event.type === "moon" || event.subtype === "penumbral-lunar"))
+      rows.push(["Altitude at event", Math.round(L.altitude) + "°"]);
+    if (event.parent) rows.push(["Parent body", event.parent]);
+    if (event.zhr) rows.push(["Peak ZHR", String(event.zhr)]);
+    if (event.elongation) rows.push(["Elongation", event.elongation + "°"]);
+    if (event.distKm) rows.push(["Distance", Math.round(event.distKm).toLocaleString() + " km"]);
+    if (event.mag) rows.push(["Est. magnitude", "~" + event.mag]);
+    if (event.path) rows.push(["Path", event.path]);
+    return rows;
+  }
+
+  function setCardExpanded(card, open) {
+    const btn = card.querySelector(".card-toggle");
+    const panel = card.querySelector(".card-panel");
+    if (!btn || !panel) return;
+    card.classList.toggle("is-open", open);
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    panel.setAttribute("aria-hidden", open ? "false" : "true");
+  }
+
   function renderGrid(events, now) {
     const grid = $("event-grid");
     grid.innerHTML = "";
@@ -852,8 +902,23 @@
       card.className = "event-card" + (past ? " past" : "");
       card.dataset.id = event.id;
 
+      const panelId = "detail-" + event.id;
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "card-toggle";
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-controls", panelId);
+      toggle.setAttribute(
+        "aria-label",
+        event.title + ", " + fmtDate(event._date) + ". Show details."
+      );
+
+      const summary = document.createElement("div");
+      summary.className = "card-summary";
+
       const art = document.createElement("div");
       art.className = "card-art";
+      art.setAttribute("aria-hidden", "true");
       const canvas = document.createElement("canvas");
       canvas.width = 88;
       canvas.height = 88;
@@ -880,6 +945,10 @@
       if (event.mag) noteText = "Est. mag ~" + event.mag;
       note.textContent = noteText;
 
+      const chevron = document.createElement("span");
+      chevron.className = "card-chevron";
+      chevron.setAttribute("aria-hidden", "true");
+
       body.appendChild(type);
       body.appendChild(h3);
       body.appendChild(date);
@@ -897,8 +966,56 @@
         body.appendChild(b);
       }
 
-      card.appendChild(art);
-      card.appendChild(body);
+      summary.appendChild(art);
+      summary.appendChild(body);
+      summary.appendChild(chevron);
+      toggle.appendChild(summary);
+
+      const panel = document.createElement("div");
+      panel.className = "card-panel";
+      panel.id = panelId;
+      panel.setAttribute("aria-hidden", "true");
+      const panelInner = document.createElement("div");
+      panelInner.className = "card-panel-inner";
+      const science = document.createElement("p");
+      science.className = "card-science";
+      science.textContent = event.desc;
+      panelInner.appendChild(science);
+
+      const rows = localDetailRows(event);
+      if (rows.length) {
+        const dl = document.createElement("dl");
+        dl.className = "card-meta";
+        for (const [k, v] of rows) {
+          const dt = document.createElement("dt");
+          dt.textContent = k;
+          const dd = document.createElement("dd");
+          dd.textContent = v;
+          dl.appendChild(dt);
+          dl.appendChild(dd);
+        }
+        panelInner.appendChild(dl);
+      }
+      panel.appendChild(panelInner);
+
+      toggle.addEventListener("click", () => {
+        const open = toggle.getAttribute("aria-expanded") !== "true";
+        // one open at a time
+        grid.querySelectorAll(".event-card.is-open").forEach((other) => {
+          if (other !== card) setCardExpanded(other, false);
+        });
+        setCardExpanded(card, open);
+        toggle.setAttribute(
+          "aria-label",
+          event.title +
+            ", " +
+            fmtDate(event._date) +
+            (open ? ". Hide details." : ". Show details.")
+        );
+      });
+
+      card.appendChild(toggle);
+      card.appendChild(panel);
       grid.appendChild(card);
       renderCardArt(canvas, event);
     }
