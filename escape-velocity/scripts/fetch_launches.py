@@ -198,9 +198,14 @@ def main() -> int:
         payload = fetch()
 
     text = json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
-    if OUT.exists() and OUT.read_text(encoding="utf-8") == text:
-        print("No launch data changes")
-        return 0
+    if OUT.exists():
+        try:
+            prev = json.loads(OUT.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            prev = None
+        if prev is not None and prev.get("launches") == payload.get("launches"):
+            print("No launch data changes")
+            return 0
     OUT.write_text(text, encoding="utf-8")
     print(f"Wrote {OUT} ({payload['count']} launches)")
     return 0
