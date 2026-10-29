@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Stellar Events — upcoming moons, meteor showers, eclipses, and planet events visible from Earth." />
+  <title>Stellar Events · Objects In Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://dkossin.com/styles.css" />
+  <link rel="stylesheet" href="stellar-events.css" />
+  <script src="astronomy.browser.min.js" defer></script>
+  <script src="stellar-events.js" defer></script>
+  <!-- Cloudflare Web Analytics --><script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "ed4660d74de24898991981cdb05e73b9"}'></script><!-- End Cloudflare Web Analytics -->
+</head>
+<body class="stellar-page">
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="nebula" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="https://dkossin.com/">Objects In Space</a>
+    <nav>
+      <a href="https://dkossin.com/">Home</a>
+      <a class="active" href="./">Stellar Events</a>
+      <a href="https://dkossin.com/orrery/">Orrery</a>
+    </nav>
+  </header>
+
+  <main class="se-main">
+    <header class="se-hero">
+      <p class="eyebrow">Sky calendar</p>
+      <h1>Stellar Events</h1>
+      <p class="tagline">Upcoming moons, meteor showers, eclipses, and planet events over the next several months.</p>
+    </header>
+
+    <section class="loc-bar" aria-label="Location for local times">
+      <form id="loc-form" class="loc-form" novalidate>
+        <label for="loc-input">Location</label>
+        <div class="loc-row">
+          <input
+            id="loc-input"
+            name="location"
+            type="text"
+            inputmode="text"
+            autocomplete="postal-code"
+            placeholder="ZIP or city"
+            aria-describedby="loc-resolved"
+            value="90045"
+          />
+          <button type="submit" class="btn primary loc-btn">Update</button>
+        </div>
+        <p class="loc-resolved" id="loc-resolved">Los Angeles, CA</p>
+        <p class="loc-error" id="loc-error" hidden></p>
+      </form>
+    </section>
+
+    <section class="featured" id="featured" aria-live="polite">
+      <div class="featured-visual">
+        <canvas id="featured-canvas" width="640" height="420" role="img" aria-label="Illustration of the next stellar event"></canvas>
+      </div>
+      <div class="featured-copy">
+        <p class="featured-kicker" id="featured-kicker">Next up</p>
+        <h2 id="featured-title">—</h2>
+        <p class="featured-when" id="featured-when"></p>
+        <p class="countdown" id="featured-countdown" aria-live="off"></p>
+        <p class="featured-desc" id="featured-desc"></p>
+        <dl class="featured-meta" id="featured-meta"></dl>
+      </div>
+    </section>
+
+    <section class="timeline" aria-labelledby="timeline-heading">
+      <h2 id="timeline-heading">Upcoming</h2>
+      <div class="event-grid" id="event-grid"></div>
+    </section>
+
+    <footer class="se-credits">
+      <p>
+        Sources: NASA Eclipse Catalog; International Meteor Organization &amp; American Meteor Society shower calendars;
+        British Astronomical Association Comet Section (2P/Encke);
+        moon phases and local rise/set computed for your location.
+      </p>
+    </footer>
+  </main>
+
+  <script src="https://dkossin.com/stars.js"></script>
+</body>
+</html>
