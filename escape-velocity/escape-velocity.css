@@ -151,18 +151,6 @@ body.ev-page {
   aspect-ratio: 480 / 560;
 }
 
-.vehicle-scale {
-  position: absolute;
-  left: 0.75rem;
-  bottom: 0.75rem;
-  margin: 0;
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  background: rgba(5, 6, 15, 0.55);
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-}
 
 .featured-badges {
   display: flex;

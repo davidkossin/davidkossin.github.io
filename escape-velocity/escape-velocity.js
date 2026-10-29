@@ -137,7 +137,6 @@
     status: document.getElementById("data-status"),
     featured: document.getElementById("featured"),
     canvas: document.getElementById("featured-canvas"),
-    scale: document.getElementById("vehicle-scale"),
     kicker: document.getElementById("featured-kicker"),
     statusPill: document.getElementById("featured-status"),
     vandy: document.getElementById("featured-vandy"),
@@ -384,12 +383,15 @@
     const mini = !!opts.mini;
     const reduced = prefersReducedMotion();
     let lift = Math.max(0, Math.min(1, opts.liftoffProgress || 0));
-    const cruise = !!opts.flightCruise || lift >= 1;
+    let cruise = !!opts.flightCruise || lift >= 1;
     const name = opts.name || "";
 
-    // Reduced motion: skip animated ascent; jump to static angled in-flight pose
+    // Reduced motion: skip animated ascent ONLY once we have left the pad.
+    // Never pitch a parked rocket — that was tilting the pre-T-0 hero on
+    // desktops with prefers-reduced-motion enabled.
     if (!mini && (cruise || lift > 0) && reduced) {
       lift = 1;
+      cruise = true;
     }
 
     ctx.clearRect(0, 0, w, h);
@@ -409,9 +411,13 @@
     const turnT = lift < 0.35 ? 0 : Math.min(1, (lift - 0.35) / 0.35);
     const sceneT = lift < 0.7 ? 0 : Math.min(1, (lift - 0.7) / 0.3);
     const flightBlend = cruise ? 1 : sceneT; // 0 pad scene → 1 space/horizon scene
-    const pitchDeg = (cruise || reduced)
-      ? 22 + (reduced ? 0 : Math.sin(anim * 0.012) * 2.5)
-      : turnT * 24; // ~0→24° gravity turn
+    // Pre-launch is always upright. Pitch only after liftoff.
+    let pitchDeg = 0;
+    if (cruise || lift >= 1) {
+      pitchDeg = 22 + (reduced ? 0 : Math.sin(anim * 0.012) * 2.5);
+    } else if (lift > 0) {
+      pitchDeg = turnT * 24; // ~0→24° gravity turn
+    }
     const pitch = (pitchDeg * Math.PI) / 180;
 
     if (mini) {
@@ -440,18 +446,26 @@
       ctx.fillRect(cx0 - w * 0.2, groundY - 3, w * 0.4, 7);
       ctx.fillStyle = "rgba(35,42,65,0.8)";
       ctx.fillRect(cx0 - w * 0.16, groundY + 4, w * 0.32, 5);
+      // Umbilical / height scale mast (full rocket height)
+      const mastX = cx0 + w * 0.14;
+      const tipY = groundY - rocketH;
       ctx.strokeStyle = "rgba(148,163,184,0.45)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(cx0 + w * 0.14, groundY);
-      ctx.lineTo(cx0 + w * 0.14, groundY - rocketH * 0.85);
+      ctx.moveTo(mastX, groundY);
+      ctx.lineTo(mastX, tipY);
       ctx.stroke();
+      // Umbilical arms (keep a few)
       for (let i = 0; i < 5; i++) {
-        const ty = groundY - (rocketH * 0.85 * i) / 5;
+        const ty = groundY - (rocketH * i) / 5;
         ctx.beginPath();
-        ctx.moveTo(cx0 + w * 0.14, ty);
-        ctx.lineTo(cx0 + w * 0.1, ty + 8);
+        ctx.moveTo(mastX, ty);
+        ctx.lineTo(mastX - w * 0.04, ty + 8);
         ctx.stroke();
+      }
+      // Height markers — only while parked on the pad (pre-liftoff)
+      if (lift < 0.02 && flightBlend < 0.02) {
+        drawHeightScale(ctx, mastX, groundY, tipY, realH, w);
       }
       if (lift < 0.85) {
         for (let i = 0; i < 6; i++) {
@@ -535,6 +549,52 @@
       ctx.textAlign = "center";
       ctx.fillText("IN FLIGHT", w * 0.5, 28);
     }
+  }
+
+
+  /** Faint meter ticks + top height label beside the pad mast. On-pad only. */
+  function drawHeightScale(ctx, mastX, groundY, tipY, realH_m, canvasW) {
+    const span = groundY - tipY;
+    if (span < 40 || !(realH_m > 0)) return;
+    // Choose a readable major interval from vehicle height
+    let step = 10;
+    if (realH_m > 100) step = 25;
+    else if (realH_m > 60) step = 20;
+    else if (realH_m <= 25) step = 5;
+    const pxPerM = span / realH_m;
+    const tickOut = Math.max(8, Math.min(14, canvasW * 0.025));
+    const fontPx = Math.max(9, Math.min(11, canvasW * 0.028));
+    ctx.save();
+    ctx.globalAlpha = 1; // already under padAlpha parent
+    ctx.strokeStyle = "rgba(148,163,184,0.4)";
+    ctx.fillStyle = "rgba(148,163,184,0.7)";
+    ctx.lineWidth = 1;
+    ctx.font = `500 ${fontPx}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    // Intermediate ticks (skip 0 — pad is obvious; skip exact top — drawn as nose label)
+    for (let m = step; m < realH_m - 0.5; m += step) {
+      const y = groundY - m * pxPerM;
+      ctx.beginPath();
+      ctx.moveTo(mastX, y);
+      ctx.lineTo(mastX + tickOut, y);
+      ctx.stroke();
+      ctx.fillText(String(m), mastX + tickOut + 3, y);
+    }
+    // Top nose marker — real vehicle height
+    ctx.strokeStyle = "rgba(186,198,220,0.65)";
+    ctx.beginPath();
+    ctx.moveTo(mastX - 2, tipY);
+    ctx.lineTo(mastX + tickOut + 2, tipY);
+    ctx.stroke();
+    const label = Number.isInteger(realH_m)
+      ? `${realH_m} m`
+      : `${Math.round(realH_m * 10) / 10} m`;
+    ctx.fillStyle = "rgba(203,213,225,0.85)";
+    ctx.font = `600 ${fontPx + 1}px ui-sans-serif, system-ui, sans-serif`;
+    ctx.textBaseline = "bottom";
+    ctx.fillText(label, mastX + tickOut + 3, tipY - 1);
+    ctx.restore();
   }
 
   function drawFlightSky(ctx, w, h, blend, anim, reduced) {
@@ -1543,13 +1603,6 @@
       els.webcast.innerHTML = "";
     }
 
-    const hm = VEHICLE_HEIGHT_M[key];
-    if (hm) {
-      els.scale.hidden = false;
-      els.scale.textContent = `~${hm} m class`;
-    } else {
-      els.scale.hidden = true;
-    }
 
     els.canvas.dataset.vehicle = key;
     els.canvas.dataset.vehicleName = L.vehicle || L.name || "";
