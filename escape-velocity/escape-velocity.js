@@ -398,8 +398,10 @@
     const groundY = mini ? h * 0.92 : h * 0.88;
     const refH = 121;
     const realH = VEHICLE_HEIGHT_M_DRAW[key] || VEHICLE_HEIGHT_M_DRAW.generic;
-    const maxRocketPx = mini ? h * 0.78 : h * 0.7;
-    const rocketH = maxRocketPx * (realH / refH);
+    const maxRocketPx = mini ? h * 0.78 : h * 0.72;
+    // Hero fills the frame (any vehicle height). Contact sheet / mini stay to-scale vs Starship.
+    const toScale = mini || !!opts.toScale;
+    const rocketH = toScale ? maxRocketPx * (realH / refH) : maxRocketPx;
 
     // Ascent timeline (within lift 0..1):
     // 0–0.35 vertical rise, 0.35–0.70 gravity turn, 0.70–1.0 handoff to flight scene
@@ -1068,54 +1070,82 @@
     },
 
     pslv(ctx, cx, base, H, anim, mini, name) {
-      // PSLV with up to 6 PSOM strap-ons
+      // PSLV XL (photos): white fairing + light core, burnt-orange PS3 band,
+      // six white PSOM-XL strap-ons with orange nose cones / aft tips.
       const half = H * (2.8 / 44) * 0.5;
       const tip = base - H;
       ogive(ctx, cx, tip, tip + H * 0.14, half * 1.05, "#f8fafc");
-      cyl(ctx, cx, tip + H * 0.14, tip + H * 0.35, half, "#e2e8f0");
-      // Solid stages white/orange bands
-      cyl(ctx, cx, tip + H * 0.35, tip + H * 0.55, half, "#f97316");
-      cyl(ctx, cx, tip + H * 0.55, base - H * 0.06, half, "#ea580c");
-      panelLines(ctx, cx, tip + H * 0.35, base - H * 0.06, half, 4, "rgba(69,26,3,0.25)");
+      // Upper stages (white)
+      cyl(ctx, cx, tip + H * 0.14, tip + H * 0.28, half, "#f1f5f9");
+      // Distinctive brownish-orange solid stage band (PS3)
+      cyl(ctx, cx, tip + H * 0.28, tip + H * 0.42, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#ea580c", "#9a3412"));
+      // S139 core — white/light with INDIA-style band hint
+      cyl(ctx, cx, tip + H * 0.42, base - H * 0.06, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f8fafc", "#cbd5e1"));
+      panelLines(ctx, cx, tip + H * 0.42, base - H * 0.06, half, 4);
+      // Dark "INDIA" vertical mark (simple bar, not lettering)
+      ctx.fillStyle = "#0f172a";
+      ctx.fillRect(cx - half * 0.08, tip + H * 0.5, half * 0.16, H * 0.28);
+      // Aft brownish tip on core
+      ctx.fillStyle = "#7c2d12";
+      ctx.fillRect(cx - half, base - H * 0.1, half * 2, H * 0.04);
       const pos = [-2.1, -1.25, -0.4, 0.4, 1.25, 2.1];
       pos.forEach((f, i) => {
+        const sx = cx + half * f;
         const top = tip + H * (0.48 + (i % 2) * 0.04);
-        srb(ctx, cx + half * f, top, base - H * 0.05, half * 0.32, "#f8fafc", "#fdba74");
+        // White body
+        srb(ctx, sx, top + H * 0.03, base - H * 0.05, half * 0.32, "#f8fafc", "#e2e8f0");
+        // Orange nose cone
+        ogive(ctx, sx, top, top + H * 0.03, half * 0.32, "#ea580c");
+        // Orange/brown aft
+        ctx.fillStyle = "#9a3412";
+        ctx.fillRect(sx - half * 0.32, base - H * 0.07, half * 0.64, H * 0.02);
       });
       engineBell(ctx, cx, base - H * 0.06, half * 0.55, "#57534e");
     },
 
     gslv(ctx, cx, base, H, anim, mini, name) {
-      // GSLV Mk II: core + 4 L40H liquid strap-ons, ogive fairing, cryogenic upper
+      // GSLV Mk II (ISRO photos): mostly white/off-white S139 core + 4 white L40H
+      // liquid strap-ons; white fairing / cryogenic upper; dark aft only.
       const half = H * (2.8 / 49.1) * 0.5;
       const tip = base - H;
       ogive(ctx, cx, tip, tip + H * 0.16, half * 1.1, "#f8fafc");
-      // Cryogenic upper (shorter, white)
-      cyl(ctx, cx, tip + H * 0.16, tip + H * 0.34, half * 0.9, "#e2e8f0");
+      // Cryogenic upper (white)
+      cyl(ctx, cx, tip + H * 0.16, tip + H * 0.34, half * 0.9, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f8fafc", "#e2e8f0"));
       ctx.fillStyle = "#64748b";
       ctx.fillRect(cx - half * 0.9, tip + H * 0.34, half * 1.8, H * 0.015);
-      // Core orange/brown solids look
-      cyl(ctx, cx, tip + H * 0.355, base - H * 0.07, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#fb923c", "#9a3412"));
-      // 4 L40H liquid strap-ons (thicker, flat tops with small noses)
+      // White/off-white solid core
+      cyl(ctx, cx, tip + H * 0.355, base - H * 0.08, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f8fafc", "#cbd5e1"));
+      panelLines(ctx, cx, tip + H * 0.355, base - H * 0.08, half, 5);
+      // Dark brownish aft casing near nozzle
+      ctx.fillStyle = "#7c2d12";
+      ctx.fillRect(cx - half, base - H * 0.1, half * 2, H * 0.03);
+      // 4 white L40H liquid strap-ons
       [-1.9, -1.05, 1.05, 1.9].forEach((f) => {
         const sx = cx + half * f;
-        ogive(ctx, sx, tip + H * 0.38, tip + H * 0.44, half * 0.42, "#fdba74");
-        cyl(ctx, sx, tip + H * 0.44, base - H * 0.05, half * 0.42, bodyGrad(ctx, sx - half, 0, sx + half, 0, "#f97316", "#7c2d12"));
-        engineBell(ctx, sx, base - H * 0.05, half * 0.32, "#44403c");
+        ogive(ctx, sx, tip + H * 0.38, tip + H * 0.44, half * 0.42, "#f1f5f9");
+        cyl(ctx, sx, tip + H * 0.44, base - H * 0.05, half * 0.42, bodyGrad(ctx, sx - half * 0.42, 0, sx + half * 0.42, 0, "#f8fafc", "#e2e8f0"));
+        // Small white fins at base
+        ctx.fillStyle = "#e2e8f0";
+        ctx.fillRect(sx - half * 0.55, base - H * 0.12, half * 0.14, H * 0.06);
+        ctx.fillRect(sx + half * 0.41, base - H * 0.12, half * 0.14, H * 0.06);
+        engineBell(ctx, sx, base - H * 0.05, half * 0.32, "#64748b");
       });
-      engineBell(ctx, cx, base - H * 0.07, half * 0.5, "#57534e");
+      engineBell(ctx, cx, base - H * 0.08, half * 0.5, "#57534e");
     },
 
     lvm3(ctx, cx, base, H, anim, mini, name) {
-      // LVM3: large core + two S200 boosters
+      // LVM3: large core + two S200 boosters (white bodies, orange accents)
       const half = H * (4 / 43.4) * 0.5;
       const tip = base - H;
       ogive(ctx, cx, tip, tip + H * 0.16, half * 1.05, "#f8fafc");
       cyl(ctx, cx, tip + H * 0.16, tip + H * 0.38, half, "#e2e8f0");
-      cyl(ctx, cx, tip + H * 0.38, base - H * 0.07, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#fb923c", "#c2410c"));
-      // Huge S200s
-      srb(ctx, cx - half * 1.95, tip + H * 0.32, base - H * 0.04, half * 0.55, "#f8fafc", "#ea580c");
-      srb(ctx, cx + half * 1.95, tip + H * 0.32, base - H * 0.04, half * 0.55, "#f8fafc", "#ea580c");
+      cyl(ctx, cx, tip + H * 0.38, base - H * 0.07, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f8fafc", "#cbd5e1"));
+      // Huge S200s — white with orange nose
+      for (const f of [-1.95, 1.95]) {
+        const sx = cx + half * f;
+        srb(ctx, sx, tip + H * 0.35, base - H * 0.04, half * 0.55, "#f8fafc", "#e2e8f0");
+        ogive(ctx, sx, tip + H * 0.32, tip + H * 0.35, half * 0.55, "#ea580c");
+      }
       engineBell(ctx, cx, base - H * 0.07, half * 0.55, "#57534e");
     },
 
@@ -1138,64 +1168,154 @@
       if (v === "lm7" || v === "lm8" || v === "lm12") {
         ogive(ctx, cx, tip, tip + H * 0.15, half * 1.1, "#f8fafc");
         cyl(ctx, cx, tip + H * 0.15, base - H * 0.06, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#f8fafc", "#94a3b8"));
-        // Light green band common on some CZ
         ctx.fillStyle = "#4d7c0f";
         ctx.fillRect(cx - half, tip + H * 0.4, half * 2, H * 0.02);
         [-1.8, 1.8].forEach((f) => srb(ctx, cx + half * f, tip + H * 0.35, base - H * 0.04, half * 0.4, "#f1f5f9", "#e2e8f0"));
         engineBell(ctx, cx, base - H * 0.06, half * 0.5, "#57534e");
         return;
       }
-      // LM-2 / LM-3 classic green with yellow bands + strap-ons
-      ogive(ctx, cx, tip, tip + H * 0.14, half, "#f8fafc");
-      cyl(ctx, cx, tip + H * 0.14, base - H * 0.06, half, "#3f6212");
+      if (v === "lm2") {
+        // Classic CZ-2 green with yellow bands
+        ogive(ctx, cx, tip, tip + H * 0.14, half, "#f8fafc");
+        cyl(ctx, cx, tip + H * 0.14, base - H * 0.06, half, "#3f6212");
+        ctx.fillStyle = "#fde047";
+        ctx.fillRect(cx - half, tip + H * 0.32, half * 2, H * 0.02);
+        ctx.fillRect(cx - half, tip + H * 0.5, half * 2, H * 0.02);
+        ctx.fillRect(cx - half, tip + H * 0.68, half * 2, H * 0.02);
+        [-1.75, 1.75].forEach((f) => srb(ctx, cx + half * f, tip + H * 0.3, base - H * 0.04, half * 0.4, "#fef9c3", "#4d7c0f"));
+        engineBell(ctx, cx, base - H * 0.06, half * 0.5, "#57534e");
+        return;
+      }
+      // LM-3 / LM-3B (default): white core + white/gray strap-ons, PRC flag + CASC marks
+      const h3 = H * (3.35 / 54.8) * 0.5;
+      ogive(ctx, cx, tip, tip + H * 0.14, h3 * 1.05, "#f8fafc");
+      // Thin dark-blue stage bands
+      cyl(ctx, cx, tip + H * 0.14, tip + H * 0.32, h3, "#f1f5f9");
+      ctx.fillStyle = "#1e3a8a";
+      ctx.fillRect(cx - h3, tip + H * 0.32, h3 * 2, H * 0.008);
+      cyl(ctx, cx, tip + H * 0.328, tip + H * 0.5, h3, bodyGrad(ctx, cx - h3, 0, cx + h3, 0, "#f8fafc", "#cbd5e1"));
+      ctx.fillStyle = "#1e3a8a";
+      ctx.fillRect(cx - h3, tip + H * 0.5, h3 * 2, H * 0.008);
+      // Open lattice interstage hint
+      cyl(ctx, cx, tip + H * 0.508, tip + H * 0.55, h3 * 0.95, "#94a3b8");
+      for (let i = 0; i < 4; i++) {
+        const ly = tip + H * (0.51 + i * 0.01);
+        ctx.strokeStyle = "rgba(15,23,42,0.45)";
+        ctx.beginPath();
+        ctx.moveTo(cx - h3 * 0.9, ly);
+        ctx.lineTo(cx + h3 * 0.9, ly + H * 0.008);
+        ctx.stroke();
+      }
+      cyl(ctx, cx, tip + H * 0.55, base - H * 0.06, h3, bodyGrad(ctx, cx - h3, 0, cx + h3, 0, "#f8fafc", "#94a3b8"));
+      panelLines(ctx, cx, tip + H * 0.55, base - H * 0.06, h3, 5);
+      // PRC flag (simple red rect + yellow star) on fairing/upper
+      const fx = cx - h3 * 0.55;
+      const fy = tip + H * 0.05;
+      const fw = h3 * 1.1;
+      const fh = H * 0.035;
+      ctx.fillStyle = "#dc2626";
+      ctx.fillRect(fx, fy, fw, fh);
       ctx.fillStyle = "#fde047";
-      ctx.fillRect(cx - half, tip + H * 0.32, half * 2, H * 0.02);
-      ctx.fillRect(cx - half, tip + H * 0.5, half * 2, H * 0.02);
-      ctx.fillRect(cx - half, tip + H * 0.68, half * 2, H * 0.02);
-      [-1.75, 1.75].forEach((f) => srb(ctx, cx + half * f, tip + H * 0.3, base - H * 0.04, half * 0.4, "#fef9c3", "#4d7c0f"));
-      engineBell(ctx, cx, base - H * 0.06, half * 0.5, "#57534e");
+      ctx.beginPath();
+      ctx.arc(fx + fw * 0.28, fy + fh * 0.5, fh * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+      // CASC mark — blue circle with pale wedge
+      const cmx = cx;
+      const cmy = tip + H * 0.22;
+      const cmr = H * 0.018;
+      ctx.fillStyle = "#1d4ed8";
+      ctx.beginPath();
+      ctx.arc(cmx, cmy, cmr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#e0e7ff";
+      ctx.beginPath();
+      ctx.moveTo(cmx, cmy - cmr * 0.7);
+      ctx.lineTo(cmx + cmr * 0.55, cmy + cmr * 0.45);
+      ctx.lineTo(cmx - cmr * 0.55, cmy + cmr * 0.45);
+      ctx.closePath();
+      ctx.fill();
+      // Dark vertical "中国航天" bar mark
+      ctx.fillStyle = "#1e3a8a";
+      ctx.fillRect(cx - h3 * 0.1, tip + H * 0.58, h3 * 0.2, H * 0.22);
+      // 4 white/gray liquid strap-ons (LM-3B)
+      [-1.85, -1.05, 1.05, 1.85].forEach((f) => {
+        const sx = cx + h3 * f;
+        ogive(ctx, sx, tip + H * 0.28, tip + H * 0.34, h3 * 0.4, "#e2e8f0");
+        cyl(ctx, sx, tip + H * 0.34, base - H * 0.04, h3 * 0.4, bodyGrad(ctx, sx - h3 * 0.4, 0, sx + h3 * 0.4, 0, "#f1f5f9", "#94a3b8"));
+        // Tiny aft fins
+        ctx.fillStyle = "#64748b";
+        ctx.fillRect(sx - h3 * 0.55, base - H * 0.1, h3 * 0.15, H * 0.05);
+        ctx.fillRect(sx + h3 * 0.4, base - H * 0.1, h3 * 0.15, H * 0.05);
+        engineBell(ctx, sx, base - H * 0.04, h3 * 0.3, "#57534e");
+      });
+      engineBell(ctx, cx, base - H * 0.06, h3 * 0.5, "#57534e");
     },
 
     soyuz(ctx, cx, base, H, anim, mini, name) {
-      // Korolev cross: central core + 4 tapered strap-ons, ogive fairing, gray equipment bay
+      // Soyuz-2: light gray/green-gray body, white fairing, dark lattice interstage,
+      // four conical strap-ons flaring at base (Korolev cross).
       const half = H * (2.95 / 46.1) * 0.5;
       const tip = base - H;
-      // Fairing / payload
+      const body = bodyGrad(ctx, cx - half, 0, cx + half, 0, "#c4cbb8", "#8a927a"); // green-gray
+      const bodyLite = bodyGrad(ctx, cx - half, 0, cx + half, 0, "#d5dbc9", "#9aa38c");
+      // White fairing
       ogive(ctx, cx, tip, tip + H * 0.2, half * 1.2, "#f8fafc");
-      // Escape tower stub for crewed — skip for generic sat
-      // Instrument / equipment bay (gray cylinder)
+      // Instrument / equipment bay
       cyl(ctx, cx, tip + H * 0.2, tip + H * 0.28, half * 1.05, "#64748b");
-      // Third stage
-      cyl(ctx, cx, tip + H * 0.28, tip + H * 0.4, half, "#e2e8f0");
-      // Core (orange/green-gray)
-      cyl(ctx, cx, tip + H * 0.4, base - H * 0.08, half, bodyGrad(ctx, cx - half, 0, cx + half, 0, "#fb923c", "#9a3412"));
-      // 4 tapered boosters — draw L/R clearly; hint front/back with narrower
+      // Third stage (light)
+      cyl(ctx, cx, tip + H * 0.28, tip + H * 0.38, half, bodyLite);
+      // Dark gray/black interstage lattice
+      const latTop = tip + H * 0.38;
+      const latBot = tip + H * 0.46;
+      cyl(ctx, cx, latTop, latBot, half * 1.02, "#1e293b");
+      ctx.strokeStyle = "rgba(148,163,184,0.55)";
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 5; i++) {
+        const t = i / 4;
+        const y = latTop + (latBot - latTop) * t;
+        ctx.beginPath();
+        ctx.moveTo(cx - half, y);
+        ctx.lineTo(cx + half, y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - half * 0.9, latTop);
+        ctx.lineTo(cx + half * (t - 0.5) * 1.8, latBot);
+        ctx.stroke();
+      }
+      // Core (green-gray)
+      cyl(ctx, cx, latBot, base - H * 0.08, half, body);
+      panelLines(ctx, cx, latBot, base - H * 0.08, half, 4, "rgba(15,23,42,0.2)");
+      // 4 tapered boosters — Korolev cross flare
       const boosters = [
-        { x: -1.7, z: 1 },
-        { x: 1.7, z: 1 },
-        { x: -0.95, z: 0.75 },
-        { x: 0.95, z: 0.75 },
+        { x: -1.75, z: 1 },
+        { x: 1.75, z: 1 },
+        { x: -0.95, z: 0.78 },
+        { x: 0.95, z: 0.78 },
       ];
       boosters.forEach(({ x, z }) => {
         const sx = cx + half * x;
         const bh = half * 0.55 * z;
-        const bTop = tip + H * 0.36;
-        // Tapered: wider at bottom
+        const bTop = tip + H * 0.42;
         ctx.beginPath();
-        ctx.moveTo(sx - bh * 0.7, bTop);
-        ctx.lineTo(sx + bh * 0.7, bTop);
-        ctx.lineTo(sx + bh * 1.15, base - H * 0.05);
-        ctx.lineTo(sx - bh * 1.15, base - H * 0.05);
+        ctx.moveTo(sx - bh * 0.65, bTop);
+        ctx.lineTo(sx + bh * 0.65, bTop);
+        ctx.lineTo(sx + bh * 1.2, base - H * 0.05);
+        ctx.lineTo(sx - bh * 1.2, base - H * 0.05);
         ctx.closePath();
-        ctx.fillStyle = bodyGrad(ctx, sx - bh, 0, sx + bh, 0, "#fdba74", "#7c2d12");
+        ctx.fillStyle = bodyGrad(ctx, sx - bh, 0, sx + bh, 0, "#c4cbb8", "#6b735f");
         ctx.fill();
-        // Nose cone tip
-        ogive(ctx, sx, bTop - H * 0.05, bTop, bh * 0.7, "#f97316");
+        // Nose cone (same family gray)
+        ogive(ctx, sx, bTop - H * 0.05, bTop, bh * 0.65, "#a8b09a");
+        // Orange/copper aft band near engines (real Soyuz photos)
+        ctx.fillStyle = "#c2410c";
+        ctx.fillRect(sx - bh * 1.15, base - H * 0.09, bh * 2.3, H * 0.035);
         engineBell(ctx, sx, base - H * 0.05, bh * 0.7, "#44403c");
       });
-      // Fregat / upper hint
-      ctx.fillStyle = "#334155";
-      ctx.fillRect(cx - half, tip + H * 0.26, half * 2, H * 0.02);
+      // Roscosmos-ish mark on fairing (small red/blue bars)
+      ctx.fillStyle = "#dc2626";
+      ctx.fillRect(cx - half * 0.35, tip + H * 0.06, half * 0.7, H * 0.012);
+      ctx.fillStyle = "#2563eb";
+      ctx.fillRect(cx - half * 0.35, tip + H * 0.072, half * 0.7, H * 0.012);
       engineBell(ctx, cx, base - H * 0.08, half * 0.5, "#57534e");
     },
 
