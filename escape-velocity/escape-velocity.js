@@ -56,6 +56,12 @@
         const t = Date.parse(nowParam);
         if (!Number.isNaN(t)) clockFixedMs = t;
       }
+      // ?flight=1 → pin clock to NET + ascent duration so cruise pose is immediate
+      if (q.get("flight") === "1" || q.get("flight") === "true") {
+        forceLiftoffDemo = true;
+        // clock pinned after load once featured NET known (see loadData hook)
+        window.__evForceFlight = true;
+      }
     } catch (_) {}
   }
 
@@ -85,6 +91,25 @@
     const elapsed = now - net;
     if (elapsed >= LIFTOFF_ANIM_MS) return 1;
     return elapsed / LIFTOFF_ANIM_MS;
+  }
+
+  /** True once the ~16s ascent finishes and until featured hold ends. */
+  function flightCruiseFor(launch, now) {
+    if (!launch || !launch.net) return false;
+    const status = (launch.status || "").toLowerCase();
+    if (/hold|scrub|to be determined|^tbd$/.test(status)) return false;
+    if (forceLiftoffDemo) {
+      if (liftoffStartMs == null) return false;
+      return now - liftoffStartMs >= LIFTOFF_ANIM_MS;
+    }
+    const net = new Date(launch.net).getTime();
+    if (Number.isNaN(net) || now < net) return false;
+    const allow =
+      !status ||
+      /go|to be confirmed|^tbc$|in flight|success|liftoff/.test(status) ||
+      status.indexOf("go") === 0;
+    if (!allow) return false;
+    return now >= net + LIFTOFF_ANIM_MS && now < net + FEATURED_HOLD_MS;
   }
 
   function isStillFeaturedWindow(launch, now) {
@@ -349,95 +374,86 @@
   }
 
   /**
-   * opts: { anim, mini, name, liftoffProgress 0..1, liftoffActive, nowMs }
-   * liftoffProgress: 0 at pad, 1 fully off-screen
+   * opts: { anim, mini, name, liftoffProgress 0..1, flightCruise }
+   * liftoffProgress: 0 pad → 1 end of ascent/pitch (then cruise until T+15m)
+   * flightCruise: true when past the ~16s ascent (hold/loop in-flight pose)
    */
   function drawRocket(ctx, w, h, key, opts) {
     opts = opts || {};
     const anim = opts.anim || 0;
     const mini = !!opts.mini;
     const reduced = prefersReducedMotion();
-    const lift = Math.max(0, Math.min(1, opts.liftoffProgress || 0));
+    let lift = Math.max(0, Math.min(1, opts.liftoffProgress || 0));
+    const cruise = !!opts.flightCruise || lift >= 1;
     const name = opts.name || "";
+
+    // Reduced motion: skip animated ascent; jump to static angled in-flight pose
+    if (!mini && (cruise || lift > 0) && reduced) {
+      lift = 1;
+    }
 
     ctx.clearRect(0, 0, w, h);
 
-    // Sky
-    if (!mini) {
-      const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, "#03040a");
-      g.addColorStop(0.45, "#0a1024");
-      g.addColorStop(0.78, "#141c32");
-      g.addColorStop(1, "#1a2238");
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, w, h);
-
-      // Slow starfield — ~8x slower than before; twinkle only if motion OK
-      const drift = reduced ? 0 : anim * 0.35;
-      ctx.fillStyle = "rgba(255,255,255,0.7)";
-      for (let i = 0; i < 70; i++) {
-        const sx = ((i * 97 + drift * 0.15) % w + w) % w;
-        const sy = ((i * 53 + drift * 0.04) % (h * 0.78));
-        const tw = reduced
-          ? 0.75
-          : 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(anim * 0.008 + i * 1.7));
-        const r = (i % 5 === 0 ? 1.15 : 0.65) * tw;
-        ctx.globalAlpha = 0.35 + tw * 0.5;
-        ctx.beginPath();
-        ctx.arc(sx, sy, r, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    } else {
-      ctx.fillStyle = "rgba(5,6,15,0.15)";
-      ctx.fillRect(0, 0, w, h);
-    }
-
-    const cx = w * 0.5;
+    const cx0 = w * 0.5;
     const groundY = mini ? h * 0.92 : h * 0.88;
-    // Scale rocket so tallest (Starship ~121m) fits; others proportional
     const refH = 121;
     const realH = VEHICLE_HEIGHT_M_DRAW[key] || VEHICLE_HEIGHT_M_DRAW.generic;
     const maxRocketPx = mini ? h * 0.78 : h * 0.7;
     const rocketH = maxRocketPx * (realH / refH);
-    // Liftoff: translate upward with ease-in acceleration
-    const liftPx = lift > 0 ? Math.pow(lift, 1.65) * (h * 1.15) : 0;
-    const baseY = groundY - (mini ? 2 : 8) - liftPx;
 
-    if (!mini) {
-      // Pad glow
-      const padG = ctx.createRadialGradient(cx, groundY, 4, cx, groundY, w * 0.4);
-      padG.addColorStop(0, lift > 0 ? `rgba(251,146,60,${0.45 + lift * 0.35})` : "rgba(251,146,60,0.28)");
+    // Ascent timeline (within lift 0..1):
+    // 0–0.35 vertical rise, 0.35–0.70 gravity turn, 0.70–1.0 handoff to flight scene
+    const riseT = Math.min(1, lift / 0.35);
+    const turnT = lift < 0.35 ? 0 : Math.min(1, (lift - 0.35) / 0.35);
+    const sceneT = lift < 0.7 ? 0 : Math.min(1, (lift - 0.7) / 0.3);
+    const flightBlend = cruise ? 1 : sceneT; // 0 pad scene → 1 space/horizon scene
+    const pitchDeg = (cruise || reduced)
+      ? 22 + (reduced ? 0 : Math.sin(anim * 0.012) * 2.5)
+      : turnT * 24; // ~0→24° gravity turn
+    const pitch = (pitchDeg * Math.PI) / 180;
+
+    if (mini) {
+      ctx.fillStyle = "rgba(5,6,15,0.15)";
+      ctx.fillRect(0, 0, w, h);
+      const drawer = DRAWERS[key] || DRAWERS.generic;
+      drawer(ctx, cx0, groundY - 2, rocketH, anim, true, name, 0);
+      return;
+    }
+
+    // —— Background: pad sky → dark space + curved Earth ——
+    drawFlightSky(ctx, w, h, flightBlend, anim, reduced);
+
+    // Pad / tower fade out as we leave Earth
+    const padAlpha = 1 - flightBlend;
+    if (padAlpha > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = padAlpha;
+      const padG = ctx.createRadialGradient(cx0, groundY, 4, cx0, groundY, w * 0.4);
+      padG.addColorStop(0, lift > 0 ? `rgba(251,146,60,${0.45 + Math.min(lift, 1) * 0.35})` : "rgba(251,146,60,0.28)");
       padG.addColorStop(0.45, "rgba(99,102,241,0.1)");
       padG.addColorStop(1, "transparent");
       ctx.fillStyle = padG;
       ctx.fillRect(0, groundY - 50, w, 90);
-
-      // Pad deck
       ctx.fillStyle = "rgba(70,80,110,0.65)";
-      ctx.fillRect(cx - w * 0.2, groundY - 3, w * 0.4, 7);
+      ctx.fillRect(cx0 - w * 0.2, groundY - 3, w * 0.4, 7);
       ctx.fillStyle = "rgba(35,42,65,0.8)";
-      ctx.fillRect(cx - w * 0.16, groundY + 4, w * 0.32, 5);
-
-      // Tower (simple)
+      ctx.fillRect(cx0 - w * 0.16, groundY + 4, w * 0.32, 5);
       ctx.strokeStyle = "rgba(148,163,184,0.45)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(cx + w * 0.14, groundY);
-      ctx.lineTo(cx + w * 0.14, groundY - rocketH * 0.85);
+      ctx.moveTo(cx0 + w * 0.14, groundY);
+      ctx.lineTo(cx0 + w * 0.14, groundY - rocketH * 0.85);
       ctx.stroke();
       for (let i = 0; i < 5; i++) {
         const ty = groundY - (rocketH * 0.85 * i) / 5;
         ctx.beginPath();
-        ctx.moveTo(cx + w * 0.14, ty);
-        ctx.lineTo(cx + w * 0.1, ty + 8);
+        ctx.moveTo(cx0 + w * 0.14, ty);
+        ctx.lineTo(cx0 + w * 0.1, ty + 8);
         ctx.stroke();
       }
-
-      // Ambient vapor
       if (lift < 0.85) {
         for (let i = 0; i < 6; i++) {
-          const vx = cx + Math.sin((reduced ? 0 : anim) * 0.012 + i * 1.1) * (20 + i * 10);
+          const vx = cx0 + Math.sin((reduced ? 0 : anim) * 0.012 + i * 1.1) * (20 + i * 10);
           const vy = groundY - 8 - i * 5 - lift * 30;
           const vr = 12 + i * 5;
           ctx.fillStyle = `rgba(200,220,255,${0.05 + i * 0.015})`;
@@ -446,40 +462,58 @@
           ctx.fill();
         }
       }
+      ctx.restore();
     }
 
-    // Exhaust / plume during liftoff
-    if (!mini && lift > 0 && lift < 1) {
-      drawExhaust(ctx, cx, Math.min(baseY + rocketH * 0.02, groundY - 2), rocketH, lift, anim);
-      // Billowing smoke at pad
-      for (let i = 0; i < 8; i++) {
-        const ang = (i / 8) * Math.PI - Math.PI / 2;
-        const dist = 18 + lift * 70 + i * 6;
-        const sx = cx + Math.cos(ang) * dist * (0.4 + lift);
-        const sy = groundY - 5 + Math.sin(anim * 0.02 + i) * 4;
-        ctx.fillStyle = `rgba(180,190,210,${0.12 * (1 - lift)})`;
-        ctx.beginPath();
-        ctx.ellipse(sx, sy, 22 + i * 3, 10 + i, 0, 0, Math.PI * 2);
-        ctx.fill();
+    // Camera: follow rocket so it stays in frame during ascent → cruise
+    // Early: rise off pad; late: settle into upper-right flight lane
+    const risePx = Math.pow(Math.min(1, riseT), 1.45) * (h * 0.55);
+    const cruiseX = w * 0.58;
+    const cruiseY = h * 0.42;
+    const padBaseY = groundY - 8 - risePx;
+    const padCx = cx0 + turnT * w * 0.06;
+    const bob = reduced || !cruise ? 0 : Math.sin(anim * 0.018) * 4;
+    const cx = padCx + (cruiseX - padCx) * flightBlend;
+    const baseY = padBaseY + (cruiseY - padBaseY) * flightBlend + bob;
+    // Slightly smaller in cruise so plume + trail fit
+    const drawH = rocketH * (1 - flightBlend * 0.18);
+
+    // Exhaust under / behind rocket (rotated with pitch)
+    if (lift > 0.02) {
+      ctx.save();
+      ctx.translate(cx, baseY);
+      ctx.rotate(pitch);
+      // Plume trails "aft" (positive Y in rocket-local = down the stack)
+      const plumeLift = cruise ? 0.85 : Math.min(1, 0.2 + lift * 0.9);
+      drawExhaust(ctx, 0, drawH * 0.02, drawH, plumeLift, anim, cruise);
+      // Smoke at pad only early
+      ctx.restore();
+      if (padAlpha > 0.15 && lift < 0.7) {
+        for (let i = 0; i < 8; i++) {
+          const ang = (i / 8) * Math.PI - Math.PI / 2;
+          const dist = 18 + lift * 70 + i * 6;
+          const sx = cx0 + Math.cos(ang) * dist * (0.4 + lift);
+          const sy = groundY - 5 + Math.sin(anim * 0.02 + i) * 4;
+          ctx.fillStyle = `rgba(180,190,210,${0.12 * padAlpha * (1 - lift)})`;
+          ctx.beginPath();
+          ctx.ellipse(sx, sy, 22 + i * 3, 10 + i, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
     }
 
+    // Rocket body (pitched)
     const drawer = DRAWERS[key] || DRAWERS.generic;
-    if (lift < 0.98 || mini) {
-      drawer(ctx, cx, baseY, rocketH, anim, mini, name, lift);
-    }
+    ctx.save();
+    ctx.translate(cx, baseY);
+    ctx.rotate(pitch);
+    drawer(ctx, 0, 0, drawH, anim, false, name, lift);
+    ctx.restore();
 
-    if (!mini && lift < 0.5) {
+    if (lift < 0.5 && flightBlend < 0.3) {
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const glow = ctx.createRadialGradient(
-        cx,
-        baseY - rocketH * 0.45,
-        4,
-        cx,
-        baseY - rocketH * 0.45,
-        rocketH * 0.35
-      );
+      const glow = ctx.createRadialGradient(cx, baseY - drawH * 0.45, 4, cx, baseY - drawH * 0.45, drawH * 0.35);
       glow.addColorStop(0, "rgba(125,211,252,0.1)");
       glow.addColorStop(1, "transparent");
       ctx.fillStyle = glow;
@@ -487,17 +521,93 @@
       ctx.restore();
     }
 
-    // Liftoff caption
-    if (!mini && lift > 0.05 && lift < 0.95) {
+    // Captions
+    if (lift > 0.05 && !cruise) {
       ctx.fillStyle = "rgba(253,186,116,0.95)";
       ctx.font = '600 13px "Orbitron", sans-serif';
       ctx.textAlign = "center";
-      ctx.fillText("LIFTOFF", cx, 28);
+      ctx.fillText("LIFTOFF", w * 0.5, 28);
+    } else if (cruise) {
+      ctx.fillStyle = "rgba(125,211,252,0.9)";
+      ctx.font = '600 12px "Orbitron", sans-serif';
+      ctx.textAlign = "center";
+      ctx.fillText("IN FLIGHT", w * 0.5, 28);
     }
   }
 
-  function drawExhaust(ctx, cx, y, H, lift, anim) {
-    const len = H * (0.15 + lift * 0.9);
+  function drawFlightSky(ctx, w, h, blend, anim, reduced) {
+    // blend 0 = launch sky, 1 = space with Earth limb
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    if (blend < 0.01) {
+      g.addColorStop(0, "#03040a");
+      g.addColorStop(0.45, "#0a1024");
+      g.addColorStop(0.78, "#141c32");
+      g.addColorStop(1, "#1a2238");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    } else {
+      // Darken toward space
+      g.addColorStop(0, "#010208");
+      g.addColorStop(0.35, "#050814");
+      g.addColorStop(0.62, `rgb(${Math.round(10 + (1 - blend) * 20)},${Math.round(16 + (1 - blend) * 30)},${Math.round(36 + (1 - blend) * 20)})`);
+      g.addColorStop(0.82, `rgb(${Math.round(30 + (1 - blend) * 40)},${Math.round(50 + (1 - blend) * 40)},${Math.round(90 + (1 - blend) * 30)})`);
+      g.addColorStop(1, `rgb(${Math.round(40 + blend * 20)},${Math.round(70 + blend * 40)},${Math.round(120 + blend * 40)})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+
+      // Atmosphere band
+      const atmo = ctx.createLinearGradient(0, h * 0.62, 0, h * 0.88);
+      atmo.addColorStop(0, "transparent");
+      atmo.addColorStop(0.35, `rgba(56,189,248,${0.08 * blend})`);
+      atmo.addColorStop(0.7, `rgba(125,211,252,${0.18 * blend})`);
+      atmo.addColorStop(1, `rgba(251,146,60,${0.12 * blend})`);
+      ctx.fillStyle = atmo;
+      ctx.fillRect(0, h * 0.55, w, h * 0.45);
+
+      // Curved Earth horizon
+      ctx.save();
+      ctx.beginPath();
+      const earthY = h * (0.78 - blend * 0.02);
+      const earthR = w * 1.6;
+      ctx.arc(w * 0.45, earthY + earthR * 0.72, earthR, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      const eg = ctx.createLinearGradient(0, earthY, 0, h);
+      eg.addColorStop(0, `rgba(30,58,95,${0.55 * blend})`);
+      eg.addColorStop(0.4, `rgba(22,78,55,${0.5 * blend})`);
+      eg.addColorStop(1, `rgba(15,40,55,${0.7 * blend})`);
+      ctx.fillStyle = eg;
+      ctx.fill();
+      // Limb glow
+      ctx.strokeStyle = `rgba(186,230,253,${0.35 * blend})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(w * 0.45, earthY + earthR * 0.72, earthR, Math.PI * 1.12, Math.PI * 1.88);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Slow starfield
+    const drift = reduced ? 0 : anim * 0.35;
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    for (let i = 0; i < 70; i++) {
+      const sx = ((i * 97 + drift * 0.15) % w + w) % w;
+      const sy = ((i * 53 + drift * 0.04) % (h * (0.78 - blend * 0.15)));
+      const tw = reduced
+        ? 0.75
+        : 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(anim * 0.008 + i * 1.7));
+      const r = (i % 5 === 0 ? 1.15 : 0.65) * tw;
+      ctx.globalAlpha = (0.35 + tw * 0.5) * (0.55 + blend * 0.45);
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawExhaust(ctx, cx, y, H, lift, anim, cruise) {
+    const len = H * (cruise ? 0.55 + 0.08 * Math.sin((anim || 0) * 0.05) : 0.15 + lift * 0.9);
     const plume = ctx.createLinearGradient(cx, y, cx, y + len);
     plume.addColorStop(0, "rgba(255,255,255,0.95)");
     plume.addColorStop(0.15, "rgba(253,224,71,0.9)");
@@ -521,6 +631,20 @@
     ctx.lineTo(cx + 3, y);
     ctx.closePath();
     ctx.fill();
+    // Thin trail behind in cruise
+    if (cruise) {
+      const trail = ctx.createLinearGradient(cx, y + len * 0.5, cx, y + len * 2.2);
+      trail.addColorStop(0, "rgba(251,146,60,0.25)");
+      trail.addColorStop(1, "transparent");
+      ctx.fillStyle = trail;
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, y + len * 0.4);
+      ctx.lineTo(cx - 10, y + len * 2.1);
+      ctx.lineTo(cx + 10, y + len * 2.1);
+      ctx.lineTo(cx + 4, y + len * 0.4);
+      ctx.closePath();
+      ctx.fill();
+    }
   }
 
   function bodyGrad(ctx, x0, y0, x1, y1, c1, c2) {
@@ -1147,11 +1271,12 @@
         return ta - tb;
       });
 
-    // ?liftoff=1 without ?now= → pin clock to featured NET so the anim is visible
+    // ?liftoff=1 / ?flight=1 without ?now= → pin clock to featured NET (or past ascent)
     if (forceLiftoffDemo && clockFixedMs == null && launches[0] && launches[0].net) {
       const net = new Date(launches[0].net).getTime();
       if (!Number.isNaN(net)) {
-        clockFixedMs = net;
+        const jump = window.__evForceFlight ? LIFTOFF_ANIM_MS + 2000 : 0;
+        clockFixedMs = net + jump;
         liftoffStartMs = net;
       }
     }
@@ -1337,12 +1462,15 @@
       net: els.canvas.dataset.net,
       status: els.canvas.dataset.status,
     };
-    const lift = liftoffProgressFor(fakeLaunch, nowMs());
+    const now = nowMs();
+    const lift = liftoffProgressFor(fakeLaunch, now);
+    const cruise = flightCruiseFor(fakeLaunch, now);
     drawRocket(ctx, els.canvas.width, els.canvas.height, key, {
       anim: featuredAnimT,
       mini: false,
       name,
-      liftoffProgress: lift,
+      liftoffProgress: cruise ? 1 : lift,
+      flightCruise: cruise,
     });
   }
 
@@ -1499,13 +1627,15 @@
   function startAnim() {
     const step = () => {
       featuredAnimT += 1;
-      // Paint every frame during liftoff; otherwise every 3rd frame (stars are slow)
       const fakeLaunch = {
         net: els.canvas && els.canvas.dataset.net,
         status: els.canvas && els.canvas.dataset.status,
       };
-      const lift = liftoffProgressFor(fakeLaunch, nowMs());
-      if (lift > 0 && lift < 1) paintFeatured();
+      const now = nowMs();
+      const lift = liftoffProgressFor(fakeLaunch, now);
+      const cruise = flightCruiseFor(fakeLaunch, now);
+      // Every frame during ascent; every frame (gentle bob) while cruising; else every 3rd
+      if ((lift > 0 && lift < 1) || cruise) paintFeatured();
       else if (featuredAnimT % 3 === 0) paintFeatured();
       animRaf = requestAnimationFrame(step);
     };
