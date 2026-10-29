@@ -112,7 +112,7 @@
         pad: raw.pad || "",
         location: raw.location || "",
         webcast: raw.webcast || "",
-        vandenberg: !!raw.vandenberg || isVandenbergLoc(raw.location, raw.pad),
+        vandenberg: raw.vandenberg === true || isVandenbergLoc(raw.location, raw.pad),
       };
     }
     const st = raw.status || {};
@@ -140,14 +140,15 @@
       pad: pad.name || "",
       location: pad.location || "",
       webcast,
-      vandenberg: !!raw.vandenberg || isVandenbergLoc(pad.location, pad.name),
+      vandenberg: raw.vandenberg === true || isVandenbergLoc(pad.location, pad.name),
     };
   }
 
   function isVandenbergLoc(location, pad) {
-    const loc = (location || "").toLowerCase();
-    const p = (pad || "").toLowerCase();
-    return /vandenberg|vafb|vandenberg space force/.test(loc + " " + p);
+    const loc = String(location || "").toLowerCase();
+    const p = String(pad || "").toLowerCase();
+    // Only pad/location fields — never mission name, webcast title, or description
+    return /\bvandenberg\b|\bvafb\b|vandenberg space force/.test(loc + " " + p);
   }
 
   function isVandenberg(launch) {
@@ -729,6 +730,8 @@
         const loc = pad.location || {};
         const mission = (L.mission && L.mission) || (L.missions && L.missions[0]) || {};
         const status = L.status || {};
+        const padName = pad.name || "";
+        const locName = loc.name || "";
         return {
           id: L.id,
           name: L.name,
@@ -744,11 +747,14 @@
           mission_name: mission.name || "",
           mission_description: mission.description || "",
           orbit: (mission.orbit && mission.orbit.name) || "",
-          pad: pad.name || "",
-          location: loc.name || "",
+          pad: padName,
+          location: locName,
           country: loc.country_code || "",
-          webcast: (L.vidURLs && L.vidURLs[0] && L.vidURLs[0].url) || L.webcast_live || "",
+          webcast: ((L.vidURLs && L.vidURLs[0] && L.vidURLs[0].url) ||
+            (L.vid_urls && L.vid_urls[0] && L.vid_urls[0].url) ||
+            "") || "",
           image: L.image || "",
+          vandenberg: isVandenbergLoc(locName, padName),
         };
       }),
     };
@@ -807,7 +813,10 @@
     els.when.textContent = formatLocal(L.net);
     els.statusPill.textContent = L.status_abbrev || L.status || "—";
     els.statusPill.className = "status-pill " + statusClass(L.status);
-    els.vandy.hidden = !isVandenberg(L);
+    const showVandy = isVandenberg(L);
+    els.vandy.hidden = !showVandy;
+    els.vandy.toggleAttribute('hidden', !showVandy);
+    els.vandy.setAttribute('aria-hidden', showVandy ? 'false' : 'true');
     els.missionDesc.textContent =
       L.mission_description ||
       (L.mission_name ? `Mission: ${L.mission_name}` : "Mission details to be published.");

@@ -1,3 +1,8 @@
+/* Respect HTML hidden even when author display rules exist */
+[hidden] {
+  display: none !important;
+}
+
 /* Escape Velocity — Objects In Space */
 
 body.ev-page {
