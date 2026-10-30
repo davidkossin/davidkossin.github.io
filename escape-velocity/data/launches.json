@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-30T16:44:25Z",
+  "updated": "2026-10-30T22:29:58Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -11,9 +11,9 @@
       "window_start": "2026-10-30T17:00:00Z",
       "window_end": "2026-10-30T21:00:00Z",
       "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
+        "id": 9,
+        "name": "Payload Deployed",
+        "abbrev": "Deployed"
       },
       "net_precision": {
         "abbrev": "MIN",
@@ -50,8 +50,8 @@
       ],
       "webcast_live": false,
       "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192851.jpeg",
-        "credit": null
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/gslv-f182fnvs-_image_thumbnail_20261030172351.jpeg",
+        "credit": "ISRO"
       },
       "probability": null
     },
