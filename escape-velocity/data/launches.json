@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-30T02:01:34Z",
+  "updated": "2026-10-30T08:46:26Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -116,9 +116,9 @@
       "id": "426bd2a5-02dd-4fbd-9f4d-2b8439c3a1ff",
       "name": "Electron | The Sea God Surveys (iQPS Launch 9)",
       "slug": "electron-the-sea-god-surveys-iqps-launch-9",
-      "net": "2026-11-02T08:45:00Z",
-      "window_start": "2026-11-02T08:45:00Z",
-      "window_end": "2026-11-02T18:15:00Z",
+      "net": "2026-11-02T16:00:00Z",
+      "window_start": "2026-11-02T16:00:00Z",
+      "window_end": "2026-11-02T18:20:00Z",
       "status": {
         "id": 8,
         "name": "To Be Confirmed",
