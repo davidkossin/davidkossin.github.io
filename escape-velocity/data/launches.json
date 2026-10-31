@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-30T22:29:58Z",
+  "updated": "2026-10-31T05:57:29Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -11,9 +11,9 @@
       "window_start": "2026-10-30T17:00:00Z",
       "window_end": "2026-10-30T21:00:00Z",
       "status": {
-        "id": 9,
-        "name": "Payload Deployed",
-        "abbrev": "Deployed"
+        "id": 3,
+        "name": "Launch Successful",
+        "abbrev": "Success"
       },
       "net_precision": {
         "abbrev": "MIN",
@@ -59,13 +59,13 @@
       "id": "57ce0a39-d035-4f16-a418-bd6108f78199",
       "name": "Falcon 9 Block 5 | Starlink Group 15-18",
       "slug": "falcon-9-block-5-starlink-group-15-18",
-      "net": "2026-10-31T04:02:22Z",
+      "net": "2026-10-31T04:04:34Z",
       "window_start": "2026-10-31T03:48:00Z",
       "window_end": "2026-10-31T07:48:00Z",
       "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
+        "id": 3,
+        "name": "Launch Successful",
+        "abbrev": "Success"
       },
       "net_precision": {
         "abbrev": "SEC",
@@ -95,9 +95,14 @@
       "vandenberg": true,
       "webcasts": [
         {
-          "url": "https://www.youtube.com/watch?v=OVOVtaf15eY",
-          "title": "GO! - SpaceX - Falcon 9 - Starlink 15-18 - SLC-4E - Vandenberg SFB, CA - Space Affairs Live",
+          "url": "https://www.youtube.com/watch?v=Lie7RZffEh8",
+          "title": "SpaceX Starlink Group 15-18",
           "type": "Unofficial Re-stream"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=BEnnrpwGnMQ",
+          "title": "SpaceX Falcon 9 rocket launches batch of Starlink satellites from California",
+          "type": "Unofficial Webcast"
         },
         {
           "url": "https://x.com/i/broadcasts/1DGleVlqoaqJL",
