@@ -1,70 +1,8 @@
 {
-  "updated": "2026-10-31T18:38:58Z",
+  "updated": "2026-11-01T06:26:03Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
-    {
-      "id": "57ce0a39-d035-4f16-a418-bd6108f78199",
-      "name": "Falcon 9 Block 5 | Starlink Group 15-18",
-      "slug": "falcon-9-block-5-starlink-group-15-18",
-      "net": "2026-10-31T04:04:34Z",
-      "window_start": "2026-10-31T03:48:00Z",
-      "window_end": "2026-10-31T07:48:00Z",
-      "status": {
-        "id": 3,
-        "name": "Launch Successful",
-        "abbrev": "Success"
-      },
-      "net_precision": {
-        "abbrev": "SEC",
-        "name": "Second"
-      },
-      "provider": "SpaceX",
-      "provider_abbrev": "SpX",
-      "vehicle": {
-        "name": "Falcon 9 Block 5",
-        "family": "falcon9",
-        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
-        "length_m": 70.0,
-        "diameter_m": 3.65
-      },
-      "mission": {
-        "name": "Starlink Group 15-18",
-        "type": "Communications",
-        "description": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "Space Launch Complex 4E",
-        "location": "Vandenberg SFB, CA, USA",
-        "country_code": "US"
-      },
-      "vandenberg": true,
-      "webcasts": [
-        {
-          "url": "https://www.youtube.com/watch?v=Lie7RZffEh8",
-          "title": "SpaceX Starlink Group 15-18",
-          "type": "Unofficial Re-stream"
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=BEnnrpwGnMQ",
-          "title": "SpaceX Falcon 9 rocket launches batch of Starlink satellites from California",
-          "type": "Unofficial Webcast"
-        },
-        {
-          "url": "https://x.com/i/broadcasts/1DGleVlqoaqJL",
-          "title": "Starlink Mission",
-          "type": "Official Webcast"
-        }
-      ],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192320.png",
-        "credit": "SpaceX"
-      },
-      "probability": null
-    },
     {
       "id": "426bd2a5-02dd-4fbd-9f4d-2b8439c3a1ff",
       "name": "Electron | The Sea God Surveys (iQPS Launch 9)",
@@ -1284,52 +1222,6 @@
       "probability": null
     },
     {
-      "id": "d3bd7fb2-fac6-49fc-ae52-cee07d2fde67",
-      "name": "Falcon Heavy | Griffin Mission One",
-      "slug": "falcon-heavy-griffin-mission-one",
-      "net": "2026-12-31T00:00:00Z",
-      "window_start": "2026-12-31T00:00:00Z",
-      "window_end": "2026-12-31T00:00:00Z",
-      "status": {
-        "id": 2,
-        "name": "To Be Determined",
-        "abbrev": "TBD"
-      },
-      "net_precision": {
-        "abbrev": "M",
-        "name": "Month"
-      },
-      "provider": "SpaceX",
-      "provider_abbrev": "SpX",
-      "vehicle": {
-        "name": "Falcon Heavy",
-        "family": "falcon-heavy",
-        "description": "The Falcon Heavy is a variant of the Falcon 9 full thrust launch vehicle and consists of a standard Falcon 9 rocket core, with two additional boosters derived from the Falcon 9 first stage.",
-        "length_m": 70.0,
-        "diameter_m": 12.2
-      },
-      "mission": {
-        "name": "Griffin Mission One",
-        "type": "Lunar Exploration",
-        "description": "Demonstration flight of the Astrobotic Griffin lander and its engines, initially contracted for the NASA VIPER (Volatiles Investigating Polar Exploration Rover) mission. The vacated payload spot will now host the FLIP (FLEX Lunar Innovation Platform) lunar rover from Astrolab.",
-        "orbit": "Lunar Orbit",
-        "orbit_abbrev": "LO"
-      },
-      "pad": {
-        "name": "Launch Complex 39A",
-        "location": "Kennedy Space Center, FL, USA",
-        "country_code": "US"
-      },
-      "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193632.jpeg",
-        "credit": null
-      },
-      "probability": null
-    },
-    {
       "id": "0cf92611-82a8-4095-a0b4-dda2e74b1fff",
       "name": "LVM-3 | GSAT-32 (GSAT-N3)",
       "slug": "lvm-3-gsat-32-gsat-n3",
@@ -1418,6 +1310,98 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/new_glenn_on_lc_image_thumbnail_20240313170027.jpeg",
         "credit": "Blue Origin"
+      },
+      "probability": null
+    },
+    {
+      "id": "11b218b1-5e40-4b9d-854e-50320299239d",
+      "name": "Falcon 9 Block 5 | BlueBird 14-16 (Block 2 #9-11)",
+      "slug": "falcon-9-block-5-bluebird-14-16-block-2-9-11",
+      "net": "2026-12-31T00:00:00Z",
+      "window_start": "2026-12-31T00:00:00Z",
+      "window_end": "2026-12-31T00:00:00Z",
+      "status": {
+        "id": 2,
+        "name": "To Be Determined",
+        "abbrev": "TBD"
+      },
+      "net_precision": {
+        "abbrev": "Q4",
+        "name": "Quarter 4"
+      },
+      "provider": "SpaceX",
+      "provider_abbrev": "SpX",
+      "vehicle": {
+        "name": "Falcon 9 Block 5",
+        "family": "falcon9",
+        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
+        "length_m": 70.0,
+        "diameter_m": 3.65
+      },
+      "mission": {
+        "name": "BlueBird 14-16 (Block 2 #9-11)",
+        "type": "Communications",
+        "description": "AST SpaceMobile’s Block 2 BlueBird satellites are designed to deliver up to 10 times the bandwidth capacity of the BlueBird Block 1 satellites, required to achieve 24/7 continuous cellular broadband service coverage in the United States, with beams designed to support a capacity of up to 40 MHz, enabling peak data transmission speeds up to 120 Mbps, supporting voice, full data and video applications. The Block 2 BlueBirds, featuring as large as 2400 square foot communications arrays, will be the largest satellites ever commercially deployed in Low Earth orbit once launched.\r\n\r\nThis launch will feature 3 satellites.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "Space Launch Complex 40",
+        "location": "Cape Canaveral SFS, FL, USA",
+        "country_code": "US"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/f9_on_slc-40_2_image_thumbnail_20240919072420.jpeg",
+        "credit": "SpaceX"
+      },
+      "probability": null
+    },
+    {
+      "id": "8bf5f61e-a7e1-41e6-aede-7b87e4beebab",
+      "name": "Falcon 9 Block 5 | CHORUS",
+      "slug": "falcon-9-block-5-chorus",
+      "net": "2026-12-31T00:00:00Z",
+      "window_start": "2026-12-31T00:00:00Z",
+      "window_end": "2026-12-31T00:00:00Z",
+      "status": {
+        "id": 2,
+        "name": "To Be Determined",
+        "abbrev": "TBD"
+      },
+      "net_precision": {
+        "abbrev": "Q4",
+        "name": "Quarter 4"
+      },
+      "provider": "SpaceX",
+      "provider_abbrev": "SpX",
+      "vehicle": {
+        "name": "Falcon 9 Block 5",
+        "family": "falcon9",
+        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
+        "length_m": 70.0,
+        "diameter_m": 3.65
+      },
+      "mission": {
+        "name": "CHORUS",
+        "type": "Earth Science",
+        "description": "CHORUS is MDA's next generation Earth observation constellation, consisting of 2 radar satellites (C-band SAR and X-band SAR), in a 53.5 degree 600 km altitude LEO, with the X-band trailing the C-band by 60 minutes. A collaborative multi-sensor constellation, CHORUS will bring together diverse and unique imagery and data sources and provide a new level of near real-time insight and innovative Earth observation services. Operating in a unique mid-inclination orbit, CHORUS will be able to image day or night, regardless of weather conditions, with daily access of up to 95% of the coverage area. From an industry-leading 700km-wide imaging swath down to sub-metre high resolution, CHORUS will provide the most extensive and unrivalled Earth observation radar imaging capacity available on the market in a single mission.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "Unknown Pad",
+        "location": "Cape Canaveral SFS, FL, USA",
+        "country_code": "US"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
+        "credit": "SpaceX"
       },
       "probability": null
     }
