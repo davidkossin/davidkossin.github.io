@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-01T06:26:03Z",
+  "updated": "2026-11-01T20:37:02Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -99,9 +99,9 @@
       "id": "54d471e8-695c-4fa7-a3cf-dbd8b389e8ae",
       "name": "Falcon 9 Block 5 | USSF-432",
       "slug": "falcon-9-block-5-ussf-432",
-      "net": "2026-11-03T01:42:00Z",
-      "window_start": "2026-11-03T01:42:00Z",
-      "window_end": "2026-11-03T05:42:00Z",
+      "net": "2026-11-04T01:28:00Z",
+      "window_start": "2026-11-04T01:28:00Z",
+      "window_end": "2026-11-04T05:28:00Z",
       "status": {
         "id": 1,
         "name": "Go for Launch",
