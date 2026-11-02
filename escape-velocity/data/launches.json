@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-02T09:39:17Z",
+  "updated": "2026-11-02T20:24:58Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -8,12 +8,12 @@
       "name": "Electron | The Sea God Surveys (iQPS Launch 9)",
       "slug": "electron-the-sea-god-surveys-iqps-launch-9",
       "net": "2026-11-02T16:41:00Z",
-      "window_start": "2026-11-02T16:00:00Z",
+      "window_start": "2026-11-02T16:30:00Z",
       "window_end": "2026-11-02T18:20:00Z",
       "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
+        "id": 9,
+        "name": "Payload Deployed",
+        "abbrev": "Deployed"
       },
       "net_precision": {
         "abbrev": "MIN",
@@ -36,18 +36,24 @@
         "orbit_abbrev": "LEO"
       },
       "pad": {
-        "name": "Unknown Pad",
+        "name": "Rocket Lab Launch Complex 1A",
         "location": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand",
         "country_code": "NZ"
       },
       "vandenberg": false,
-      "webcasts": [],
+      "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=irbPTnpIl9g",
+          "title": "Rocket Lab - 'The Sea God Surveys' Launch",
+          "type": "Official Webcast"
+        }
+      ],
       "webcast_live": false,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193613.jpeg",
         "credit": null
       },
-      "probability": null
+      "probability": 90
     },
     {
       "id": "f3f201cd-0ff9-4ff7-9aaa-1d22c399c75a",
@@ -96,12 +102,58 @@
       "probability": null
     },
     {
+      "id": "9e27a1ed-e81a-4918-b32b-0380cf3a9f8f",
+      "name": "Mir | Demo Flight",
+      "slug": "mir-demo-flight",
+      "net": "2026-11-04T05:00:00Z",
+      "window_start": "2026-11-04T05:00:00Z",
+      "window_end": "2026-11-04T09:00:00Z",
+      "status": {
+        "id": 8,
+        "name": "To Be Confirmed",
+        "abbrev": "TBC"
+      },
+      "net_precision": {
+        "abbrev": "HR",
+        "name": "Hour"
+      },
+      "provider": "Agency for Defense Development",
+      "provider_abbrev": "ADD",
+      "vehicle": {
+        "name": "Mir",
+        "family": "generic",
+        "description": "Mir (Korean for a kind of dragon, and previously only known as \"Solid-fuel space launch vehicle\") is a South Korean military developed small satellite launch vehicle for \"quick response\" usage. First orbital test launch in December 2023 omits the 2nd stage but still carries satellite into orbit.",
+        "length_m": null,
+        "diameter_m": null
+      },
+      "mission": {
+        "name": "Demo Flight",
+        "type": "Test Flight",
+        "description": "Note: Launch vehicle name is provisional.\r\n\r\nFirst orbital full version launch of the South Korean military small satellite launch vehicle, after 2 sub-orbital tests of individual stages on 30 March and 30 December 2022, and 1 orbital test flight without the 2nd stage on 4 December 2023. Details TBD.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "ADD Offshore launch platform",
+        "location": "Sea Launch",
+        "country_code": "??"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192440.png",
+        "credit": "Yonhap"
+      },
+      "probability": null
+    },
+    {
       "id": "54d471e8-695c-4fa7-a3cf-dbd8b389e8ae",
       "name": "Falcon 9 Block 5 | USSF-432",
       "slug": "falcon-9-block-5-ussf-432",
-      "net": "2026-11-04T01:28:00Z",
-      "window_start": "2026-11-04T01:28:00Z",
-      "window_end": "2026-11-04T05:28:00Z",
+      "net": "2026-11-05T01:14:00Z",
+      "window_start": "2026-11-05T01:14:00Z",
+      "window_end": "2026-11-05T05:14:00Z",
       "status": {
         "id": 1,
         "name": "Go for Launch",
@@ -149,52 +201,6 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_thumbnail_20260816171423.jpeg",
         "credit": "SpaceX"
-      },
-      "probability": null
-    },
-    {
-      "id": "9e27a1ed-e81a-4918-b32b-0380cf3a9f8f",
-      "name": "Mir | Demo Flight",
-      "slug": "mir-demo-flight",
-      "net": "2026-11-04T05:00:00Z",
-      "window_start": "2026-11-04T05:00:00Z",
-      "window_end": "2026-11-04T09:00:00Z",
-      "status": {
-        "id": 8,
-        "name": "To Be Confirmed",
-        "abbrev": "TBC"
-      },
-      "net_precision": {
-        "abbrev": "HR",
-        "name": "Hour"
-      },
-      "provider": "Agency for Defense Development",
-      "provider_abbrev": "ADD",
-      "vehicle": {
-        "name": "Mir",
-        "family": "generic",
-        "description": "Mir (Korean for a kind of dragon, and previously only known as \"Solid-fuel space launch vehicle\") is a South Korean military developed small satellite launch vehicle for \"quick response\" usage. First orbital test launch in December 2023 omits the 2nd stage but still carries satellite into orbit.",
-        "length_m": null,
-        "diameter_m": null
-      },
-      "mission": {
-        "name": "Demo Flight",
-        "type": "Test Flight",
-        "description": "Note: Launch vehicle name is provisional.\r\n\r\nFirst orbital full version launch of the South Korean military small satellite launch vehicle, after 2 sub-orbital tests of individual stages on 30 March and 30 December 2022, and 1 orbital test flight without the 2nd stage on 4 December 2023. Details TBD.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "ADD Offshore launch platform",
-        "location": "Sea Launch",
-        "country_code": "??"
-      },
-      "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192440.png",
-        "credit": "Yonhap"
       },
       "probability": null
     },
@@ -337,58 +343,12 @@
       "probability": null
     },
     {
-      "id": "db3500ac-965b-4ad8-b417-cb8d8d005586",
-      "name": "Electron | The Mountain God Rises (iQPS Launch 10)",
-      "slug": "electron-the-mountain-god-rises-iqps-launch-10",
-      "net": "2026-11-10T00:00:00Z",
-      "window_start": "2026-11-10T00:00:00Z",
-      "window_end": "2026-11-10T00:00:00Z",
-      "status": {
-        "id": 2,
-        "name": "To Be Determined",
-        "abbrev": "TBD"
-      },
-      "net_precision": {
-        "abbrev": "DAY",
-        "name": "Day"
-      },
-      "provider": "Rocket Lab",
-      "provider_abbrev": "RL",
-      "vehicle": {
-        "name": "Electron",
-        "family": "electron",
-        "description": "Electron is a two-stage orbital expendable launch vehicle (with an optional third stage) developed by the American aerospace company Rocket Lab. Electron is a small-lift launch vehicle designed to launch small satellites and cubesats to sun-synchronous orbit and low earth orbit. The Electron is the first orbital class rocket to use electric-pump-fed engines, powered by the 9 Rutherford engines on the first stage. It is also used as a suborbital testbed (called HASTE) for hypersonics research.",
-        "length_m": 18.0,
-        "diameter_m": 1.2
-      },
-      "mission": {
-        "name": "The Mountain God Rises (iQPS Launch 10)",
-        "type": "Earth Science",
-        "description": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "Unknown Pad",
-        "location": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand",
-        "country_code": "NZ"
-      },
-      "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193613.jpeg",
-        "credit": null
-      },
-      "probability": null
-    },
-    {
       "id": "6aa7b90b-e5ed-45d8-a52e-04fbf399d178",
       "name": "Falcon 9 Block 5 | USSF-xxx (\"R-5\")",
       "slug": "falcon-9-block-5-ussf-xxx-r-5",
-      "net": "2026-11-10T03:03:00Z",
-      "window_start": "2026-11-10T03:03:00Z",
-      "window_end": "2026-11-10T07:03:00Z",
+      "net": "2026-11-09T03:17:00Z",
+      "window_start": "2026-11-09T03:17:00Z",
+      "window_end": "2026-11-09T07:17:00Z",
       "status": {
         "id": 8,
         "name": "To Be Confirmed",
@@ -471,6 +431,52 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193955.jpeg",
         "credit": "United Launch Alliance"
+      },
+      "probability": null
+    },
+    {
+      "id": "db3500ac-965b-4ad8-b417-cb8d8d005586",
+      "name": "Electron | The Mountain God Rises (iQPS Launch 10)",
+      "slug": "electron-the-mountain-god-rises-iqps-launch-10",
+      "net": "2026-11-14T00:00:00Z",
+      "window_start": "2026-11-14T00:00:00Z",
+      "window_end": "2026-11-14T00:00:00Z",
+      "status": {
+        "id": 2,
+        "name": "To Be Determined",
+        "abbrev": "TBD"
+      },
+      "net_precision": {
+        "abbrev": "DAY",
+        "name": "Day"
+      },
+      "provider": "Rocket Lab",
+      "provider_abbrev": "RL",
+      "vehicle": {
+        "name": "Electron",
+        "family": "electron",
+        "description": "Electron is a two-stage orbital expendable launch vehicle (with an optional third stage) developed by the American aerospace company Rocket Lab. Electron is a small-lift launch vehicle designed to launch small satellites and cubesats to sun-synchronous orbit and low earth orbit. The Electron is the first orbital class rocket to use electric-pump-fed engines, powered by the 9 Rutherford engines on the first stage. It is also used as a suborbital testbed (called HASTE) for hypersonics research.",
+        "length_m": 18.0,
+        "diameter_m": 1.2
+      },
+      "mission": {
+        "name": "The Mountain God Rises (iQPS Launch 10)",
+        "type": "Earth Science",
+        "description": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "Unknown Pad",
+        "location": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand",
+        "country_code": "NZ"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193613.jpeg",
+        "credit": null
       },
       "probability": null
     },
@@ -754,17 +760,17 @@
       "id": "d74afbc7-0de5-491c-be05-4e9c31f736ac",
       "name": "Falcon 9 Block 5 | Cygnus CRS-2 NG-25",
       "slug": "falcon-9-block-5-cygnus-crs-2-ng-25",
-      "net": "2026-11-29T16:00:00Z",
-      "window_start": "2026-11-29T16:00:00Z",
-      "window_end": "2026-11-29T16:00:00Z",
+      "net": "2026-11-29T15:49:00Z",
+      "window_start": "2026-11-29T15:49:00Z",
+      "window_end": "2026-11-29T15:49:00Z",
       "status": {
-        "id": 8,
-        "name": "To Be Confirmed",
-        "abbrev": "TBC"
+        "id": 1,
+        "name": "Go for Launch",
+        "abbrev": "Go"
       },
       "net_precision": {
-        "abbrev": "HR",
-        "name": "Hour"
+        "abbrev": "MIN",
+        "name": "Minute"
       },
       "provider": "SpaceX",
       "provider_abbrev": "SpX",
