@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-01T20:37:02Z",
+  "updated": "2026-11-02T01:36:08Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -333,63 +333,6 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_thumbnail_20241128132937.jpeg",
         "credit": "Unknown"
-      },
-      "probability": null
-    },
-    {
-      "id": "3cdb9dee-b5cb-406c-bbd1-06a219930fb7",
-      "name": "Falcon 9 Block 5 | Starlink Group 15-21",
-      "slug": "falcon-9-block-5-starlink-group-15-21",
-      "net": "2026-11-06T02:21:00Z",
-      "window_start": "2026-11-06T02:21:00Z",
-      "window_end": "2026-11-06T06:21:00Z",
-      "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
-      },
-      "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
-      },
-      "provider": "SpaceX",
-      "provider_abbrev": "SpX",
-      "vehicle": {
-        "name": "Falcon 9 Block 5",
-        "family": "falcon9",
-        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
-        "length_m": 70.0,
-        "diameter_m": 3.65
-      },
-      "mission": {
-        "name": "Starlink Group 15-21",
-        "type": "Communications",
-        "description": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "Space Launch Complex 4E",
-        "location": "Vandenberg SFB, CA, USA",
-        "country_code": "US"
-      },
-      "vandenberg": true,
-      "webcasts": [
-        {
-          "url": "https://www.youtube.com/watch?v=z9uME3O2xHk",
-          "title": "GO!- SpaceX - Falcon 9 - Starlink 15-21 - SLC-4E - Vandenberg SFB, CA - Space Affairs Live",
-          "type": "Unofficial Re-stream"
-        },
-        {
-          "url": "https://x.com/i/broadcasts/1aJbdEgvmWaKX",
-          "title": "Starlink Mission",
-          "type": "Official Webcast"
-        }
-      ],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192320.png",
-        "credit": "SpaceX"
       },
       "probability": null
     },
@@ -941,6 +884,63 @@
       "webcast_live": false,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_thumbnail_20241020164114.jpeg",
+        "credit": "SpaceX"
+      },
+      "probability": null
+    },
+    {
+      "id": "3cdb9dee-b5cb-406c-bbd1-06a219930fb7",
+      "name": "Falcon 9 Block 5 | Starlink Group 15-21",
+      "slug": "falcon-9-block-5-starlink-group-15-21",
+      "net": "2026-11-30T00:00:00Z",
+      "window_start": "2026-11-30T00:00:00Z",
+      "window_end": "2026-11-30T00:00:00Z",
+      "status": {
+        "id": 2,
+        "name": "To Be Determined",
+        "abbrev": "TBD"
+      },
+      "net_precision": {
+        "abbrev": "M",
+        "name": "Month"
+      },
+      "provider": "SpaceX",
+      "provider_abbrev": "SpX",
+      "vehicle": {
+        "name": "Falcon 9 Block 5",
+        "family": "falcon9",
+        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
+        "length_m": 70.0,
+        "diameter_m": 3.65
+      },
+      "mission": {
+        "name": "Starlink Group 15-21",
+        "type": "Communications",
+        "description": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "Space Launch Complex 4E",
+        "location": "Vandenberg SFB, CA, USA",
+        "country_code": "US"
+      },
+      "vandenberg": true,
+      "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=z9uME3O2xHk",
+          "title": "GO!- SpaceX - Falcon 9 - Starlink 15-21 - SLC-4E - Vandenberg SFB, CA - Space Affairs Live",
+          "type": "Unofficial Re-stream"
+        },
+        {
+          "url": "https://x.com/i/broadcasts/1aJbdEgvmWaKX",
+          "title": "Starlink Mission",
+          "type": "Official Webcast"
+        }
+      ],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192320.png",
         "credit": "SpaceX"
       },
       "probability": null
