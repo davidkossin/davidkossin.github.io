@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-02T01:36:08Z",
+  "updated": "2026-11-02T09:39:17Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -199,52 +199,6 @@
       "probability": null
     },
     {
-      "id": "e91d1da2-819b-4523-95bf-39ac7daa871d",
-      "name": "Ceres-2 | Unknown Payload",
-      "slug": "ceres-2-unknown-payload",
-      "net": "2026-11-04T21:00:00Z",
-      "window_start": "2026-11-04T21:00:00Z",
-      "window_end": "2026-11-05T02:00:00Z",
-      "status": {
-        "id": 8,
-        "name": "To Be Confirmed",
-        "abbrev": "TBC"
-      },
-      "net_precision": {
-        "abbrev": "HR",
-        "name": "Hour"
-      },
-      "provider": "Galactic Energy",
-      "provider_abbrev": "GE",
-      "vehicle": {
-        "name": "Ceres-2",
-        "family": "generic",
-        "description": "Orbital launch vehicle. Details from the operator’s published configuration.",
-        "length_m": null,
-        "diameter_m": 3.35
-      },
-      "mission": {
-        "name": "Unknown Payload",
-        "type": "Unknown",
-        "description": "Details TBD.",
-        "orbit": "Unknown",
-        "orbit_abbrev": "N/A"
-      },
-      "pad": {
-        "name": "Launch Area 95A",
-        "location": "Jiuquan Satellite Launch Center, People's Republic of China",
-        "country_code": "CN"
-      },
-      "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ceres-2_illustr_image_thumbnail_20251210054658.png",
-        "credit": "Galactic Energy"
-      },
-      "probability": null
-    },
-    {
       "id": "711de6bc-f755-475b-a12f-ec5240da3a11",
       "name": "Long March 2C | Unknown Payload",
       "slug": "long-march-2c-unknown-payload",
@@ -333,6 +287,52 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_thumbnail_20241128132937.jpeg",
         "credit": "Unknown"
+      },
+      "probability": null
+    },
+    {
+      "id": "e91d1da2-819b-4523-95bf-39ac7daa871d",
+      "name": "Ceres-2 | Unknown Payload",
+      "slug": "ceres-2-unknown-payload",
+      "net": "2026-11-06T23:35:00Z",
+      "window_start": "2026-11-06T23:28:00Z",
+      "window_end": "2026-11-06T23:50:00Z",
+      "status": {
+        "id": 1,
+        "name": "Go for Launch",
+        "abbrev": "Go"
+      },
+      "net_precision": {
+        "abbrev": "HR",
+        "name": "Hour"
+      },
+      "provider": "Galactic Energy",
+      "provider_abbrev": "GE",
+      "vehicle": {
+        "name": "Ceres-2",
+        "family": "generic",
+        "description": "Orbital launch vehicle. Details from the operator’s published configuration.",
+        "length_m": null,
+        "diameter_m": 3.35
+      },
+      "mission": {
+        "name": "Unknown Payload",
+        "type": "Unknown",
+        "description": "Details TBD.",
+        "orbit": "Unknown",
+        "orbit_abbrev": "N/A"
+      },
+      "pad": {
+        "name": "Launch Area 95A",
+        "location": "Jiuquan Satellite Launch Center, People's Republic of China",
+        "country_code": "CN"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ceres-2_illustr_image_thumbnail_20251210054658.png",
+        "credit": "Galactic Energy"
       },
       "probability": null
     },
