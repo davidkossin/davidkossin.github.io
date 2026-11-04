@@ -367,7 +367,7 @@
     $("open-week-label").textContent = formatWeekRange(data.openWeek.monday);
     $("open-week-heading-label").textContent = formatWeekRange(data.openWeek.monday);
     $("current-week-label").textContent = formatWeekRange(data.currentWeek.monday);
-    $("submit-week-target").textContent = `Picks are for week of ${formatWeekRange(data.openWeek.monday)} (Arizona time).`;
+    $("submit-week-target").textContent = `Picks are for week of ${formatWeekRange(data.openWeek.monday)}.`;
     $("open-week-note").textContent = data.openWeek.accepting
       ? "Accepting submissions"
       : "Submissions closed";
