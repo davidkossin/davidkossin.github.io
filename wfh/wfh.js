@@ -259,12 +259,17 @@
     }
     for (const p of picks) {
       const tr = document.createElement("tr");
-      const reason = reasonLabel(p.reason, p.reasonOther);
-      const day = dayLabel(p.day);
-      let html = `<td>${escapeHtml(p.name)}</td><td>${escapeHtml(reason)}</td><td>${escapeHtml(day)}</td>`;
+      const isHidden = p.hidden === true || p.reason == null || p.day == null;
+      const reasonCell = isHidden
+        ? `<td><span class="hidden-pick">Hidden</span></td>`
+        : `<td>${escapeHtml(reasonLabel(p.reason, p.reasonOther))}</td>`;
+      const dayCell = isHidden
+        ? `<td><span class="hidden-pick">Hidden</span></td>`
+        : `<td>${escapeHtml(dayLabel(p.day))}</td>`;
+      let html = `<td>${escapeHtml(p.name)}</td>${reasonCell}${dayCell}`;
       if (withPoints) {
         html +=
-          p.points != null
+          !isHidden && p.points != null
             ? `<td class="pts-cell">${p.points}</td>`
             : `<td class="pts-cell">—</td>`;
       }
@@ -428,7 +433,7 @@
       return;
     }
     try {
-      await api("/api/submit", {
+      const saved = await api("/api/submit", {
         method: "POST",
         body: {
           name,
@@ -441,7 +446,14 @@
         localStorage.setItem(NAME_KEY, name);
       } catch (_) {}
       status.className = "form-status ok";
-      status.textContent = "Pick saved.";
+      const pick = saved && saved.pick;
+      if (pick && pick.reason) {
+        const rLabel = reasonLabel(pick.reason, pick.reasonOther);
+        const dLabel = dayLabel(pick.day);
+        status.textContent = `Pick saved — ${rLabel} · ${dLabel}. Others stay hidden until the deadline.`;
+      } else {
+        status.textContent = "Pick saved.";
+      }
       await refresh();
     } catch (err) {
       status.className = "form-status error";

@@ -453,3 +453,10 @@ summary:focus-visible {
     animation: none;
   }
 }
+
+.hidden-pick {
+  color: var(--muted);
+  font-style: italic;
+  font-weight: 300;
+  opacity: 0.85;
+}
