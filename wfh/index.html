@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="Reason For Absence — weekly work-from-home prediction." />
+  <title>Reason For Absence · Objects In Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://dkossin.com/styles.css" />
+  <link rel="stylesheet" href="wfh.css" />
+  <script src="wfh.js" defer></script>
+  <!-- Cloudflare Web Analytics --><script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "ed4660d74de24898991981cdb05e73b9"}'></script><!-- End Cloudflare Web Analytics -->
+</head>
+<body class="wfh-page">
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="nebula" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="https://dkossin.com/">Objects In Space</a>
+  </header>
+
+  <main class="wfh-main">
+    <header class="wfh-hero">
+      <p class="eyebrow">Weekly prediction</p>
+      <h1>Reason For Absence</h1>
+      <p class="tagline">Guess the reason and weekday a coworker will work from home next week.</p>
+    </header>
+
+    <section class="panel countdown-panel" aria-labelledby="countdown-heading">
+      <h2 id="countdown-heading" class="visually-hidden">Submission deadline</h2>
+      <p class="countdown-label">Open week <span id="open-week-label">—</span> · submissions close</p>
+      <p class="countdown" id="deadline-countdown" aria-live="polite">—</p>
+      <p class="countdown-meta" id="deadline-meta"></p>
+    </section>
+
+    <section class="panel scoring-legend" aria-labelledby="scoring-heading">
+      <h2 id="scoring-heading">Scoring</h2>
+      <ul>
+        <li>Correct reason: <strong>2</strong> points</li>
+        <li>Correct day: <strong>1</strong> point</li>
+        <li>Maximum per week: <strong>3</strong> points</li>
+      </ul>
+    </section>
+
+    <section class="panel submit-panel" aria-labelledby="submit-heading">
+      <h2 id="submit-heading">Your pick</h2>
+      <p class="week-target" id="submit-week-target"></p>
+      <form id="pick-form" novalidate>
+        <div class="field">
+          <label for="name-input">Your name</label>
+          <input id="name-input" name="name" type="text" maxlength="40" autocomplete="nickname" required />
+        </div>
+
+        <fieldset class="field">
+          <legend>Reason</legend>
+          <div class="reason-list" id="reason-list" role="radiogroup" aria-label="Reason"></div>
+          <div class="other-wrap" id="other-wrap" hidden>
+            <label for="other-input">Other reason</label>
+            <input id="other-input" name="reasonOther" type="text" maxlength="60" />
+          </div>
+        </fieldset>
+
+        <fieldset class="field">
+          <legend>Day</legend>
+          <div class="day-buttons" id="day-buttons" role="group" aria-label="Day of the week"></div>
+        </fieldset>
+
+        <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+        <button type="submit" class="btn primary" id="submit-btn">Submit pick</button>
+      </form>
+    </section>
+
+    <div class="weeks-grid">
+      <section class="panel week-panel" aria-labelledby="current-week-heading">
+        <h2 id="current-week-heading">Current week <span class="week-date" id="current-week-label"></span></h2>
+        <p class="week-note" id="current-week-note">Locked · playing out</p>
+        <div id="current-result" class="result-banner" hidden></div>
+        <div class="table-wrap">
+          <table class="picks-table" id="current-picks-table">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Reason</th>
+                <th scope="col">Day</th>
+                <th scope="col">Pts</th>
+              </tr>
+            </thead>
+            <tbody id="current-picks-body">
+              <tr><td colspan="4" class="empty">No picks yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel week-panel" aria-labelledby="open-week-heading">
+        <h2 id="open-week-heading">Open week <span class="week-date" id="open-week-heading-label"></span></h2>
+        <p class="week-note" id="open-week-note">Accepting submissions</p>
+        <div class="table-wrap">
+          <table class="picks-table" id="open-picks-table">
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Reason</th>
+                <th scope="col">Day</th>
+              </tr>
+            </thead>
+            <tbody id="open-picks-body">
+              <tr><td colspan="3" class="empty">No picks yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel scoreboard-panel" aria-labelledby="scoreboard-heading">
+      <h2 id="scoreboard-heading">All-time scoreboard</h2>
+      <div class="table-wrap">
+        <table class="scoreboard-table" id="scoreboard-table">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">Name</th>
+              <th scope="col">Points</th>
+              <th scope="col">Weeks</th>
+              <th scope="col">Exact</th>
+            </tr>
+          </thead>
+          <tbody id="scoreboard-body">
+            <tr><td colspan="5" class="empty">No scored weeks yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel history-panel" aria-labelledby="history-heading">
+      <h2 id="history-heading">Past weeks</h2>
+      <div id="history-list" class="history-list">
+        <p class="empty">No resolved weeks yet.</p>
+      </div>
+    </section>
+
+    <details class="panel admin-panel" id="admin-panel">
+      <summary>Set result</summary>
+      <form id="admin-form" class="admin-form" novalidate>
+        <div class="field">
+          <label for="admin-code">Admin code</label>
+          <input id="admin-code" name="adminCode" type="password" autocomplete="current-password" required />
+        </div>
+        <div class="field">
+          <label for="admin-week">Week (Monday)</label>
+          <select id="admin-week" name="weekMonday"></select>
+        </div>
+        <fieldset class="field">
+          <legend>Actual reason</legend>
+          <div class="reason-list" id="admin-reason-list" role="radiogroup" aria-label="Actual reason"></div>
+          <div class="other-wrap" id="admin-other-wrap" hidden>
+            <label for="admin-other-input">Actual other text</label>
+            <input id="admin-other-input" name="reasonOther" type="text" maxlength="60" />
+            <div id="admin-other-checks" class="other-checks" hidden></div>
+          </div>
+        </fieldset>
+        <fieldset class="field">
+          <legend>Actual day</legend>
+          <div class="day-buttons" id="admin-day-buttons" role="group" aria-label="Actual day"></div>
+        </fieldset>
+        <p class="form-status" id="admin-status" role="status" aria-live="polite"></p>
+        <button type="submit" class="btn primary" id="admin-submit">Save result</button>
+      </form>
+    </details>
+  </main>
+
+  <script src="https://dkossin.com/stars.js"></script>
+</body>
+</html>
