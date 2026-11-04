@@ -350,10 +350,7 @@
     const diff = end - now;
     if (!state.openWeek.accepting || diff <= 0) {
       el.textContent = "Closed";
-      meta.textContent =
-        "Picks closed Friday night at midnight, Arizona time (" +
-        formatDeadlineShort(state.openWeek.deadline) +
-        ")";
+      meta.textContent = "Submissions close Friday at 11:59 PM PDT";
       return;
     }
     const s = Math.floor(diff / 1000);
@@ -362,10 +359,7 @@
     const mins = Math.floor((s % 3600) / 60);
     const secs = s % 60;
     el.textContent = `${daysN}d ${pad(hours)}h ${pad(mins)}m ${pad(secs)}s`;
-    meta.textContent =
-      "Picks close Friday night at midnight, Arizona time (" +
-      formatDeadlineShort(state.openWeek.deadline) +
-      ")";
+    meta.textContent = "Submissions close Friday at 11:59 PM PDT";
   }
 
   function applyState(data) {
