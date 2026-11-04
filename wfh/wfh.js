@@ -213,14 +213,17 @@
         return;
       }
       box.hidden = false;
-      box.innerHTML =
-        "<p style='color:var(--muted);font-size:0.85rem;margin-bottom:0.35rem'>Mark submitted Other texts that count as correct:</p>";
+      box.innerHTML = "";
+      const legend = document.createElement("p");
+      legend.className = "other-checks-legend";
+      legend.textContent = "Winners";
+      box.appendChild(legend);
       for (const o of others) {
         const lab = document.createElement("label");
         const cb = document.createElement("input");
         cb.type = "checkbox";
         cb.value = o.nameKey;
-        cb.name = "otherCorrect";
+        cb.name = "otherWinners";
         const span = document.createElement("span");
         span.textContent = `${o.name}: “${o.reasonOther || ""}”`;
         lab.append(cb, span);
@@ -465,22 +468,25 @@
       status.textContent = "Select actual reason and day.";
       return;
     }
-    const otherCorrect = [
-      ...document.querySelectorAll('#admin-other-checks input[name="otherCorrect"]:checked'),
+    const otherWinners = [
+      ...document.querySelectorAll('#admin-other-checks input[name="otherWinners"]:checked'),
     ].map((el) => el.value);
     const code = $("admin-code").value;
     try {
+      const body = {
+        adminCode: code,
+        weekMonday: $("admin-week").value,
+        reason: adminReason,
+        day: adminDay,
+      };
+      if (adminReason === "other") {
+        body.reasonOther = $("admin-other-input").value;
+        body.otherWinners = otherWinners;
+      }
       await api("/api/admin/result", {
         method: "POST",
         headers: { "X-Admin-Code": code },
-        body: {
-          adminCode: code,
-          weekMonday: $("admin-week").value,
-          reason: adminReason,
-          day: adminDay,
-          reasonOther: adminReason === "other" ? $("admin-other-input").value : undefined,
-          otherCorrect: adminReason === "other" ? otherCorrect : undefined,
-        },
+        body,
       });
       status.className = "form-status ok";
       status.textContent = "Result saved.";
