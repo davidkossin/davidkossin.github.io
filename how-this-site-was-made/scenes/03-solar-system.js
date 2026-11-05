@@ -120,31 +120,24 @@ function drawCollapsingNebula(ctx, w, h, cx, cy, p, quality, dim) {
 }
 
 function drawJets(ctx, cx, cy, p, dim) {
-  // Bipolar outflow early (protostar / young Sun)
-  const jets = smoothstep(0.12, 0.28, p) * (1 - smootherstep(0.42, 0.58, p));
-  if (jets < 0.01) return;
+  // Faint tapered bipolar jets — fully faded before the disk checkpoint
+  const jets = smoothstep(0.10, 0.22, p) * (1 - smootherstep(0.30, 0.42, p));
+  if (jets < 0.02) return;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   for (const dir of [-1, 1]) {
-    const len = dim * 0.7 * jets;
-    const g = ctx.createLinearGradient(cx, cy, cx, cy + dir * len);
-    g.addColorStop(0, rgba(180, 220, 255, 0.55 * jets));
-    g.addColorStop(0.4, rgba(120, 180, 255, 0.25 * jets));
-    g.addColorStop(1, rgba(80, 140, 255, 0));
-    ctx.strokeStyle = g;
-    ctx.lineWidth = 6 * jets;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + dir * dim * 0.04, cy + dir * len);
-    ctx.stroke();
-    // Wider cone
-    ctx.strokeStyle = rgba(140, 190, 255, 0.12 * jets);
-    ctx.lineWidth = 18 * jets;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx, cy + dir * len * 0.85);
-    ctx.stroke();
+    const len = dim * 0.55 * jets;
+    const steps = 12;
+    for (let s = 0; s < steps; s++) {
+      const t = s / (steps - 1);
+      const y = cy + dir * len * t;
+      const taper = Math.pow(1 - t, 1.6);
+      const wobble = Math.sin(t * 9 + dir) * dim * 0.008;
+      drawGlow(ctx, cx + wobble, y, (3.5 + 8 * taper) * jets, { r: 160, g: 210, b: 255 }, 0.16 * jets * taper);
+      if (s % 3 === 1) {
+        drawGlow(ctx, cx + wobble, y, 6 * jets * taper, { r: 200, g: 230, b: 255 }, 0.22 * jets * taper);
+      }
+    }
   }
   ctx.restore();
 }
@@ -172,17 +165,16 @@ function drawProtoDisk(ctx, cx, cy, p, quality, dim) {
   const disk = smootherstep(0.18, 0.45, p) * (1 - smootherstep(0.72, 0.86, p));
   if (disk < 0.01) return;
   const maxR = dim * 0.72;
-  const snowLine = 0.48; // fractional radius
+  const snowLine = 0.48;
 
   ctx.save();
   ctx.translate(cx, cy);
   ctx.scale(1, 0.32);
 
-  // Continuous disk: warm inside snow line, cool/icy outside
   const dg = ctx.createRadialGradient(0, 0, maxR * 0.06, 0, 0, maxR);
   dg.addColorStop(0, rgba(255, 230, 170, 0.2 * disk));
   dg.addColorStop(snowLine * 0.85, rgba(230, 170, 100, 0.38 * disk));
-  dg.addColorStop(snowLine, rgba(200, 200, 230, 0.32 * disk)); // snow line transition
+  dg.addColorStop(snowLine, rgba(200, 200, 230, 0.32 * disk));
   dg.addColorStop(0.78, rgba(150, 180, 230, 0.22 * disk));
   dg.addColorStop(1, rgba(0, 0, 0, 0));
   ctx.fillStyle = dg;
@@ -190,40 +182,34 @@ function drawProtoDisk(ctx, cx, cy, p, quality, dim) {
   ctx.arc(0, 0, maxR, 0, Math.PI * 2);
   ctx.fill();
 
-  // Soft spiral / turbulent dust arms
+  // Soft dusty spiral structure — overlapping glows, not paper cutouts
   ctx.globalCompositeOperation = "lighter";
   const arms = 3;
   for (let a = 0; a < arms; a++) {
-    ctx.strokeStyle = rgba(255, 210, 150, 0.14 * disk);
-    ctx.lineWidth = maxR * 0.06;
-    ctx.beginPath();
-    for (let t = 0; t <= 1; t += 0.02) {
-      const ang = a * ((Math.PI * 2) / arms) + t * 3.5 + p * 0.6;
-      const r = maxR * (0.15 + t * 0.8);
-      const j = 1 + (hash01(a * 10 + Math.floor(t * 20)) - 0.5) * 0.06;
+    for (let t = 0; t <= 1; t += 0.028) {
+      const ang = a * ((Math.PI * 2) / arms) + t * 3.5 + p * 0.5;
+      const r = maxR * (0.18 + t * 0.75);
+      const j = 1 + (hash01(a * 10 + Math.floor(t * 30)) - 0.5) * 0.04;
       const x = Math.cos(ang) * r * j;
       const y = Math.sin(ang) * r * j;
-      if (t === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      const icy = r > maxR * snowLine;
+      const col = icy ? { r: 170, g: 200, b: 255 } : { r: 255, g: 200, b: 140 };
+      drawGlow(ctx, x, y, maxR * 0.07, col, 0.055 * disk * (1 - t * 0.35));
     }
-    ctx.stroke();
   }
 
-  // Turbulent density clumps
-  const clumps = Math.floor(lerp(40, 100, quality) * disk);
+  // Soft dusty density clumps
+  const clumps = Math.floor(lerp(30, 70, quality) * disk);
   for (let i = 0; i < clumps; i++) {
     const ang = hash01(i * 3) * Math.PI * 2 + p * 0.35;
     const r = maxR * (0.18 + hash01(i * 7) * 0.75);
     const icy = r > maxR * snowLine;
-    ctx.fillStyle = icy
-      ? rgba(180, 210, 255, 0.25 * disk)
-      : rgba(255, 200, 140, 0.3 * disk);
-    ctx.beginPath();
-    ctx.arc(Math.cos(ang) * r, Math.sin(ang) * r, 1.5 + hash01(i * 5) * 3.5, 0, Math.PI * 2);
-    ctx.fill();
+    const col = icy ? { r: 180, g: 210, b: 255 } : { r: 255, g: 200, b: 140 };
+    drawGlow(ctx, Math.cos(ang) * r, Math.sin(ang) * r,
+      4 + hash01(i * 5) * 10, col, 0.1 * disk);
   }
 
-  // Gaps with shepherding protoplanets
+  // Soft gaps + shepherds
   const gaps = [
     { f: 0.36, shepherd: true },
     { f: 0.55, shepherd: true },
@@ -232,8 +218,13 @@ function drawProtoDisk(ctx, cx, cy, p, quality, dim) {
   ctx.globalCompositeOperation = "source-over";
   gaps.forEach((g, i) => {
     const on = smootherstep(0.38 + i * 0.04, 0.52 + i * 0.04, p);
-    ctx.strokeStyle = rgba(6, 8, 18, 0.65 * disk * on);
-    ctx.lineWidth = maxR * 0.055;
+    ctx.strokeStyle = rgba(4, 6, 14, 0.35 * disk * on);
+    ctx.lineWidth = maxR * 0.07;
+    ctx.beginPath();
+    ctx.arc(0, 0, maxR * g.f, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = rgba(4, 6, 14, 0.18 * disk * on);
+    ctx.lineWidth = maxR * 0.12;
     ctx.beginPath();
     ctx.arc(0, 0, maxR * g.f, 0, Math.PI * 2);
     ctx.stroke();
@@ -251,23 +242,17 @@ function drawProtoDisk(ctx, cx, cy, p, quality, dim) {
     }
   });
 
-  // Snow line marker (subtle dashed ring)
-  ctx.strokeStyle = rgba(200, 220, 255, 0.22 * disk);
-  ctx.setLineDash([6, 8]);
-  ctx.lineWidth = 1.5;
+  // Soft snow-line hint
+  ctx.strokeStyle = rgba(200, 220, 255, 0.14 * disk);
+  ctx.setLineDash([4, 10]);
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.arc(0, 0, maxR * snowLine, 0, Math.PI * 2);
   ctx.stroke();
   ctx.setLineDash([]);
 
-  // Edge glow
   ctx.globalCompositeOperation = "lighter";
-  ctx.strokeStyle = rgba(255, 210, 160, 0.2 * disk);
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.arc(0, 0, maxR * 0.96, 0, Math.PI * 2);
-  ctx.stroke();
-  drawGlow(ctx, 0, 0, maxR * 1.05, { r: 255, g: 200, b: 140 }, 0.08 * disk);
+  drawGlow(ctx, 0, 0, maxR * 1.05, { r: 255, g: 200, b: 140 }, 0.07 * disk);
 
   ctx.restore();
 }
@@ -402,8 +387,8 @@ const scene = {
 
     drawBg(ctx, w, h, p, quality);
     drawCollapsingNebula(ctx, w, h, cx, cy, p, quality, dim);
+    drawJets(ctx, cx, cy, p, dim); // behind disk — faint, gone by disk checkpoint
     drawProtoDisk(ctx, cx, cy, p, quality, dim);
-    drawJets(ctx, cx, cy, p, dim);
     drawSun(ctx, cx, cy, p, dim);
     drawPlanets(ctx, cx, cy, p, quality, dim);
     drawMoonImpact(ctx, cx, cy, p, quality, dim);

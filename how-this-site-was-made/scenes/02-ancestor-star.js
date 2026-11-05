@@ -57,9 +57,9 @@ function stage(view, w, h) {
   const s = view.safeContent;
   if (s && s.w > 40 && s.h > 40) {
     const dim = Math.min(s.w, s.h);
-    return { cx: s.cx, cy: s.cy, dim };
+    return { cx: s.cx, cy: s.cy, dim, sx: s.x, sy: s.y, sw: s.w, sh: s.h };
   }
-  return { cx: w * 0.55, cy: h * 0.48, dim: Math.min(w, h) * 0.7 };
+  return { cx: w * 0.55, cy: h * 0.48, dim: Math.min(w, h) * 0.7, sx: 0, sy: 0, sw: w, sh: h };
 }
 
 function drawNebulaBg(ctx, w, h, p, quality) {
@@ -94,8 +94,8 @@ function drawMassiveStar(ctx, cx, cy, radius, heat, p, quality) {
   const mid = mixRgb({ r: 255, g: 215, b: 150 }, { r: 255, g: 100, b: 55 }, heat);
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  drawBloom(ctx, cx, cy, radius * 2.6, mid, 0.6);
-  drawGlow(ctx, cx, cy, radius * 1.5, core, 0.7);
+  drawBloom(ctx, cx, cy, radius * 1.2, mid, 0.42);
+  drawGlow(ctx, cx, cy, radius * 1.08, core, 0.55);
 
   // Photosphere
   ctx.globalCompositeOperation = "source-over";
@@ -129,31 +129,28 @@ function drawMassiveStar(ctx, cx, cy, radius, heat, p, quality) {
   ctx.restore();
 }
 
-/** Wedge cutaway with thick shells + leader-line labels ≥12px */
-function drawWedgeCutaway(ctx, cx, cy, radius, progress, quality, canvasW) {
+/** Wedge cutaway — ~90° inside the star disk, plasma gradients, on-canvas labels */
+function drawWedgeCutaway(ctx, cx, cy, radius, progress, quality, safe) {
   const reveal = smootherstep(0.12, 0.48, progress);
   if (reveal < 0.02) return;
 
-  // Wedge opens lower-right; labels sit LEFT of star (on-canvas)
-  const a0 = -0.35;
-  const a1 = 1.35;
+  const a0 = -Math.PI / 4;
+  const a1 = Math.PI / 4;
+  const midAng = 0;
 
   ctx.save();
-  // Clip to wedge
   ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, radius * 1.02, a0, a1);
-  ctx.closePath();
+  ctx.arc(cx, cy, radius * 0.995, 0, Math.PI * 2);
   ctx.clip();
-
-  // Darken cut face slightly
-  ctx.fillStyle = rgba(10, 12, 24, 0.35 * reveal);
   ctx.beginPath();
   ctx.moveTo(cx, cy);
   ctx.arc(cx, cy, radius, a0, a1);
-  ctx.fill();
+  ctx.closePath();
+  ctx.clip();
 
-  // Thick filled shells (annular wedges)
+  ctx.fillStyle = rgba(8, 10, 22, 0.4 * reveal);
+  ctx.fillRect(cx, cy - radius, radius + 2, radius * 2);
+
   for (let i = 0; i < SHELLS.length; i++) {
     const on = clamp((reveal - i * 0.07) / 0.2, 0, 1);
     if (on <= 0) continue;
@@ -164,49 +161,60 @@ function drawWedgeCutaway(ctx, cx, cy, radius, progress, quality, canvasW) {
     ctx.arc(cx, cy, rOuter, a0, a1);
     ctx.arc(cx, cy, rInner, a1, a0, true);
     ctx.closePath();
-    ctx.fillStyle = rgba(c.r, c.g, c.b, 0.82 * on);
+    const g = ctx.createRadialGradient(cx, cy, rInner, cx, cy, rOuter);
+    g.addColorStop(0, rgba(Math.min(255, c.r + 60), Math.min(255, c.g + 50), Math.min(255, c.b + 40), 0.95 * on));
+    g.addColorStop(0.55, rgba(c.r, c.g, c.b, 0.78 * on));
+    g.addColorStop(1, rgba(Math.max(0, c.r - 40), Math.max(0, c.g - 30), Math.max(0, c.b - 20), 0.55 * on));
+    ctx.fillStyle = g;
     ctx.fill();
-    // Bright rim
-    ctx.strokeStyle = rgba(255, 255, 255, 0.35 * on);
-    ctx.lineWidth = Math.max(2, radius * 0.012);
+    ctx.strokeStyle = rgba(255, 255, 255, 0.28 * on);
+    ctx.lineWidth = Math.max(1.5, radius * 0.01);
     ctx.beginPath();
-    ctx.arc(cx, cy, rOuter, a0, a1);
+    ctx.arc(cx, cy, rOuter * 0.995, a0, a1);
     ctx.stroke();
   }
 
-  // Fe core disc
-  const feOn = clamp((reveal - 0.55) / 0.25, 0, 1);
+  const feOn = clamp((reveal - 0.5) / 0.3, 0, 1);
   if (feOn > 0) {
     const feR = radius * SHELLS[SHELLS.length - 1].f;
-    drawGlow(ctx, cx, cy, feR * 2.2, { r: 255, g: 240, b: 200 }, 0.4 * feOn);
-    ctx.fillStyle = rgba(245, 245, 250, 0.95 * feOn);
+    drawGlow(ctx, cx, cy, feR * 2.0, { r: 255, g: 245, b: 210 }, 0.45 * feOn);
+    const fg = ctx.createRadialGradient(cx - feR * 0.25, cy - feR * 0.25, 0, cx, cy, feR);
+    fg.addColorStop(0, rgba(255, 255, 255, 0.98 * feOn));
+    fg.addColorStop(0.7, rgba(230, 230, 240, 0.9 * feOn));
+    fg.addColorStop(1, rgba(180, 180, 200, 0.7 * feOn));
+    ctx.fillStyle = fg;
     ctx.beginPath();
     ctx.arc(cx, cy, feR, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
 
-  // Cut edges (radial lines)
   ctx.save();
-  ctx.strokeStyle = rgba(232, 236, 255, 0.55 * reveal);
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = rgba(232, 236, 255, 0.5 * reveal);
+  ctx.lineWidth = 1.75;
   for (const ang of [a0, a1]) {
     ctx.beginPath();
     ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(ang) * radius, cy + Math.sin(ang) * radius);
+    ctx.lineTo(cx + Math.cos(ang) * radius * 0.99, cy + Math.sin(ang) * radius * 0.99);
     ctx.stroke();
   }
   ctx.restore();
 
-  // Leader lines + labels to the RIGHT of star (fits in safeContent on desktop)
-  const midAng = (a0 + a1) * 0.5;
-  const fontPx = Math.max(13, Math.min(18, radius * 0.095));
-  const maxX = (canvasW || 1280) - 20;
+  const sx = safe?.sx ?? 0;
+  const sy = safe?.sy ?? 0;
+  const sw = safe?.sw ?? 1280;
+  const sh = safe?.sh ?? 800;
+  const rightLimit = sx + sw - 10;
+  const topLimit = sy + 10;
+  const botLimit = sy + sh - 10;
+  const fontPx = Math.max(11, Math.min(14, radius * 0.095));
+  const wantColX = cx + radius * 0.78;
+  const useColumn = wantColX + 36 < rightLimit && radius > 90;
+
   ctx.save();
   ctx.font = `700 ${fontPx}px Outfit, system-ui, sans-serif`;
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
-  const labelX = Math.min(maxX - 8, cx + radius * 1.08);
   SHELLS.forEach((s, i) => {
     const on = clamp((reveal - i * 0.07) / 0.2, 0, 1);
     if (on < 0.35) return;
@@ -215,28 +223,43 @@ function drawWedgeCutaway(ctx, cx, cy, radius, progress, quality, canvasW) {
     const rMid = (rOuter + rInner) * 0.5;
     const ax = cx + Math.cos(midAng) * rMid;
     const ay = cy + Math.sin(midAng) * rMid;
-    const ly = cy - radius * 0.62 + i * (fontPx + 11);
-    ctx.globalAlpha = 0.98 * on;
-    ctx.strokeStyle = rgba(230, 235, 255, 0.9);
-    ctx.lineWidth = 1.75;
-    ctx.beginPath();
-    ctx.moveTo(ax, ay);
-    ctx.lineTo(labelX - 4, ly);
-    ctx.stroke();
+
+    let lx, ly;
+    if (useColumn) {
+      lx = Math.min(wantColX, rightLimit - 30);
+      const spread = Math.min(radius * 0.9, (SHELLS.length - 1) * (fontPx + 6));
+      ly = cy - spread * 0.5 + i * (spread / Math.max(1, SHELLS.length - 1));
+    } else {
+      const labelAng = -0.12 + i * 0.04;
+      lx = cx + Math.cos(labelAng) * Math.min(rMid + fontPx * 0.8, radius * 0.92);
+      ly = cy + Math.sin(labelAng) * Math.min(rMid, radius * 0.55);
+    }
+    lx = clamp(lx, sx + 8, rightLimit - 26);
+    ly = clamp(ly, topLimit + fontPx, botLimit - fontPx);
+
+    ctx.globalAlpha = 0.95 * on;
+    if (useColumn || Math.hypot(lx - ax, ly - ay) > 10) {
+      ctx.strokeStyle = rgba(230, 235, 255, 0.7);
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(lx - 2, ly);
+      ctx.stroke();
+    }
     ctx.fillStyle = rgba(s.c.r, s.c.g, s.c.b, 1);
     ctx.beginPath();
-    ctx.arc(ax, ay, 4, 0, Math.PI * 2);
+    ctx.arc(ax, ay, 2.5, 0, Math.PI * 2);
     ctx.fill();
     const tw = ctx.measureText(s.label).width;
-    ctx.fillStyle = rgba(5, 6, 18, 0.78);
-    ctx.fillRect(labelX - 4, ly - fontPx * 0.6, tw + 12, fontPx * 1.25);
+    ctx.fillStyle = rgba(5, 6, 18, 0.75);
+    ctx.fillRect(lx - 3, ly - fontPx * 0.55, tw + 10, fontPx * 1.15);
     ctx.fillStyle = "#f0f3ff";
-    ctx.fillText(s.label, labelX + 2, ly);
+    ctx.fillText(s.label, lx + 1, ly);
   });
   ctx.restore();
 }
 
-/** Irregular filamentary remnant — Cas A / Crab style, NOT a UI ellipse */
+/** Irregular filamentary remnant — tapered wisps + diffuse emission, not tubes */
 function drawFilamentaryRemnant(ctx, w, h, cx, cy, p, quality, radiusScale) {
   const blast = smootherstep(0.46, 0.72, p) * (1 - smootherstep(0.74, 0.88, p));
   if (blast < 0.01) return;
@@ -245,7 +268,6 @@ function drawFilamentaryRemnant(ctx, w, h, cx, cy, p, quality, radiusScale) {
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
 
-  // Soft shock glow (irregular — multiple offset centers)
   for (let i = 0; i < 5; i++) {
     const ox = (hash01(i * 2.2) - 0.5) * R * 0.25;
     const oy = (hash01(i * 3.1) - 0.5) * R * 0.2;
@@ -253,15 +275,12 @@ function drawFilamentaryRemnant(ctx, w, h, cx, cy, p, quality, radiusScale) {
   }
   drawBloom(ctx, cx, cy, R * 0.45, { r: 255, g: 240, b: 210 }, 0.55 * blast * (1 - blast * 0.4));
 
-  // Bright compact remnant (NS / hotspot)
   drawGlow(ctx, cx, cy, R * 0.12, WHITE, 0.85 * blast);
   ctx.fillStyle = rgba(255, 250, 240, 0.95 * blast);
   ctx.beginPath();
   ctx.arc(cx, cy, Math.max(3, R * 0.025), 0, Math.PI * 2);
   ctx.fill();
 
-  // Wispy multi-colored filaments (quadratic curves with jittered endpoints)
-  const filaments = Math.floor(lerp(45, 90, quality));
   const palette = [
     { r: 255, g: 200, b: 120 },
     { r: 120, g: 200, b: 255 },
@@ -269,49 +288,69 @@ function drawFilamentaryRemnant(ctx, w, h, cx, cy, p, quality, radiusScale) {
     { r: 180, g: 140, b: 255 },
     { r: 140, g: 255, b: 200 },
   ];
+
+  for (let i = 0; i < Math.floor(lerp(8, 16, quality)); i++) {
+    const ang = hash01(i * 4.1 + 9) * Math.PI * 2;
+    const d = R * (0.2 + hash01(i * 2) * 0.55);
+    drawGlow(ctx, cx + Math.cos(ang) * d, cy + Math.sin(ang) * d * 0.85,
+      R * (0.15 + hash01(i) * 0.25), palette[i % palette.length], 0.1 * blast);
+  }
+
+  const filaments = Math.floor(lerp(28, 55, quality));
   for (let i = 0; i < filaments; i++) {
-    const ang = (i / filaments) * Math.PI * 2 + hash01(i) * 0.5;
-    const len = R * (0.45 + hash01(i * 3) * 0.7);
-    const curl = (hash01(i * 7) - 0.5) * 1.4;
-    const x1 = cx + Math.cos(ang) * R * (0.08 + hash01(i * 2) * 0.12);
-    const y1 = cy + Math.sin(ang) * R * (0.08 + hash01(i * 2) * 0.1);
-    const x2 = cx + Math.cos(ang + curl * 0.35) * len * (0.85 + hash01(i * 4) * 0.3);
-    const y2 = cy + Math.sin(ang + curl * 0.35) * len * (0.7 + hash01(i * 5) * 0.35);
+    const ang = (i / filaments) * Math.PI * 2 + hash01(i) * 0.55;
+    const len = R * (0.4 + hash01(i * 3) * 0.65);
+    const curl = (hash01(i * 7) - 0.5) * 1.2;
+    const col = palette[i % palette.length];
+    const baseW = 1.2 + hash01(i * 6) * 4.5;
+    const steps = 10;
+    const x1 = cx + Math.cos(ang) * R * 0.1;
+    const y1 = cy + Math.sin(ang) * R * 0.08;
+    const x2 = cx + Math.cos(ang + curl * 0.35) * len;
+    const y2 = cy + Math.sin(ang + curl * 0.35) * len * 0.82;
     const cpx = cx + Math.cos(ang + curl) * len * 0.5;
     const cpy = cy + Math.sin(ang + curl) * len * 0.42;
-    const col = palette[i % palette.length];
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const omt = 1 - t;
+      const x = omt * omt * x1 + 2 * omt * t * cpx + t * t * x2;
+      const y = omt * omt * y1 + 2 * omt * t * cpy + t * t * y2;
+      const taper = Math.pow(1 - t, 1.4);
+      drawGlow(ctx, x, y, baseW * taper * 2.2, col, 0.22 * blast * taper);
+    }
     const g = ctx.createLinearGradient(x1, y1, x2, y2);
-    g.addColorStop(0, rgba(col.r, col.g, col.b, 0.65 * blast));
-    g.addColorStop(0.55, rgba(col.r, col.g, col.b, 0.35 * blast));
+    g.addColorStop(0, rgba(col.r, col.g, col.b, 0.55 * blast));
     g.addColorStop(1, rgba(col.r, col.g, col.b, 0));
-    // Soft glow under filament
-    ctx.strokeStyle = rgba(col.r, col.g, col.b, 0.2 * blast);
-    ctx.lineWidth = 8 + hash01(i * 6) * 10;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.quadraticCurveTo(cpx, cpy, x2, y2);
-    ctx.stroke();
     ctx.strokeStyle = g;
-    ctx.lineWidth = 2.5 + hash01(i * 6) * 5;
+    ctx.lineWidth = Math.max(0.6, baseW * 0.35);
+    ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.quadraticCurveTo(cpx, cpy, x2, y2);
     ctx.stroke();
   }
 
-  // Clumpy ejecta knots
+  for (let i = 0; i < Math.floor(lerp(20, 40, quality)); i++) {
+    const ang = hash01(i * 9.2) * Math.PI * 2;
+    const len = R * (0.3 + hash01(i * 3.3) * 0.5);
+    const col = palette[i % palette.length];
+    ctx.strokeStyle = rgba(col.r, col.g, col.b, 0.2 * blast);
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(ang) * R * 0.15, cy + Math.sin(ang) * R * 0.12);
+    ctx.lineTo(cx + Math.cos(ang + 0.3) * len, cy + Math.sin(ang + 0.3) * len * 0.8);
+    ctx.stroke();
+  }
+
   const knots = Math.floor(lerp(35, 70, quality));
   for (let i = 0; i < knots; i++) {
     const ang = hash01(i * 1.9 + 3) * Math.PI * 2;
     const d = R * (0.25 + hash01(i * 4.2) * 0.85);
     const x = cx + Math.cos(ang) * d * (0.9 + hash01(i) * 0.25);
     const y = cy + Math.sin(ang) * d * (0.75 + hash01(i * 2) * 0.3);
-    const col = palette[i % palette.length];
-    drawGlow(ctx, x, y, 5 + hash01(i * 3) * 14, col, 0.35 * blast);
+    drawGlow(ctx, x, y, 5 + hash01(i * 3) * 14, palette[i % palette.length], 0.35 * blast);
   }
 
-  // Irregular Cas A–like shell belt (clumpy, not a clean ring)
   const shellN = Math.floor(lerp(40, 80, quality));
   for (let i = 0; i < shellN; i++) {
     const ang = (i / shellN) * Math.PI * 2 + hash01(i * 2.7) * 0.4;
@@ -399,8 +438,9 @@ const scene = {
   render(ctx, localProgress, view) {
     const { w, h, quality = 1 } = view;
     const p = clamp(localProgress, 0, 1);
-    const { cx, cy, dim } = stage(view, w, h);
-    const starR = dim * 0.68;
+    const { cx, cy, dim, sx, sy, sw, sh } = stage(view, w, h);
+    // Whole-star diameter ≈ 68% of safeContent min dim (room for soft bloom)
+    const starR = dim * 0.34;
 
     drawNebulaBg(ctx, w, h, p, quality);
 
@@ -410,10 +450,10 @@ const scene = {
 
     if (starPhase > 0.05 && r > 8) {
       drawMassiveStar(ctx, cx, cy, r, heat, p, quality);
-      drawWedgeCutaway(ctx, cx, cy, r, p, quality, w);
+      drawWedgeCutaway(ctx, cx, cy, r, p, quality, { sx, sy, sw, sh });
     }
 
-    drawFilamentaryRemnant(ctx, w, h, cx, cy, p, quality, dim * 0.95);
+    drawFilamentaryRemnant(ctx, w, h, cx, cy, p, quality, dim * 0.78);
     drawNSMerger(ctx, w, h, cx, cy, p, quality, dim);
 
     drawVignette(ctx, w, h, 0.5);
