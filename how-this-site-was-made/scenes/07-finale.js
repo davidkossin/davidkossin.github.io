@@ -60,7 +60,7 @@ const scene={id:"finale",title:"Finale",weight:1.0,checkpoints,
 
     // Particles ONLY during the transition before the assemble checkpoint.
     // Fully gone by at=0.55 so the title is crisp with zero stray dots.
-    const particleVis = smootherstep(0.36, 0.46, p) * (1 - smootherstep(0.50, 0.55, p));
+    const particleVis = p >= 0.55 ? 0 : smootherstep(0.36, 0.46, p) * (1 - smootherstep(0.48, 0.545, p));
     if (particleVis > 0.01) {
       const n = Math.floor(lerp(160, 420, quality));
       ctx.save(); ctx.globalCompositeOperation = "lighter";
@@ -112,10 +112,15 @@ const scene={id:"finale",title:"Finale",weight:1.0,checkpoints,
       ctx.fillStyle = "#e8ecff";
       ctx.font = `700 ${fontSize}px Orbitron,sans-serif`;
       ctx.textAlign = "left";
-      ctx.shadowColor = "rgba(125,211,252,0.45)";
-      ctx.shadowBlur = 22;
-      ctx.fillText(title, tx, ty);
+      // Soft bloom behind the title block (not a second glyph pass — avoids ghost duplicate)
+      if (titleOn > 0.85) {
+        softDisc(ctx, tx + tw * 0.5, ty - fontSize * 0.35, Math.max(tw, fontSize) * 0.7, { r:100, g:170, b:255 }, 0.14 * titleOn);
+      }
+      ctx.shadowColor = "transparent";
       ctx.shadowBlur = 0;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.fillText(title, tx, ty);
 
       const tag = "Projects that are the result of an exploding star.";
       let tagSize = Math.max(12, Math.min(18, st.aw * 0.032));

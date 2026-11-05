@@ -85,80 +85,80 @@ const scene = { id:"humans", title:"Humans", weight:1.15, checkpoints,
     const mobile = w < 700;
 
     if (dual > 0.02) {
-      const pad = Math.max(14, Math.min(aw, ah) * 0.04);
-      const box = { x: sx + pad, y: sy + pad, w: aw - pad * 2, h: ah - pad * 2 };
-      // Leave a little room under globes for labels
-      const labelBand = mobile ? 22 : 20;
+      // Atmosphere glow extends ~1.2×R beyond the limb — budget that into fit.
+      const pad = Math.max(16, Math.min(aw, ah) * 0.045);
+      const box = { x: sx + pad, y: sy + pad, w: Math.max(80, aw - pad * 2), h: Math.max(80, ah - pad * 2) };
+      // Also never exceed canvas
+      const canvasRight = w - 10;
+      const canvasBot = h - 90;
+      box.w = Math.min(box.w, canvasRight - box.x);
+      box.h = Math.min(box.h, canvasBot - box.y);
+      const labelBand = mobile ? 28 : 26;
+      const atmos = 1.18; // layout radius multiplier for glow clearance
       let gx1, gy1, gx2, gy2, R;
 
       if (mobile) {
-        // Stack vertically — both fully inside safeContent
-        const gap = 18;
+        const gap = 16;
         const availH = box.h - gap - labelBand * 2;
-        R = Math.min(box.w * 0.42, availH * 0.24);
+        R = Math.min(box.w * 0.38, availH / (4 * atmos));
+        R = Math.max(36, R);
         gx1 = box.x + box.w * 0.5;
         gx2 = gx1;
-        gy1 = box.y + R + labelBand * 0.3;
-        gy2 = box.y + box.h - R - labelBand * 0.3;
-        // Ensure no overlap
-        if (gy2 - gy1 < 2 * R + gap) {
-          R = Math.max(40, (box.h - gap - labelBand * 2) / 4);
-          gy1 = box.y + R + 8;
-          gy2 = box.y + box.h - R - 8;
+        gy1 = box.y + R * atmos + 4;
+        gy2 = box.y + box.h - R * atmos - labelBand;
+        if (gy2 - gy1 < 2 * R * atmos + gap) {
+          R = Math.max(32, (box.h - gap - labelBand * 2) / (4 * atmos));
+          gy1 = box.y + R * atmos + 2;
+          gy2 = box.y + box.h - R * atmos - labelBand;
         }
       } else {
-        // Side by side — both fully inside safeContent with margin
-        const gap = Math.max(20, box.w * 0.04);
-        const availW = box.w - gap;
-        R = Math.min(availW / 4, (box.h - labelBand) / 2) * 0.92;
-        gx1 = box.x + R + 4;
-        gx2 = box.x + box.w - R - 4;
-        gy1 = box.y + box.h * 0.48;
+        const gap = Math.max(24, box.w * 0.05);
+        R = Math.min((box.w - gap) / (4 * atmos), (box.h - labelBand) / (2 * atmos));
+        R = Math.max(48, R);
+        gx1 = box.x + R * atmos;
+        gx2 = box.x + box.w - R * atmos;
+        gy1 = box.y + (box.h - labelBand) * 0.48;
         gy2 = gy1;
-        // Hard fit guarantee
-        if (gx1 + R + gap / 2 > gx2 - R) {
-          R = Math.max(50, (box.w - gap - 8) / 4);
-          gx1 = box.x + R + 4;
-          gx2 = box.x + box.w - R - 4;
+        // Hard fit: both limbs + atmosphere inside box and canvas
+        while ((gx2 + R * atmos > Math.min(box.x + box.w, canvasRight) || gx1 - R * atmos < box.x) && R > 40) {
+          R -= 2;
+          gx1 = box.x + R * atmos;
+          gx2 = box.x + box.w - R * atmos;
         }
       }
 
-      // Globe 1: Indian Ocean / Arabia — Africa, ME, Europe, S Asia, Australia
-      const rotOld = 70;
-      // Globe 2: North Pacific / Beringia — East Asia, Beringia, Americas
-      const rotNew = -170;
+      // Globe 1: Indian Ocean / Arabia — Africa → ME → Europe + S Asia → Sahul
+      const rotOld = 75;
+      // Globe 2: Beringia with East Asia left and Americas right (slightly east of pure Pacific)
+      const rotNew = -155;
 
       ctx.save(); ctx.globalAlpha = dual;
-      drawEarthGlobe(ctx, gx1, gy1, R, { landMode:"modern", rotLon:rotOld, ox:0.9, night:0.05, clouds:0.35, quality });
-      drawEarthGlobe(ctx, gx2, gy2, R, { landMode:"modern", rotLon:rotNew, ox:0.9, night:0.05, clouds:0.35, quality });
+      drawEarthGlobe(ctx, gx1, gy1, R, { landMode:"modern", rotLon:rotOld, ox:0.9, night:0.05, clouds:0.3, quality });
+      drawEarthGlobe(ctx, gx2, gy2, R, { landMode:"modern", rotLon:rotNew, ox:0.9, night:0.05, clouds:0.3, quality });
 
       const origin = project(36, 5, gx1, gy1, R, rotOld);
       if (origin) {
         ctx.globalCompositeOperation = "lighter";
-        drawGlow(ctx, origin.x, origin.y, 14, { r:255, g:210, b:100 }, 0.55 * dual);
+        drawGlow(ctx, origin.x, origin.y, 12, { r:255, g:210, b:100 }, 0.5 * dual);
         ctx.globalCompositeOperation = "source-over";
       }
       drawRoutesOnGlobe(ctx, ROUTES_OLD, gx1, gy1, R, rotOld, p, dual);
       drawRoutesOnGlobe(ctx, ROUTES_NEW, gx2, gy2, R, rotNew, p, dual);
 
-      // Labels fully inside safe box
-      ctx.globalAlpha = dual * 0.85;
-      const fontPx = Math.max(9, Math.min(12, R * 0.09));
-      drawSafeLabel(ctx, 145, -28, gx1, gy1, R, rotOld, "~65–50 kya Sahul", box, fontPx);
-      drawSafeLabel(ctx, -2, 46, gx1, gy1, R, rotOld, "~45 kya Europe", box, fontPx);
-      drawSafeLabel(ctx, -155, 62, gx2, gy2, R, rotNew, "~16–15 kya Beringia", box, fontPx);
-      drawSafeLabel(ctx, -70, -30, gx2, gy2, R, rotNew, "~15–12 kya", box, fontPx);
-
-      // Fallback labels under each globe if projections missed (guaranteed visible)
+      // All date labels UNDER the globes — never on the limb (avoids clipping)
+      ctx.globalAlpha = dual * 0.9;
+      const fontPx = Math.max(9, Math.min(11, R * 0.085));
       ctx.font = `500 ${fontPx}px Outfit,sans-serif`;
       ctx.textAlign = "center";
-      ctx.fillStyle = rgba(255, 210, 140, 0.75);
-      const under1 = clamp(gy1 + R + fontPx + 4, box.y + fontPx, box.y + box.h - 2);
-      const under2 = clamp(gy2 + R + fontPx + 4, box.y + fontPx, box.y + box.h - 2);
-      // Only draw under-globe captions if projection labels may be tight on mobile
+      ctx.fillStyle = rgba(255, 210, 140, 0.92);
+      const under1 = Math.min(box.y + box.h - 4, gy1 + R * atmos + fontPx + 2);
+      const under2 = Math.min(box.y + box.h - 4, gy2 + R * atmos + fontPx + 2);
       if (mobile) {
-        ctx.fillText("Out of Africa → Eurasia / Sahul", gx1, under1);
-        ctx.fillText("Beringia → Americas", gx2, under2);
+        ctx.fillText("Africa → Eurasia / Sahul  ·  ~65–50 kya", gx1, under1);
+        ctx.fillText("Beringia → Americas  ·  ~16–15 kya", gx2, under2);
+      } else {
+        ctx.fillText("~45 kya Europe   ·   ~65–50 kya Sahul", gx1, under1);
+        ctx.fillText("~16–15 kya Beringia → Americas", gx2, under2);
       }
       ctx.restore();
     }
