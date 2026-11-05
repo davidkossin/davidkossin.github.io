@@ -1,0 +1,21 @@
+import { scenes } from "./registry.js";
+import { createEngine } from "./engine.js";
+
+const canvas = document.getElementById("timeline-canvas");
+const ui = {
+  track: document.getElementById("scrub-track"),
+  thumb: document.getElementById("scrub-thumb"),
+  fill: document.getElementById("scrub-fill"),
+  ticks: document.getElementById("scrub-ticks"),
+  eras: document.getElementById("scrub-eras"),
+  slider: document.getElementById("scrub-track"),
+  playBtn: document.getElementById("play-btn"),
+  placard: document.getElementById("placard"),
+  placardTime: document.getElementById("placard-time"),
+  placardTitle: document.getElementById("placard-title"),
+  placardBody: document.getElementById("placard-body"),
+  placardChapter: document.getElementById("placard-chapter"),
+  live: document.getElementById("live"),
+};
+
+window.__hsm = createEngine({ canvas, scenes, ui });
