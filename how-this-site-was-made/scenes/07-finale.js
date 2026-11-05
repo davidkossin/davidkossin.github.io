@@ -2,7 +2,7 @@
  * Chapter 7 — Finale (v4c) — particles clear by assemble checkpoint; no ghost title
  */
 import { clamp, lerp, smoothstep, smootherstep, hash01, drawGlow, drawVignette, drawGrain, rgba } from "../util.js";
-import { stage } from "../globe.js?v=a09b8da";
+import { stage } from "../globe.js?v=b69902c";
 
 const PROMPT = "I'd like to host a personal website on my GitHub.io page. Let's start with a simple landing page that has a space theme to it.";
 const CODE_LINES = ["<!DOCTYPE html>",'<html lang="en">',"<title>Objects In Space</title>",'<canvas id="stars"></canvas>','<div class="nebula"></div>',"<h1>Objects In Space</h1>",'<p class="tagline">Projects that are the result of an exploding star.</p>'];
