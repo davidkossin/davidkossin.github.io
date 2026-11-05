@@ -248,9 +248,11 @@ html, body {
     padding: 0.95rem 1rem 1.05rem;
     max-width: none;
   }
-  .era { font-size: 0.52rem; max-width: 3.6rem; }
-  /* Drop odd-indexed era labels on narrow screens to reduce overlap */
+  .era { font-size: 0.48rem; max-width: 3.2rem; letter-spacing: 0.01em; }
+  /* Drop even-indexed era labels on narrow screens to reduce overlap */
   .era:nth-child(even) { display: none; }
+  /* Thin checkpoint ticks — every other mark — so ~46 ticks stay readable */
+  .tick:nth-child(even) { opacity: 0.25; height: 0.35rem; }
   .scrubber { gap: 0.5rem; padding-left: 0.65rem; padding-right: 0.65rem; }
   .play-btn { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
 }

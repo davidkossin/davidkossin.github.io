@@ -22,7 +22,8 @@ how-this-site-was-made/
     04-earth-and-life.js
     05-humans.js
     06-machines.js
-    07-finale.js
+    07-generation.js   # prompt → tokens → network → code → publish → delivery
+    07-finale.js        # page assembles; you are here
   README.md
 ```
 
@@ -58,3 +59,7 @@ Absolute cosmic time is *not* linear on the scrubber. Each chapter owns a slice 
 ### Motion & accessibility
 
 Default is **paused** (scrub-driven). Play advances slowly. `prefers-reduced-motion: reduce` disables autoplay drift; scrubbing still works. All camera-like motion stays slow — no fast zooms or rushing starfields. Adaptive quality reduces particle counts and resolution when frame times are high.
+
+### Prompt-to-page chapter
+
+`07-generation.js` sits between Machines and Finale. It owns the 22 September 2026 sequence: natural-language request, tokenization (subword pieces → IDs → embeddings), transformer self-attention, autoregressive generation of HTML/CSS/JS, Git commit/push to GitHub Pages, and HTTPS delivery — then Finale paints the assembled page. Keep that chapter factual (no model names, parameter counts, or hardware claims). Reorder or drop it only via `registry.js`.
