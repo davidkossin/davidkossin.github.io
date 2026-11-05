@@ -47,6 +47,20 @@ export function createEngine({ canvas, scenes, ui }) {
   }
   allCheckpoints.sort((a, b) => a.globalAt - b.globalAt);
 
+  // Per-boundary crossfade width: never let a blend reach a checkpoint,
+  // so every placard frame shows only its own scene.
+  for (let i = 0; i < layout.length; i++) {
+    const L = layout[i];
+    const ats = L.scene.checkpoints.map((c) => clamp(c.at, 0, 1));
+    L.headRoom = ats.length ? Math.min(...ats) * L.weight * 0.8 : CROSSFADE;
+    L.tailRoom = ats.length ? (1 - Math.max(...ats)) * L.weight * 0.8 : CROSSFADE;
+  }
+  for (let i = 0; i < layout.length; i++) {
+    const L = layout[i], P = layout[i - 1], N = layout[i + 1];
+    L.fadeIn = P ? Math.min(CROSSFADE, L.headRoom, P.tailRoom) : 0;
+    L.fadeOut = N ? Math.min(CROSSFADE, L.tailRoom, N.headRoom) : 0;
+  }
+
   let progress = 0; // global 0..1
   let playing = false;
   let pointerDragging = false;
@@ -224,12 +238,12 @@ export function createEngine({ canvas, scenes, ui }) {
     const { index, layout: L, local } = sceneAt(progress);
 
     // Crossfade with neighbor near edges
-    const edgeDist = Math.min(progress - L.start, L.end - progress);
-    const fadeZone = CROSSFADE;
+    const nearStart = progress - L.start < L.end - progress;
+    const fadeZone = nearStart ? L.fadeIn : L.fadeOut;
+    const edgeDist = nearStart ? progress - L.start : L.end - progress;
     let drawn = false;
 
-    if (edgeDist < fadeZone && layout.length > 1) {
-      const nearStart = progress - L.start < fadeZone;
+    if (fadeZone > 0 && edgeDist < fadeZone && layout.length > 1) {
       const neighborIdx = nearStart ? index - 1 : index + 1;
       if (neighborIdx >= 0 && neighborIdx < layout.length) {
         const N = layout[neighborIdx];
