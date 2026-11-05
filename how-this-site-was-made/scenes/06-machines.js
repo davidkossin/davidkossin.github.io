@@ -2,7 +2,7 @@
  * Chapter 6 — Machines (v3) — large transistor morph, ARPANET, WWW, phones, nets, tokens
  */
 import { clamp, lerp, smoothstep, smootherstep, hash01, drawGlow, drawVignette, drawGrain, rgba } from "../util.js";
-import { stage } from "../globe.js?v=eb09baa";
+import { stage } from "../globe.js?v=e6afa06";
 
 const checkpoints = [
   { id:"electricity", at:0.08, timeLabel:"practical electric power from the late 19th century", title:"Electricity",

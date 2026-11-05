@@ -6,7 +6,7 @@ import {
   clamp, lerp, smoothstep, smootherstep, hash01,
   drawGlow, drawVignette, drawGrain, drawStarfield, rgba, mixRgb,
 } from "../util.js";
-import { stage, drawEarthGlobe, project } from "../globe.js?v=eb09baa";
+import { stage, drawEarthGlobe, project } from "../globe.js?v=e6afa06";
 
 const checkpoints = [
   { id:"oceans", at:0.06, timeLabel:"by about 4.4 to 4.0 billion years ago", title:"Oceans form",
