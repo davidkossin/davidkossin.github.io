@@ -2,7 +2,7 @@
  * Chapter 5 — Humans (v3) — Natural Earth globe + accurate routes/centers
  */
 import { clamp, lerp, smoothstep, smootherstep, hash01, drawGlow, drawVignette, drawGrain, drawStarfield, rgba } from "../util.js";
-import { stage, drawEarthGlobe, drawGlobePath, drawGlobeMarker, project } from "../globe.js?v=9e87e54";
+import { stage, drawEarthGlobe, drawGlobePath, drawGlobeMarker, project } from "../globe.js?v=eb09baa";
 
 const checkpoints = [
   { id:"sapiens", at:0.08, timeLabel:"about 300,000 years ago", title:"Homo sapiens",

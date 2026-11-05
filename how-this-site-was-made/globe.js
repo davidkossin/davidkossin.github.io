@@ -3,7 +3,7 @@
  * Land rings: public-domain Natural Earth 110m (see ne-land.js).
  */
 import { clamp, lerp, smoothstep, hash01, drawGlow, rgba, mixRgb } from "./util.js";
-import { NE_LAND_RINGS, RODINIA_RINGS, PANGAEA_RINGS } from "./ne-land.js?v=v3b1";
+import { NE_LAND_RINGS, RODINIA_RINGS, PANGAEA_RINGS } from "./ne-land.js?v=eb09baa";
 
 export { NE_LAND_RINGS, RODINIA_RINGS, PANGAEA_RINGS };
 
