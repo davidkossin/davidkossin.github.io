@@ -226,10 +226,9 @@ function drawLandingAssemble(ctx, w, h, frame, p, quality) {
       tx = frame.cx - tw / 2;
       ty = frame.cy - 10;
     } else {
-      // Sit in safe zone: right of placard / within frame
-      tx = Math.max(frame.x + 16, Math.min(frame.cx - tw * 0.15, w - tw - 40));
-      // If placard occupies top-left, push title toward vertical center of free area
-      ty = Math.max(frame.y + fontSize, frame.cy - 20);
+      // Sit clearly below/right of placard (~370×260 top-left)
+      tx = Math.max(400, Math.min(frame.cx - tw * 0.1, w - tw - 48));
+      ty = Math.max(300 + fontSize * 0.3, frame.cy - 10);
     }
 
     ctx.textAlign = "left";
