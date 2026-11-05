@@ -3,7 +3,7 @@
  * Particles fully clear before the assemble checkpoint; single crisp title (no ghost).
  */
 import { clamp, lerp, smoothstep, smootherstep, hash01, drawGlow, drawVignette, drawGrain, rgba } from "../util.js";
-import { stage } from "../globe.js?v=d130905";
+import { stage } from "../globe.js?v=8533430";
 
 const checkpoints = [
   { id:"assemble", at:0.40, timeLabel:"22 September 2026", title:"The page assembles",
