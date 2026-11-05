@@ -7,8 +7,8 @@ import { clamp, lerp, smoothstep, smootherstep } from "./util.js";
 const CROSSFADE = 0.035; // fraction of global progress for chapter blends
 const SNAP_RADIUS = 0.018; // global scrub units
 const DWELL_SEC = 10; // seconds held at each checkpoint while playing
-const SNAP_GAIN = 3.2; // lower = smoother, slower travel between checkpoints
-const SNAP_DAMP = 0.86;
+const TWEEN_MIN_SEC = 1.1; // travel time between checkpoints (eased, never overshoots)
+const TWEEN_MAX_SEC = 2.6;
 
 /**
  * @typedef {{ id: string, at: number, timeLabel: string, title: string, body: string }} Checkpoint
@@ -68,7 +68,8 @@ export function createEngine({ canvas, scenes, ui }) {
   let dwellLeft = 0;
   let pointerDragging = false;
   let snapTarget = null;
-  let snapVel = 0;
+  let snapVel = 0; // legacy, unused
+  let tween = null; // { from, to, t, dur }
   let quality = 1;
   let frameMsEma = 16.7;
   let lastTs = performance.now();
@@ -187,17 +188,21 @@ export function createEngine({ canvas, scenes, ui }) {
     if (frameMsEma > 22) quality = Math.max(0.3, quality - 0.02);
     else if (frameMsEma < 14) quality = Math.min(1, quality + 0.01);
 
-    // Snap ease (used by Next/Prev and by Play between checkpoints)
+    // Eased travel to snapTarget (Next/Prev, Play, scrub release). Time-based, monotonic, no overshoot.
     if (snapTarget != null && !pointerDragging) {
-      const diff = snapTarget - progress;
-      if (Math.abs(diff) < 0.00035) {
-        progress = snapTarget;
+      if (!tween || tween.to !== snapTarget) {
+        const dist = Math.abs(snapTarget - progress);
+        const dur = clamp(TWEEN_MIN_SEC + dist * 18, TWEEN_MIN_SEC, TWEEN_MAX_SEC);
+        tween = { from: progress, to: snapTarget, t: 0, dur: reducedMotion ? 0.001 : dur };
+      }
+      tween.t = Math.min(1, tween.t + dt / tween.dur);
+      const e = tween.t < 0.5 ? 4 * tween.t ** 3 : 1 - Math.pow(-2 * tween.t + 2, 3) / 2; // easeInOutCubic
+      progress = clamp(tween.from + (tween.to - tween.from) * e, 0, 1);
+      if (tween.t >= 1) {
+        progress = tween.to;
         snapTarget = null;
-        snapVel = 0;
+        tween = null;
         if (playing) dwellLeft = DWELL_SEC;
-      } else {
-        snapVel = snapVel * SNAP_DAMP + diff * SNAP_GAIN * dt;
-        progress = clamp(progress + snapVel, 0, 1);
       }
     } else if (playing && !pointerDragging && !reducedMotion) {
       // Hold on the current checkpoint so the placard can be read, then ease to the next.
@@ -216,7 +221,7 @@ export function createEngine({ canvas, scenes, ui }) {
     }
 
     // Placard transition
-    const cp = activeCheckpoint(progress);
+    const cp = tween ? activeCheckpoint(tween.to) : activeCheckpoint(progress);
     if (cp.id !== lastCpId) {
       lastCpId = cp.id;
       placardOpacity = 0;
@@ -325,6 +330,7 @@ export function createEngine({ canvas, scenes, ui }) {
     const g = clamp((clientX - rect.left) / rect.width, 0, 1);
     progress = g;
     snapTarget = null;
+    tween = null;
   }
 
   function releaseSnap() {
@@ -336,7 +342,7 @@ export function createEngine({ canvas, scenes, ui }) {
   }
 
   function jumpCheckpoint(dir) {
-    const g = progress;
+    const g = snapTarget != null ? snapTarget : progress;
     if (dir > 0) {
       const next = allCheckpoints.find((c) => c.globalAt > g + 0.002);
       snapTarget = next ? next.globalAt : allCheckpoints[allCheckpoints.length - 1].globalAt;
@@ -378,6 +384,7 @@ export function createEngine({ canvas, scenes, ui }) {
     pointerDragging = true;
     playing = false;
     snapTarget = null;
+    tween = null;
     ui.track.setPointerCapture?.(e.pointerId);
     setProgressFromClientX(e.clientX);
     e.preventDefault();
@@ -452,7 +459,7 @@ export function createEngine({ canvas, scenes, ui }) {
   // Expose for debugging / tests
   const api = {
     get progress() { return progress; },
-    set progress(v) { progress = clamp(v, 0, 1); snapTarget = null; },
+    set progress(v) { progress = clamp(v, 0, 1); snapTarget = null; tween = null; },
     get checkpoints() { return allCheckpoints; },
     get layout() { return layout; },
     jumpCheckpoint,
