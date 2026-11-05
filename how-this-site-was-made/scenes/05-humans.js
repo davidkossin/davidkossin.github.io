@@ -39,7 +39,7 @@ function roundRect(ctx,x,y,w,h,rad){ctx.beginPath();ctx.moveTo(x+rad,y);ctx.arcT
 
 const scene = { id:"humans", title:"Humans", weight:1.15, checkpoints,
   render(ctx, localProgress, view) {
-    const { w,h,quality=1 }=view; const p=clamp(localProgress,0,1); const st=stage(view); const {cx,cy,aw,ah}=st; const R=Math.min(aw,ah)*0.46;
+    const { w,h,quality=1 }=view; const p=clamp(localProgress,0,1); const st=stage(view); const {cx,cy,aw,ah}=st; const R=Math.min(aw,ah)*0.50;
     ctx.fillStyle="#05060f"; ctx.fillRect(0,0,w,h); drawStarfield(ctx,w,h,Math.floor(50*quality),51,p*0.12,0.4);
     const night=smootherstep(0.48,0.65,p), rotLon=15+p*28, overlay=smootherstep(0.62,0.78,p);
     if (1-overlay*0.55>0.05) { ctx.save(); ctx.globalAlpha=1-overlay*0.55; drawEarthGlobe(ctx,cx,cy,R,{landMode:"modern",rotLon,ox:0.9,night,clouds:0.4,quality}); ctx.restore(); }

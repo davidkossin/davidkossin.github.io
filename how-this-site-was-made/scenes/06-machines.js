@@ -27,25 +27,45 @@ function roundRect(ctx,x,y,w,h,rad){ctx.beginPath();ctx.moveTo(x+rad,y);ctx.arcT
 function drawTransistor(ctx,cx,cy,size,p,q,show){
   if(show<0.01)return; const shrink=smootherstep(0.26,0.40,p); const device=1-shrink; const ic=shrink;
   ctx.save(); ctx.globalAlpha=show;
-  if(device>0.05){ ctx.save(); ctx.globalAlpha=show*device; const S=size*1.2*lerp(1,0.2,shrink);
-    softDisc(ctx,cx-S*0.2,cy-S*0.35,S*1.3,{r:255,g:240,b:210},0.14); softDisc(ctx,cx,cy,S*1.2,{r:100,g:160,b:220},0.12);
-    ctx.fillStyle=rgba(50,45,55,0.95); roundRect(ctx,cx-S*0.58,cy+S*0.18,S*1.16,S*0.24,8); ctx.fill();
-    // Germanium slab
-    ctx.fillStyle=rgba(90,100,115,0.95); ctx.beginPath(); ctx.moveTo(cx-S*0.45,cy+S*0.2); ctx.lineTo(cx+S*0.45,cy+S*0.2); ctx.lineTo(cx+S*0.3,cy-S*0.02); ctx.lineTo(cx-S*0.3,cy-S*0.02); ctx.closePath(); ctx.fill();
-    const ge=ctx.createLinearGradient(cx,cy-S*0.02,cx,cy+S*0.2); ge.addColorStop(0,rgba(180,195,210,0.4)); ge.addColorStop(1,rgba(40,50,65,0.25)); ctx.fillStyle=ge; ctx.fill();
-    // Plastic wedge (triangular 1947 look)
-    ctx.fillStyle=rgba(55,70,95,0.94); ctx.beginPath(); ctx.moveTo(cx,cy-S*0.52); ctx.lineTo(cx+S*0.36,cy); ctx.lineTo(cx-S*0.36,cy); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle=rgba(140,180,220,0.5); ctx.lineWidth=1.8; ctx.stroke();
-    // Gold foil contacts
-    ctx.strokeStyle=rgba(255,210,100,0.95); ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(cx-S*0.14,cy-S*0.46); ctx.lineTo(cx-S*0.09,cy); ctx.moveTo(cx+S*0.14,cy-S*0.46); ctx.lineTo(cx+S*0.09,cy); ctx.stroke();
-    ctx.globalCompositeOperation="lighter"; drawGlow(ctx,cx-S*0.09,cy,S*0.14,{r:255,g:220,b:120},0.7); drawGlow(ctx,cx+S*0.09,cy,S*0.14,{r:255,g:220,b:120},0.7);
-    ctx.fillStyle=rgba(255,240,180,0.95); ctx.beginPath(); ctx.arc(cx-S*0.09,cy,4,0,Math.PI*2); ctx.arc(cx+S*0.09,cy,4,0,Math.PI*2); ctx.fill();
-    ctx.globalCompositeOperation="source-over"; ctx.strokeStyle=rgba(180,190,210,0.85); ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(cx,cy+S*0.2); ctx.lineTo(cx,cy+S*0.48); ctx.stroke();
-    ctx.fillStyle=rgba(180,210,255,0.8); ctx.font=`${Math.max(12,size*0.06)}px Outfit,sans-serif`; ctx.textAlign="center"; ctx.fillText("1947 · point-contact transistor",cx,cy+S*0.62); ctx.restore();
+  if(device>0.05){ ctx.save(); ctx.globalAlpha=show*device; const S=size*1.35*lerp(1,0.18,shrink);
+    // Soft lab lighting
+    softDisc(ctx,cx-S*0.25,cy-S*0.45,S*1.5,{r:255,g:245,b:220},0.2); softDisc(ctx,cx+S*0.3,cy+S*0.1,S*1.1,{r:120,g:160,b:210},0.1);
+    // Base / mount
+    ctx.fillStyle=rgba(42,40,48,0.96); roundRect(ctx,cx-S*0.62,cy+S*0.22,S*1.24,S*0.26,10); ctx.fill();
+    ctx.fillStyle=rgba(70,68,78,0.7); roundRect(ctx,cx-S*0.55,cy+S*0.24,S*1.1,S*0.08,4); ctx.fill();
+    // Germanium slab (metallic grey-brown bar)
+    ctx.fillStyle=rgba(110,115,125,0.98); ctx.beginPath(); ctx.moveTo(cx-S*0.48,cy+S*0.24); ctx.lineTo(cx+S*0.48,cy+S*0.24); ctx.lineTo(cx+S*0.34,cy+S*0.02); ctx.lineTo(cx-S*0.34,cy+S*0.02); ctx.closePath(); ctx.fill();
+    const ge=ctx.createLinearGradient(cx,cy+S*0.02,cx,cy+S*0.24); ge.addColorStop(0,rgba(210,215,225,0.55)); ge.addColorStop(0.5,rgba(90,95,105,0.2)); ge.addColorStop(1,rgba(40,45,55,0.45)); ctx.fillStyle=ge; ctx.fill();
+    // Cream / polystyrene triangular wedge (1947 Bell Labs look)
+    const wedge=ctx.createLinearGradient(cx-S*0.3,cy-S*0.55,cx+S*0.3,cy+S*0.05);
+    wedge.addColorStop(0,rgba(245,235,210,0.98)); wedge.addColorStop(0.45,rgba(230,215,185,0.98)); wedge.addColorStop(1,rgba(200,185,155,0.98));
+    ctx.fillStyle=wedge; ctx.beginPath(); ctx.moveTo(cx,cy-S*0.58); ctx.lineTo(cx+S*0.4,cy+S*0.04); ctx.lineTo(cx-S*0.4,cy+S*0.04); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle=rgba(160,140,110,0.55); ctx.lineWidth=1.6; ctx.stroke();
+    // Soft inner bevel
+    ctx.strokeStyle=rgba(255,250,235,0.45); ctx.lineWidth=1.2; ctx.beginPath(); ctx.moveTo(cx,cy-S*0.5); ctx.lineTo(cx+S*0.3,cy-S*0.02); ctx.lineTo(cx-S*0.3,cy-S*0.02); ctx.closePath(); ctx.stroke();
+    // Gold foil contacts (triangular strips pressed to germanium)
+    ctx.fillStyle=rgba(255,200,80,0.95);
+    ctx.beginPath(); ctx.moveTo(cx-S*0.16,cy-S*0.5); ctx.lineTo(cx-S*0.08,cy-S*0.5); ctx.lineTo(cx-S*0.05,cy+S*0.04); ctx.lineTo(cx-S*0.13,cy+S*0.04); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx+S*0.08,cy-S*0.5); ctx.lineTo(cx+S*0.16,cy-S*0.5); ctx.lineTo(cx+S*0.13,cy+S*0.04); ctx.lineTo(cx+S*0.05,cy+S*0.04); ctx.closePath(); ctx.fill();
+    // Contact glow on germanium
+    ctx.globalCompositeOperation="lighter"; drawGlow(ctx,cx-S*0.09,cy+S*0.02,S*0.16,{r:255,g:220,b:100},0.75); drawGlow(ctx,cx+S*0.09,cy+S*0.02,S*0.16,{r:255,g:220,b:100},0.75);
+    ctx.fillStyle=rgba(255,245,180,0.95); ctx.beginPath(); ctx.arc(cx-S*0.09,cy+S*0.02,5,0,Math.PI*2); ctx.arc(cx+S*0.09,cy+S*0.02,5,0,Math.PI*2); ctx.fill();
+    ctx.globalCompositeOperation="source-over";
+    // Emitter lead
+    ctx.strokeStyle=rgba(190,195,210,0.9); ctx.lineWidth=3.5; ctx.beginPath(); ctx.moveTo(cx,cy+S*0.24); ctx.lineTo(cx,cy+S*0.55); ctx.stroke();
+    ctx.fillStyle=rgba(230,210,160,0.9); ctx.font=`${Math.max(13,size*0.065)}px Outfit,sans-serif`; ctx.textAlign="center"; ctx.fillText("1947 · point-contact transistor",cx,cy+S*0.7); ctx.restore();
   }
-  if(ic>0.05){ ctx.save(); ctx.globalAlpha=show*smootherstep(0.05,0.6,ic); softDisc(ctx,cx,cy,size*0.9,{r:40,g:120,b:180},0.14); const n=Math.floor(lerp(7,16,q)); const cell=size*0.095; const dieW=n*cell*1.15;
-    ctx.fillStyle=rgba(20,40,70,0.6*ic); roundRect(ctx,cx-dieW/2,cy-dieW/2,dieW,dieW,10); ctx.fill(); ctx.globalCompositeOperation="lighter";
-    for(let j=-n;j<=n;j++) for(let i=-n;i<=n;i++){ if(Math.hypot(i,j)>n*0.95) continue; const x=cx+i*cell,y=cy+j*cell; const gate=hash01(i*12+j*7+3); ctx.strokeStyle=rgba(80,200,255,(0.15+gate*0.45)*ic); ctx.lineWidth=1; ctx.strokeRect(x-cell*0.35,y-cell*0.35,cell*0.7,cell*0.7); if(gate>0.4){ const col=gate>0.7?{r:100,g:220,b:255}:{r:180,g:160,b:255}; drawGlow(ctx,x,y,cell*0.4,col,0.5*ic); ctx.fillStyle=rgba(col.r,col.g,col.b,0.85*ic); ctx.fillRect(x-2.2,y-2.2,4.4,4.4);} }
+  if(ic>0.05){ ctx.save(); ctx.globalAlpha=show*smootherstep(0.05,0.6,ic); softDisc(ctx,cx,cy,size*1.05,{r:40,g:130,b:190},0.18); const n=Math.floor(lerp(8,18,q)); const cell=size*0.1; const dieW=n*cell*1.2;
+    // Silicon die substrate
+    const die=ctx.createLinearGradient(cx,cy-dieW/2,cx,cy+dieW/2); die.addColorStop(0,rgba(30,55,90,0.85*ic)); die.addColorStop(1,rgba(15,30,55,0.9*ic)); ctx.fillStyle=die; roundRect(ctx,cx-dieW/2,cy-dieW/2,dieW,dieW,12); ctx.fill();
+    ctx.strokeStyle=rgba(100,180,255,0.35*ic); ctx.lineWidth=1.5; ctx.stroke();
+    ctx.globalCompositeOperation="lighter";
+    for(let j=-n;j<=n;j++) for(let i=-n;i<=n;i++){ if(Math.hypot(i,j)>n*0.95) continue; const x=cx+i*cell,y=cy+j*cell; const gate=hash01(i*12+j*7+3);
+      // metal traces
+      ctx.strokeStyle=rgba(100,210,255,(0.18+gate*0.5)*ic); ctx.lineWidth=1.1; ctx.strokeRect(x-cell*0.38,y-cell*0.38,cell*0.76,cell*0.76);
+      if(gate>0.35){ const col=gate>0.72?{r:90,g:230,b:255}:gate>0.5?{r:180,g:160,b:255}:{r:255,g:200,b:120}; drawGlow(ctx,x,y,cell*0.45,col,0.55*ic); ctx.fillStyle=rgba(col.r,col.g,col.b,0.9*ic); ctx.fillRect(x-2.4,y-2.4,4.8,4.8);} }
+    // Bond pads
+    for(let i=0;i<8;i++){ const ang=(i/8)*Math.PI*2; const px=cx+Math.cos(ang)*dieW*0.52, py=cy+Math.sin(ang)*dieW*0.52; ctx.fillStyle=rgba(255,210,100,0.7*ic); ctx.fillRect(px-4,py-3,8,6); }
     ctx.restore();
   }
   ctx.restore();
@@ -55,7 +75,7 @@ const ARPA=[{id:"UCLA",x:-0.55,y:0.2},{id:"SRI",x:-0.32,y:-0.38},{id:"UCSB",x:-0
 const ARPA_E=[[0,1],[0,2],[1,3],[1,2]];
 
 const scene={id:"machines",title:"Machines",weight:1.25,checkpoints,
-  render(ctx,localProgress,view){ const{w,h,quality=1}=view; const p=clamp(localProgress,0,1); const st=stage(view); const{cx,cy,aw,ah}=st; const size=Math.min(aw,ah)*0.48;
+  render(ctx,localProgress,view){ const{w,h,quality=1}=view; const p=clamp(localProgress,0,1); const st=stage(view); const{cx,cy,aw,ah}=st; const size=Math.min(aw,ah)*0.52;
     ctx.fillStyle="#05060f"; ctx.fillRect(0,0,w,h);
     ctx.save(); ctx.strokeStyle=rgba(60,100,160,0.06); const step=lerp(70,48,quality); for(let x=0;x<w;x+=step){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();} for(let y=0;y<h;y+=step){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();} ctx.restore();
     const elec=smootherstep(0,0.14,p)*(1-smootherstep(0.16,0.26,p));
