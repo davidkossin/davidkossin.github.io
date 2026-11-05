@@ -1,4 +1,4 @@
-import { scenes } from "./registry.js?v=8533430";
+import { scenes } from "./registry.js?v=cea7ac7";
 import { createEngine } from "./engine.js";
 
 const canvas = document.getElementById("timeline-canvas");
