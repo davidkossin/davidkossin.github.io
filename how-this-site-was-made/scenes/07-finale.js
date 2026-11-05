@@ -2,7 +2,7 @@
  * Chapter 7 — Finale (v4b) — title fitted in safeContent; assemble fully formed at checkpoint
  */
 import { clamp, lerp, smoothstep, smootherstep, hash01, drawGlow, drawVignette, drawGrain, rgba } from "../util.js";
-import { stage } from "../globe.js?v=e6afa06";
+import { stage } from "../globe.js?v=04f86f2";
 
 const PROMPT = "I'd like to host a personal website on my GitHub.io page. Let's start with a simple landing page that has a space theme to it.";
 const CODE_LINES = ["<!DOCTYPE html>",'<html lang="en">',"<title>Objects In Space</title>",'<canvas id="stars"></canvas>','<div class="nebula"></div>',"<h1>Objects In Space</h1>",'<p class="tagline">Projects that are the result of an exploding star.</p>'];
