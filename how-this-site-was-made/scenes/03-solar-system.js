@@ -1,6 +1,6 @@
 /**
- * Chapter 3 — Solar system (premium)
- * Collapsing nebula with dust lanes, proto-Sun, gapped disk, accretion, Moon impact.
+ * Chapter 3 — Solar system (v3 planetarium)
+ * Large subjects, dusty spiral disk, snow line, gaps + shepherds, jets, Moon impact.
  */
 import {
   clamp, lerp, smoothstep, smootherstep, hash01,
@@ -48,86 +48,118 @@ const checkpoints = [
 
 function stage(view, w, h) {
   const s = view.safeContent;
-  if (s && s.w > 40) return { cx: s.cx, cy: s.cy, scale: Math.min(s.w, s.h) };
-  return { cx: w * 0.5, cy: h * 0.48, scale: Math.min(w, h) };
+  if (s && s.w > 40 && s.h > 40) {
+    return { cx: s.cx, cy: s.cy, dim: Math.min(s.w, s.h) };
+  }
+  return { cx: w * 0.55, cy: h * 0.48, dim: Math.min(w, h) * 0.7 };
 }
 
 function drawBg(ctx, w, h, p, quality) {
-  ctx.fillStyle = "#05060f";
+  ctx.fillStyle = "#060714";
   ctx.fillRect(0, 0, w, h);
-  drawStarfield(ctx, w, h, Math.floor(60 * quality), 30, p * 0.2, 0.5);
+  drawStarfield(ctx, w, h, Math.floor(100 * quality), 30, p * 0.15, 0.55);
+  // Rich purple/teal wash so it's never empty black
+  drawVolumetricHaze(ctx, w, h, {
+    count: Math.floor(lerp(5, 10, quality)),
+    seed: 33,
+    strength: 0.12,
+    color: { r: 50, g: 40, b: 110 },
+    progress: p * 0.3,
+  });
 }
 
-function drawCollapsingNebula(ctx, w, h, cx, cy, p, quality) {
-  const str = 1 - smootherstep(0.28, 0.50, p);
+function drawCollapsingNebula(ctx, w, h, cx, cy, p, quality, dim) {
+  const str = 1 - smootherstep(0.26, 0.48, p);
   if (str < 0.01) return;
 
   drawVolumetricHaze(ctx, w, h, {
-    count: Math.floor(lerp(7, 14, quality)),
+    count: Math.floor(lerp(10, 18, quality)),
     seed: 40,
-    strength: 0.22 * str,
-    color: { r: 120, g: 90, b: 200 },
+    strength: 0.28 * str,
+    color: { r: 130, g: 90, b: 210 },
     progress: p,
   });
   drawVolumetricHaze(ctx, w, h, {
-    count: 6,
+    count: 8,
     seed: 41,
-    strength: 0.16 * str,
-    color: { r: 80, g: 120, b: 200 },
+    strength: 0.18 * str,
+    color: { r: 70, g: 130, b: 210 },
     progress: p,
   });
 
-  // Dust lanes — dark curved filaments spiraling in
+  // Dust lanes spiraling in
   ctx.save();
-  ctx.globalCompositeOperation = "source-over";
-  const lanes = Math.floor(lerp(5, 10, quality));
+  const lanes = Math.floor(lerp(6, 12, quality));
   for (let i = 0; i < lanes; i++) {
-    const ang0 = (i / lanes) * Math.PI * 2 + p * 0.4;
-    ctx.strokeStyle = rgba(5, 6, 15, 0.45 * str);
-    ctx.lineWidth = 8 + hash01(i) * 14;
+    const ang0 = (i / lanes) * Math.PI * 2 + p * 0.5;
+    ctx.strokeStyle = rgba(8, 10, 24, 0.5 * str);
+    ctx.lineWidth = 10 + hash01(i) * 18;
     ctx.lineCap = "round";
     ctx.beginPath();
-    for (let t = 0; t <= 1; t += 0.04) {
-      const ang = ang0 + t * 1.8;
-      const r = Math.max(w, h) * 0.48 * (1 - t * 0.75) * str + 30;
+    for (let t = 0; t <= 1; t += 0.03) {
+      const ang = ang0 + t * 2.2;
+      const r = dim * 1.1 * (1 - t * 0.78) * str + dim * 0.08;
       const x = cx + Math.cos(ang) * r;
-      const y = cy + Math.sin(ang) * r * 0.42;
+      const y = cy + Math.sin(ang) * r * 0.4;
       if (t === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
   }
-  // Infalling bright filaments
   ctx.globalCompositeOperation = "lighter";
   for (let i = 0; i < lanes; i++) {
-    const ang0 = (i / lanes) * Math.PI * 2 + 0.4 + p * 0.3;
-    const g = ctx.createLinearGradient(
-      cx + Math.cos(ang0) * 200, cy + Math.sin(ang0) * 80,
-      cx, cy
-    );
-    g.addColorStop(0, rgba(160, 180, 255, 0));
-    g.addColorStop(1, rgba(200, 190, 255, 0.3 * str));
-    ctx.strokeStyle = g;
+    const ang0 = (i / lanes) * Math.PI * 2 + 0.35 + p * 0.35;
+    ctx.strokeStyle = rgba(200, 190, 255, 0.22 * str);
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(cx + Math.cos(ang0) * Math.max(w, h) * 0.4 * str, cy + Math.sin(ang0) * Math.max(w, h) * 0.18 * str);
-    ctx.lineTo(cx + Math.cos(ang0) * 40, cy + Math.sin(ang0) * 18);
+    ctx.moveTo(cx + Math.cos(ang0) * dim * 1.05 * str, cy + Math.sin(ang0) * dim * 0.42 * str);
+    ctx.lineTo(cx + Math.cos(ang0) * dim * 0.12, cy + Math.sin(ang0) * dim * 0.05);
     ctx.stroke();
   }
   ctx.restore();
 }
 
-function drawSun(ctx, cx, cy, p) {
-  const on = smootherstep(0.16, 0.40, p) * (1 - smootherstep(0.80, 0.92, p) * 0.85);
-  if (on <= 0.01) return;
-  const r = lerp(10, 38, Math.min(1, on / 0.5));
+function drawJets(ctx, cx, cy, p, dim) {
+  // Bipolar outflow early (protostar / young Sun)
+  const jets = smoothstep(0.12, 0.28, p) * (1 - smootherstep(0.42, 0.58, p));
+  if (jets < 0.01) return;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
-  drawBloom(ctx, cx, cy, r * 4.5, { r: 255, g: 200, b: 90 }, 0.55 * on);
-  drawGlow(ctx, cx, cy, r * 1.8, { r: 255, g: 240, b: 190 }, 0.7 * on);
+  for (const dir of [-1, 1]) {
+    const len = dim * 0.7 * jets;
+    const g = ctx.createLinearGradient(cx, cy, cx, cy + dir * len);
+    g.addColorStop(0, rgba(180, 220, 255, 0.55 * jets));
+    g.addColorStop(0.4, rgba(120, 180, 255, 0.25 * jets));
+    g.addColorStop(1, rgba(80, 140, 255, 0));
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 6 * jets;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + dir * dim * 0.04, cy + dir * len);
+    ctx.stroke();
+    // Wider cone
+    ctx.strokeStyle = rgba(140, 190, 255, 0.12 * jets);
+    ctx.lineWidth = 18 * jets;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx, cy + dir * len * 0.85);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawSun(ctx, cx, cy, p, dim) {
+  const on = smootherstep(0.14, 0.38, p) * (1 - smootherstep(0.80, 0.92, p) * 0.85);
+  if (on < 0.01) return;
+  const r = dim * 0.1 * lerp(0.5, 1, Math.min(1, on / 0.6));
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  drawBloom(ctx, cx, cy, r * 5, { r: 255, g: 200, b: 90 }, 0.6 * on);
+  drawGlow(ctx, cx, cy, r * 2, { r: 255, g: 240, b: 190 }, 0.75 * on);
   const g = ctx.createRadialGradient(cx - r * 0.2, cy - r * 0.2, 0, cx, cy, r);
   g.addColorStop(0, rgba(255, 252, 240, 0.98 * on));
-  g.addColorStop(0.6, rgba(255, 220, 140, 0.95 * on));
+  g.addColorStop(0.55, rgba(255, 220, 140, 0.95 * on));
   g.addColorStop(1, rgba(255, 180, 80, 0));
   ctx.fillStyle = g;
   ctx.beginPath();
@@ -136,93 +168,137 @@ function drawSun(ctx, cx, cy, p) {
   ctx.restore();
 }
 
-function drawProtoDisk(ctx, cx, cy, p, quality, scale) {
-  const disk = smootherstep(0.22, 0.48, p) * (1 - smootherstep(0.72, 0.86, p));
+function drawProtoDisk(ctx, cx, cy, p, quality, dim) {
+  const disk = smootherstep(0.18, 0.45, p) * (1 - smootherstep(0.72, 0.86, p));
   if (disk < 0.01) return;
-  const maxR = Math.min(scale * 0.48, Math.min(cx, cy) * 0.95);
+  const maxR = dim * 0.72;
+  const snowLine = 0.48; // fractional radius
 
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.scale(1, 0.30);
-  ctx.globalCompositeOperation = "lighter";
+  ctx.scale(1, 0.32);
 
-  // Continuous disk gradient (not stepped rings only)
-  const dg = ctx.createRadialGradient(0, 0, maxR * 0.08, 0, 0, maxR);
-  dg.addColorStop(0, rgba(255, 230, 180, 0.15 * disk));
-  dg.addColorStop(0.25, rgba(220, 180, 120, 0.28 * disk));
-  dg.addColorStop(0.55, rgba(180, 140, 100, 0.18 * disk));
-  dg.addColorStop(0.78, rgba(140, 160, 200, 0.12 * disk));
+  // Continuous disk: warm inside snow line, cool/icy outside
+  const dg = ctx.createRadialGradient(0, 0, maxR * 0.06, 0, 0, maxR);
+  dg.addColorStop(0, rgba(255, 230, 170, 0.2 * disk));
+  dg.addColorStop(snowLine * 0.85, rgba(230, 170, 100, 0.38 * disk));
+  dg.addColorStop(snowLine, rgba(200, 200, 230, 0.32 * disk)); // snow line transition
+  dg.addColorStop(0.78, rgba(150, 180, 230, 0.22 * disk));
   dg.addColorStop(1, rgba(0, 0, 0, 0));
   ctx.fillStyle = dg;
   ctx.beginPath();
   ctx.arc(0, 0, maxR, 0, Math.PI * 2);
   ctx.fill();
 
-  // Gaps (darker annular bands)
-  const gaps = [0.38, 0.55, 0.72];
-  ctx.globalCompositeOperation = "source-over";
-  gaps.forEach((gf, i) => {
-    const on = smootherstep(0.40 + i * 0.05, 0.55 + i * 0.05, p);
-    ctx.strokeStyle = rgba(5, 6, 15, 0.55 * disk * on);
-    ctx.lineWidth = maxR * 0.045;
-    ctx.beginPath();
-    ctx.arc(0, 0, maxR * gf, 0, Math.PI * 2);
-    ctx.stroke();
-  });
-
-  // Bright ring edges
+  // Soft spiral / turbulent dust arms
   ctx.globalCompositeOperation = "lighter";
-  for (let i = 0; i < 5; i++) {
-    const r = maxR * (0.2 + i * 0.15);
-    ctx.strokeStyle = rgba(255, 210, 150, 0.08 * disk);
-    ctx.lineWidth = 2;
+  const arms = 3;
+  for (let a = 0; a < arms; a++) {
+    ctx.strokeStyle = rgba(255, 210, 150, 0.14 * disk);
+    ctx.lineWidth = maxR * 0.06;
     ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    for (let t = 0; t <= 1; t += 0.02) {
+      const ang = a * ((Math.PI * 2) / arms) + t * 3.5 + p * 0.6;
+      const r = maxR * (0.15 + t * 0.8);
+      const j = 1 + (hash01(a * 10 + Math.floor(t * 20)) - 0.5) * 0.06;
+      const x = Math.cos(ang) * r * j;
+      const y = Math.sin(ang) * r * j;
+      if (t === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
     ctx.stroke();
   }
 
-  // Planetesimals
-  const n = Math.floor(lerp(30, 90, quality) * disk);
-  for (let i = 0; i < n; i++) {
-    const ang = hash01(i * 3) * Math.PI * 2 + p * (0.3 + hash01(i) * 0.4);
-    const r = maxR * (0.22 + hash01(i * 7) * 0.72);
-    // Avoid deep gaps a bit
-    ctx.fillStyle = rgba(255, 220, 170, 0.35 * disk * (0.4 + hash01(i * 2) * 0.6));
+  // Turbulent density clumps
+  const clumps = Math.floor(lerp(40, 100, quality) * disk);
+  for (let i = 0; i < clumps; i++) {
+    const ang = hash01(i * 3) * Math.PI * 2 + p * 0.35;
+    const r = maxR * (0.18 + hash01(i * 7) * 0.75);
+    const icy = r > maxR * snowLine;
+    ctx.fillStyle = icy
+      ? rgba(180, 210, 255, 0.25 * disk)
+      : rgba(255, 200, 140, 0.3 * disk);
     ctx.beginPath();
-    ctx.arc(Math.cos(ang) * r, Math.sin(ang) * r, 1.2 + hash01(i * 5) * 2.5, 0, Math.PI * 2);
+    ctx.arc(Math.cos(ang) * r, Math.sin(ang) * r, 1.5 + hash01(i * 5) * 3.5, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  // Gaps with shepherding protoplanets
+  const gaps = [
+    { f: 0.36, shepherd: true },
+    { f: 0.55, shepherd: true },
+    { f: 0.72, shepherd: false },
+  ];
+  ctx.globalCompositeOperation = "source-over";
+  gaps.forEach((g, i) => {
+    const on = smootherstep(0.38 + i * 0.04, 0.52 + i * 0.04, p);
+    ctx.strokeStyle = rgba(6, 8, 18, 0.65 * disk * on);
+    ctx.lineWidth = maxR * 0.055;
+    ctx.beginPath();
+    ctx.arc(0, 0, maxR * g.f, 0, Math.PI * 2);
+    ctx.stroke();
+    if (g.shepherd && on > 0.3) {
+      const ang = p * (0.8 + i * 0.3) + i * 2;
+      const x = Math.cos(ang) * maxR * g.f;
+      const y = Math.sin(ang) * maxR * g.f;
+      ctx.globalCompositeOperation = "lighter";
+      drawGlow(ctx, x, y, 14, { r: 255, g: 220, b: 160 }, 0.45 * on * disk);
+      ctx.fillStyle = rgba(255, 230, 180, 0.9 * on * disk);
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+    }
+  });
+
+  // Snow line marker (subtle dashed ring)
+  ctx.strokeStyle = rgba(200, 220, 255, 0.22 * disk);
+  ctx.setLineDash([6, 8]);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, maxR * snowLine, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Edge glow
+  ctx.globalCompositeOperation = "lighter";
+  ctx.strokeStyle = rgba(255, 210, 160, 0.2 * disk);
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.arc(0, 0, maxR * 0.96, 0, Math.PI * 2);
+  ctx.stroke();
+  drawGlow(ctx, 0, 0, maxR * 1.05, { r: 255, g: 200, b: 140 }, 0.08 * disk);
+
   ctx.restore();
 }
 
-function drawPlanets(ctx, cx, cy, p, quality, scale) {
-  const grow = smootherstep(0.50, 0.78, p) * (1 - smootherstep(0.78, 0.90, p));
-  if (grow <= 0.01) return;
+function drawPlanets(ctx, cx, cy, p, quality, dim) {
+  const grow = smootherstep(0.48, 0.78, p) * (1 - smootherstep(0.78, 0.90, p));
+  if (grow < 0.01) return;
   const planets = [
-    { orb: 0.20, r: 3.2, c: { r: 180, g: 180, b: 185 } },
-    { orb: 0.30, r: 5.2, c: { r: 230, g: 190, b: 120 } },
-    { orb: 0.40, r: 5.8, c: { r: 80, g: 145, b: 230 } },
-    { orb: 0.50, r: 4.2, c: { r: 210, g: 110, b: 75 } },
-    { orb: 0.66, r: 13, c: { r: 230, g: 190, b: 150 } },
-    { orb: 0.80, r: 11, c: { r: 235, g: 210, b: 150 } },
+    { orb: 0.18, r: 4, c: { r: 180, g: 180, b: 185 } },
+    { orb: 0.28, r: 6.5, c: { r: 230, g: 190, b: 120 } },
+    { orb: 0.38, r: 7, c: { r: 80, g: 145, b: 230 } },
+    { orb: 0.48, r: 5, c: { r: 210, g: 110, b: 75 } },
+    { orb: 0.64, r: 16, c: { r: 230, g: 190, b: 150 } },
+    { orb: 0.78, r: 13, c: { r: 235, g: 210, b: 150 } },
   ];
-  const maxR = Math.min(scale * 0.48, Math.min(cx, cy) * 0.9);
+  const maxR = dim * 0.7;
   ctx.save();
-  // Faint orbits
-  ctx.strokeStyle = rgba(180, 200, 255, 0.08 * grow);
+  ctx.strokeStyle = rgba(180, 200, 255, 0.1 * grow);
   ctx.lineWidth = 1;
   planets.forEach((pl) => {
     ctx.beginPath();
-    ctx.ellipse(cx, cy, maxR * pl.orb, maxR * pl.orb * 0.30, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, maxR * pl.orb, maxR * pl.orb * 0.32, 0, 0, Math.PI * 2);
     ctx.stroke();
   });
   planets.forEach((pl, i) => {
-    const on = clamp((grow - i * 0.07) / 0.22, 0, 1);
+    const on = clamp((grow - i * 0.06) / 0.22, 0, 1);
     if (on <= 0) return;
-    const ang = p * (0.5 + i * 0.12) + i * 1.1;
+    const ang = p * (0.45 + i * 0.12) + i * 1.1;
     const x = cx + Math.cos(ang) * maxR * pl.orb;
-    const y = cy + Math.sin(ang) * maxR * pl.orb * 0.30;
-    drawGlow(ctx, x, y, pl.r * 5 * on, pl.c, 0.3 * on);
+    const y = cy + Math.sin(ang) * maxR * pl.orb * 0.32;
+    drawGlow(ctx, x, y, pl.r * 5 * on, pl.c, 0.35 * on);
     ctx.fillStyle = rgba(pl.c.r, pl.c.g, pl.c.b, 0.95 * on);
     ctx.beginPath();
     ctx.arc(x, y, pl.r * on, 0, Math.PI * 2);
@@ -231,80 +307,84 @@ function drawPlanets(ctx, cx, cy, p, quality, scale) {
   ctx.restore();
 }
 
-function drawMoonImpact(ctx, w, h, cx, cy, p, quality, scale) {
+function drawMoonImpact(ctx, cx, cy, p, quality, dim) {
   const imp = smootherstep(0.76, 0.96, p);
   if (imp <= 0) return;
-
-  const ex = cx + scale * 0.02;
+  const ex = cx;
   const ey = cy;
-  const earthR = Math.min(28, scale * 0.07);
+  const earthR = dim * 0.16;
 
   ctx.save();
-  // Earth body
-  drawGlow(ctx, ex, ey, earthR * 3.2, { r: 70, g: 130, b: 210 }, 0.35 * imp);
+  drawGlow(ctx, ex, ey, earthR * 3.5, { r: 70, g: 130, b: 210 }, 0.4 * imp);
   const eg = ctx.createRadialGradient(ex - earthR * 0.3, ey - earthR * 0.3, earthR * 0.1, ex, ey, earthR);
   eg.addColorStop(0, rgba(140, 185, 240, 0.98 * imp));
-  eg.addColorStop(0.55, rgba(50, 110, 190, 0.98 * imp));
+  eg.addColorStop(0.5, rgba(50, 110, 190, 0.98 * imp));
   eg.addColorStop(1, rgba(20, 50, 110, 0.98 * imp));
   ctx.fillStyle = eg;
   ctx.beginPath();
   ctx.arc(ex, ey, earthR, 0, Math.PI * 2);
   ctx.fill();
 
-  // Theia approaches then merges
-  const approach = smootherstep(0.76, 0.87, p);
-  const contact = smootherstep(0.86, 0.92, p);
-  const sep = lerp(scale * 0.32, earthR * 0.9, approach);
-  if (contact < 0.95) {
+  const approach = smootherstep(0.76, 0.86, p);
+  const contact = smootherstep(0.84, 0.90, p);
+  const sep = lerp(dim * 0.38, earthR * 0.95, approach);
+  if (contact < 0.92) {
     const tx = ex - sep;
-    const ty = ey - earthR * 0.15;
-    const tr = earthR * 0.58;
-    drawGlow(ctx, tx, ty, tr * 2.5, { r: 200, g: 150, b: 100 }, 0.3 * imp * (1 - contact));
-    ctx.fillStyle = rgba(190, 150, 110, 0.92 * imp * (1 - contact * 0.85));
+    const ty = ey - earthR * 0.12;
+    const tr = earthR * 0.55;
+    drawGlow(ctx, tx, ty, tr * 2.8, { r: 200, g: 150, b: 100 }, 0.35 * imp * (1 - contact));
+    ctx.fillStyle = rgba(190, 150, 110, 0.95 * imp * (1 - contact * 0.8));
     ctx.beginPath();
     ctx.arc(tx, ty, tr, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // Impact bloom + debris ring → Moon
   const debris = smootherstep(0.82, 0.96, p);
   if (debris > 0) {
     ctx.globalCompositeOperation = "lighter";
-    drawBloom(ctx, ex - earthR * 0.4, ey, 100 * debris, { r: 255, g: 180, b: 90 }, 0.55 * debris);
+    drawBloom(ctx, ex - earthR * 0.35, ey, earthR * 3.5 * debris, { r: 255, g: 180, b: 90 }, 0.55 * debris);
 
-    // Debris ring (smooth ellipse strokes)
-    for (const [rx, ry, a, lw] of [
-      [3.6, 1.2, 0.45, 5],
-      [4.2, 1.45, 0.25, 3],
-    ]) {
-      ctx.strokeStyle = rgba(255, 205, 150, a * debris);
-      ctx.lineWidth = lw;
+    // Debris ring — irregular, clumpy
+    for (let ring = 0; ring < 2; ring++) {
+      const segs = 40;
+      ctx.strokeStyle = rgba(255, 200, 140, (0.4 - ring * 0.12) * debris);
+      ctx.lineWidth = 4 - ring;
       ctx.beginPath();
-      ctx.ellipse(ex, ey, earthR * rx * debris, earthR * ry * debris, -0.35, 0, Math.PI * 2);
+      for (let i = 0; i <= segs; i++) {
+        const t = i / segs;
+        const ang = t * Math.PI * 2 - 0.4;
+        const j = 0.92 + 0.15 * hash01(i + ring * 20);
+        const rx = earthR * (3.2 + ring * 0.55) * debris * j;
+        const ry = earthR * (1.1 + ring * 0.2) * debris * j;
+        const x = ex + Math.cos(ang) * rx;
+        const y = ey + Math.sin(ang) * ry;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
       ctx.stroke();
     }
 
-    const n = Math.floor(55 * quality);
+    const n = Math.floor(70 * quality);
     for (let i = 0; i < n; i++) {
-      const ang = hash01(i) * Math.PI * 2 + p * 0.8;
-      const rr = earthR * (1.6 + hash01(i * 2) * 4.2) * debris;
+      const ang = hash01(i) * Math.PI * 2 + p;
+      const rr = earthR * (1.5 + hash01(i * 2) * 4.5) * debris;
       const x = ex + Math.cos(ang) * rr;
       const y = ey + Math.sin(ang) * rr * 0.38;
-      drawGlow(ctx, x, y, 4 + hash01(i * 3) * 5, { r: 255, g: 200, b: 140 }, 0.35 * debris * hash01(i + 1));
+      drawGlow(ctx, x, y, 4 + hash01(i * 3) * 6, { r: 255, g: 200, b: 140 }, 0.4 * debris * hash01(i + 1));
     }
 
-    // Coalescing Moon
-    const moonOn = smootherstep(0.86, 0.96, p);
-    const mx = ex + earthR * 4.0 * Math.min(1, debris * 1.05);
-    const my = ey - earthR * 0.85;
-    drawGlow(ctx, mx, my, 22 * moonOn, { r: 200, g: 205, b: 220 }, 0.45 * moonOn);
+    const moonOn = smootherstep(0.86, 0.97, p);
+    const mx = ex + earthR * 4.2 * Math.min(1, debris * 1.05);
+    const my = ey - earthR * 0.9;
+    drawGlow(ctx, mx, my, 28 * moonOn, { r: 200, g: 205, b: 220 }, 0.5 * moonOn);
     ctx.globalCompositeOperation = "source-over";
-    const mg = ctx.createRadialGradient(mx - 2, my - 2, 1, mx, my, 8 * moonOn);
+    const mg = ctx.createRadialGradient(mx - 3, my - 3, 1, mx, my, 10 * moonOn);
     mg.addColorStop(0, rgba(230, 230, 235, 0.95 * moonOn));
     mg.addColorStop(1, rgba(140, 140, 155, 0.95 * moonOn));
     ctx.fillStyle = mg;
     ctx.beginPath();
-    ctx.arc(mx, my, 8 * moonOn, 0, Math.PI * 2);
+    ctx.arc(mx, my, 10 * moonOn, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
@@ -318,17 +398,18 @@ const scene = {
   render(ctx, localProgress, view) {
     const { w, h, quality = 1 } = view;
     const p = clamp(localProgress, 0, 1);
-    const { cx, cy, scale } = stage(view, w, h);
+    const { cx, cy, dim } = stage(view, w, h);
 
     drawBg(ctx, w, h, p, quality);
-    drawCollapsingNebula(ctx, w, h, cx, cy, p, quality);
-    drawProtoDisk(ctx, cx, cy, p, quality, scale);
-    drawSun(ctx, cx, cy, p);
-    drawPlanets(ctx, cx, cy, p, quality, scale);
-    drawMoonImpact(ctx, w, h, cx, cy, p, quality, scale);
+    drawCollapsingNebula(ctx, w, h, cx, cy, p, quality, dim);
+    drawProtoDisk(ctx, cx, cy, p, quality, dim);
+    drawJets(ctx, cx, cy, p, dim);
+    drawSun(ctx, cx, cy, p, dim);
+    drawPlanets(ctx, cx, cy, p, quality, dim);
+    drawMoonImpact(ctx, cx, cy, p, quality, dim);
 
-    drawVignette(ctx, w, h, 0.52);
-    drawGrain(ctx, w, h, Math.floor(p * 600 + 100), 0.028, quality);
+    drawVignette(ctx, w, h, 0.48);
+    drawGrain(ctx, w, h, Math.floor(p * 600 + 100), 0.008, quality);
   },
 };
 

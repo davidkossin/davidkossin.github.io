@@ -1,10 +1,9 @@
 /**
- * Chapter 1 — Cosmic dawn (premium)
- * Smooth volumetric plasma, fog clearing into CMB mottling, first stars & galaxies.
- * State is a pure function of localProgress (+ view.quality for particle counts).
+ * Chapter 1 — Cosmic dawn (v3 planetarium)
+ * Large subjects in safeContent; rich full-canvas backgrounds; mid-clear recombination.
  */
 import {
-  clamp, lerp, smoothstep, smootherstep, hash01, fbm,
+  clamp, lerp, smoothstep, smootherstep, hash01,
   drawGlow, drawBloom, drawVignette, drawGrain,
   drawVolumetricHaze, drawStarfield, rgba, mixRgb,
 } from "../util.js";
@@ -70,156 +69,188 @@ const checkpoints = [
 
 const WHITE = { r: 255, g: 252, b: 245 };
 const GOLD = { r: 255, g: 210, b: 130 };
-const PLASMA_HOT = { r: 255, g: 140, b: 70 };
-const PLASMA_PINK = { r: 255, g: 100, b: 140 };
-const PLASMA_COOL = { r: 255, g: 170, b: 110 };
-const CMB_WARM = { r: 210, g: 160, b: 130 };
-const CMB_COOL = { r: 90, g: 110, b: 150 };
+const PLASMA_HOT = { r: 255, g: 150, b: 70 };
+const PLASMA_PINK = { r: 255, g: 110, b: 150 };
+const PLASMA_COOL = { r: 255, g: 175, b: 115 };
+const CMB_WARM = { r: 255, g: 170, b: 120 };
+const CMB_COOL = { r: 70, g: 110, b: 190 };
 const STAR = { r: 210, g: 225, b: 255 };
+
+function stage(view, w, h) {
+  const s = view.safeContent;
+  if (s && s.w > 40 && s.h > 40) {
+    const dim = Math.min(s.w, s.h);
+    return { cx: s.cx, cy: s.cy, dim };
+  }
+  return { cx: w * 0.5, cy: h * 0.48, dim: Math.min(w, h) * 0.7 };
+}
 
 function colorTemp(p) {
   if (p < 0.15) return mixRgb(WHITE, GOLD, smoothstep(0, 0.15, p));
   if (p < 0.32) return mixRgb(GOLD, PLASMA_PINK, smoothstep(0.15, 0.32, p));
   if (p < 0.48) return mixRgb(PLASMA_PINK, PLASMA_COOL, smoothstep(0.32, 0.48, p));
   if (p < 0.62) return mixRgb(PLASMA_COOL, CMB_WARM, smoothstep(0.48, 0.62, p));
-  if (p < 0.82) return mixRgb(CMB_WARM, { r: 28, g: 34, b: 60 }, smoothstep(0.62, 0.82, p));
-  return mixRgb({ r: 28, g: 34, b: 60 }, { r: 5, g: 6, b: 16 }, smoothstep(0.82, 1, p));
+  if (p < 0.82) return mixRgb(CMB_WARM, { r: 18, g: 22, b: 48 }, smoothstep(0.62, 0.82, p));
+  return mixRgb({ r: 18, g: 22, b: 48 }, { r: 5, g: 6, b: 16 }, smoothstep(0.82, 1, p));
 }
 
-function stageCenter(view, w, h) {
-  const s = view.safeContent;
-  if (s && s.w > 40) return { cx: s.cx, cy: s.cy };
-  return { cx: w * 0.5, cy: h * 0.48 };
-}
-
-function drawPlasmaVolume(ctx, w, h, p, quality, opacity) {
-  if (opacity < 0.01) return;
-  // Soft radial blobs only — never cell/ImageData fields (avoids any grid).
-  const n = Math.floor(lerp(10, 22, quality));
-  ctx.save();
-  for (let i = 0; i < n; i++) {
-    const x = ((hash01(i * 2.1 + 2) + p * 0.04 * (hash01(i) - 0.4)) % 1) * w;
-    const y = ((hash01(i * 5.3 + 4) + p * 0.03 * (hash01(i + 1) - 0.5)) % 1) * h;
-    const rad = (0.18 + hash01(i * 8) * 0.55) * Math.max(w, h);
-    const hot = hash01(i * 3) > 0.45;
-    const col = hot ? mixRgb(PLASMA_HOT, GOLD, hash01(i * 4)) : mixRgb(PLASMA_PINK, PLASMA_COOL, hash01(i * 5));
-    const a = opacity * (0.08 + hash01(i * 6) * 0.14);
-    drawGlow(ctx, x, y, rad, col, a);
+function drawRichBackdrop(ctx, w, h, p, quality) {
+  const bg = colorTemp(p);
+  const dark = smootherstep(0.58, 0.85, p);
+  const deep = mixRgb(bg, { r: 8, g: 10, b: 28 }, dark * 0.75);
+  ctx.fillStyle = rgba(deep.r, deep.g, deep.b, 1);
+  ctx.fillRect(0, 0, w, h);
+  const sheets = Math.floor(lerp(6, 12, quality));
+  for (let i = 0; i < sheets; i++) {
+    const x = hash01(i * 1.7 + 2) * w;
+    const y = hash01(i * 3.3 + 4) * h;
+    const rad = (0.35 + hash01(i * 5) * 0.55) * Math.max(w, h);
+    let col;
+    if (p < 0.45) col = mixRgb(PLASMA_HOT, GOLD, hash01(i));
+    else if (p < 0.65) col = mixRgb(CMB_WARM, { r: 120, g: 80, b: 160 }, hash01(i));
+    else col = mixRgb({ r: 40, g: 60, b: 120 }, { r: 80, g: 40, b: 120 }, hash01(i));
+    drawGlow(ctx, x, y, rad, col, (0.06 + hash01(i * 2) * 0.1) * (1 - dark * 0.4));
   }
-  ctx.globalCompositeOperation = "lighter";
-  for (let i = 0; i < Math.floor(n * 0.6); i++) {
-    const x = hash01(i * 9.1 + 7) * w;
-    const y = hash01(i * 4.4 + 8) * h;
-    const rad = (0.08 + hash01(i * 2) * 0.2) * Math.max(w, h);
-    drawGlow(ctx, x, y, rad, WHITE, 0.06 * opacity);
-  }
-  ctx.restore();
-  drawVolumetricHaze(ctx, w, h, {
-    count: Math.floor(lerp(6, 12, quality)),
-    seed: 3,
-    strength: 0.22 * opacity,
-    color: mixRgb(PLASMA_HOT, GOLD, 0.4),
-    progress: p,
-    composite: "lighter",
-  });
 }
 
-function drawCMBField(ctx, w, h, strength, quality, p) {
+/** High-contrast Planck-like CMB with dark gaps between patches */
+function drawCMBMap(ctx, w, h, strength, quality) {
   if (strength < 0.01) return;
-  // Soft all-sky wash
   ctx.save();
-  const g = ctx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.7);
-  g.addColorStop(0, rgba(CMB_WARM.r, CMB_WARM.g, CMB_WARM.b, 0.28 * strength));
-  g.addColorStop(0.55, rgba(160, 130, 120, 0.14 * strength));
-  g.addColorStop(1, rgba(40, 50, 80, 0.06 * strength));
-  ctx.fillStyle = g;
+  const base = ctx.createRadialGradient(w * 0.5, h * 0.5, 0, w * 0.5, h * 0.5, Math.max(w, h) * 0.7);
+  base.addColorStop(0, rgba(22, 20, 38, 0.75 * strength));
+  base.addColorStop(1, rgba(3, 4, 12, 0.95 * strength));
+  ctx.fillStyle = base;
   ctx.fillRect(0, 0, w, h);
 
-  // Anisotropy as large soft blobs (no grids) — warm/cool patches
-  const n = Math.floor(lerp(18, 36, quality));
+  const n = Math.floor(lerp(32, 60, quality));
   for (let i = 0; i < n; i++) {
-    const x = hash01(i * 3.7 + 11) * w;
-    const y = hash01(i * 8.1 + 13) * h;
-    const rad = (0.12 + hash01(i * 2.2) * 0.28) * Math.max(w, h);
-    const warm = hash01(i * 5.5 + 11) > 0.5;
-    const col = warm ? { r: 230, g: 175, b: 140 } : { r: 90, g: 115, b: 160 };
-    drawGlow(ctx, x, y, rad, col, 0.11 * strength);
+    const gx = hash01(i * 2.1 + 11);
+    const gy = hash01(i * 4.7 + 13);
+    const cx = (gx * 0.65 + hash01(Math.floor(gx * 5) * 3.1) * 0.35) * w;
+    const cy = (gy * 0.65 + hash01(Math.floor(gy * 5) * 5.2) * 0.35) * h;
+    const rad = (0.05 + hash01(i * 3.3) * 0.14) * Math.max(w, h);
+    const warm = hash01(i * 7.7 + 11) > 0.48;
+    const col = warm
+      ? { r: 255, g: 155 + hash01(i) * 45, b: 85 + hash01(i * 2) * 45 }
+      : { r: 45 + hash01(i) * 45, g: 85 + hash01(i * 2) * 45, b: 175 + hash01(i * 3) * 55 };
+    drawGlow(ctx, cx, cy, rad, col, (0.32 + hash01(i * 1.5) * 0.3) * strength);
+  }
+  for (let i = 0; i < 7; i++) {
+    const cx = hash01(i * 9.1 + 40) * w;
+    const cy = hash01(i * 6.2 + 41) * h;
+    const rad = (0.16 + hash01(i) * 0.14) * Math.max(w, h);
+    drawGlow(ctx, cx, cy, rad, i % 2 === 0 ? CMB_WARM : CMB_COOL, 0.24 * strength);
   }
   ctx.restore();
 }
 
-function drawFirstStars(ctx, w, h, cx, cy, p, quality, strength) {
+/** Patchy glowing billows with gaps — mid-clear reveals CMB underneath */
+function drawPlasmaFog(ctx, w, h, p, quality, opacity) {
+  if (opacity < 0.01) return;
+  const n = Math.floor(lerp(7, 13, quality));
+  ctx.save();
+  for (let i = 0; i < n; i++) {
+    const x = ((hash01(i * 2.2 + 1) + p * 0.05 * (hash01(i + 2) - 0.35)) % 1) * w;
+    const y = ((hash01(i * 5.1 + 3) + p * 0.04 * (hash01(i + 4) - 0.5)) % 1) * h;
+    const rad = (0.12 + hash01(i * 7) * 0.26) * Math.max(w, h);
+    const col = mixRgb(mixRgb(PLASMA_HOT, GOLD, hash01(i)), PLASMA_PINK, hash01(i * 3) * 0.4);
+    drawGlow(ctx, x, y, rad, col, opacity * (0.42 + hash01(i * 4) * 0.32));
+  }
+  ctx.globalCompositeOperation = "lighter";
+  for (let i = 0; i < Math.floor(n * 0.75); i++) {
+    const x = hash01(i * 8.2 + 9) * w;
+    const y = hash01(i * 3.9 + 10) * h;
+    drawGlow(ctx, x, y, (0.045 + hash01(i) * 0.07) * Math.max(w, h), WHITE, 0.22 * opacity);
+    drawGlow(ctx, x, y, (0.09 + hash01(i * 2) * 0.1) * Math.max(w, h), GOLD, 0.24 * opacity);
+  }
+  ctx.restore();
+}
+
+function drawInflationRings(ctx, cx, cy, dim, p, strength) {
   if (strength < 0.01) return;
-  const count = Math.floor(lerp(20, 100, quality));
-  const ignite = smootherstep(0.70, 0.90, p);
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  const R = dim * 0.85;
+  for (let k = 0; k < 7; k++) {
+    const t = (p * 1.4 + k * 0.12) % 1;
+    ctx.strokeStyle = rgba(255, 230, 180, 0.16 * strength * (1 - t));
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * (0.15 + t * 1.1), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  drawBloom(ctx, cx, cy, dim * 0.7, GOLD, 0.45 * strength);
+  ctx.restore();
+}
+
+function drawFirstStars(ctx, w, h, cx, cy, dim, p, quality, strength) {
+  if (strength < 0.01) return;
+  const count = Math.floor(lerp(40, 130, quality));
+  const ignite = smootherstep(0.68, 0.88, p);
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   for (let i = 0; i < count; i++) {
     const birth = hash01(i * 13.1);
-    const on = clamp((ignite - birth * 0.8) / 0.22, 0, 1) * strength;
+    const on = clamp((ignite - birth * 0.75) / 0.25, 0, 1) * strength;
     if (on <= 0) continue;
-    // Bias slightly toward stage center, still fill frame
-    const bx = hash01(i * 19.7 + 3.1);
-    const by = hash01(i * 7.3 + 11.9);
-    const x = lerp(bx * w, cx + (bx - 0.5) * w * 0.9, 0.35);
-    const y = lerp(by * h, cy + (by - 0.5) * h * 0.85, 0.35);
-    const r = 0.7 + hash01(i * 2.9) * 2.6;
-    const col = hash01(i * 5.5) > 0.65 ? { r: 255, g: 215, b: 175 } : STAR;
-    const pulse = 0.88 + 0.12 * Math.sin((p * 6 + i) * 1.3);
-    drawGlow(ctx, x, y, r * 26 * on * pulse, col, 0.5 * on);
-    drawGlow(ctx, x, y, r * 8 * on, WHITE, 0.4 * on);
-    ctx.fillStyle = rgba(255, 255, 255, 0.92 * on);
+    const inStage = hash01(i * 2.2) > 0.22;
+    const x = inStage ? cx + (hash01(i * 19.7) - 0.5) * dim * 1.15 : hash01(i * 19.7 + 3) * w;
+    const y = inStage ? cy + (hash01(i * 7.3) - 0.5) * dim * 0.95 : hash01(i * 7.3 + 11) * h;
+    const r = (1.3 + hash01(i * 2.9) * 4) * (inStage ? 1.4 : 0.85);
+    const col = hash01(i * 5.5) > 0.6 ? { r: 255, g: 220, b: 180 } : STAR;
+    const pulse = 0.88 + 0.12 * Math.sin((p * 5 + i) * 1.2);
+    drawGlow(ctx, x, y, r * 22 * on * pulse, col, 0.55 * on);
+    drawGlow(ctx, x, y, r * 7 * on, WHITE, 0.5 * on);
+    ctx.fillStyle = rgba(255, 255, 255, 0.95 * on);
     ctx.beginPath();
-    ctx.arc(x, y, Math.max(1.1, r * on), 0, Math.PI * 2);
+    ctx.arc(x, y, Math.max(1.4, r * 0.55 * on), 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore();
 }
 
-function drawGalaxies(ctx, w, h, cx, cy, p, quality, strength) {
+function drawGalaxies(ctx, w, h, cx, cy, dim, p, quality, strength) {
   if (strength < 0.01) return;
-  const count = Math.floor(lerp(5, 16, quality));
-  const grow = smootherstep(0.86, 1.0, p) * strength;
+  const count = Math.floor(lerp(8, 20, quality));
+  const grow = smootherstep(0.84, 1.0, p) * strength;
   ctx.save();
   ctx.globalCompositeOperation = "lighter";
   for (let i = 0; i < count; i++) {
-    const gx = lerp(hash01(i * 4.4 + 2) * w, cx + (hash01(i * 4.4) - 0.5) * w * 0.85, 0.3);
-    const gy = lerp(hash01(i * 9.1 + 6) * h, cy + (hash01(i * 9.1) - 0.5) * h * 0.75, 0.3);
+    const inStage = i < count * 0.65;
+    const gx = inStage ? cx + (hash01(i * 4.4) - 0.5) * dim : hash01(i * 4.4 + 2) * w;
+    const gy = inStage ? cy + (hash01(i * 9.1) - 0.5) * dim * 0.85 : hash01(i * 9.1 + 6) * h;
     const ang = hash01(i * 3.3) * Math.PI * 2;
-    const size = (36 + hash01(i * 2.2) * 80) * grow;
-    const a = (0.1 + hash01(i) * 0.14) * grow;
+    const size = (55 + hash01(i * 2.2) * 115) * grow * (inStage ? 1.25 : 0.7);
+    const a = (0.12 + hash01(i) * 0.16) * grow;
     ctx.save();
     ctx.translate(gx, gy);
     ctx.rotate(ang);
-    ctx.scale(1, 0.32 + hash01(i * 1.7) * 0.35);
+    ctx.scale(1, 0.30 + hash01(i * 1.7) * 0.32);
     const g = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
-    g.addColorStop(0, rgba(240, 245, 255, a * 2));
-    g.addColorStop(0.2, rgba(150, 170, 255, a));
-    g.addColorStop(0.55, rgba(100, 70, 180, a * 0.4));
+    g.addColorStop(0, rgba(245, 248, 255, a * 2.2));
+    g.addColorStop(0.18, rgba(160, 180, 255, a));
+    g.addColorStop(0.5, rgba(110, 70, 190, a * 0.45));
     g.addColorStop(1, rgba(0, 0, 0, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.arc(0, 0, size, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = rgba(180, 200, 255, 0.22 * a);
+    ctx.lineWidth = 2;
+    for (let arm = 0; arm < 2; arm++) {
+      ctx.beginPath();
+      for (let t = 0; t <= 1; t += 0.05) {
+        const ra = size * (0.2 + t * 0.75);
+        const aa = arm * Math.PI + t * 2.8;
+        const x = Math.cos(aa) * ra;
+        const y = Math.sin(aa) * ra;
+        if (t === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
     ctx.restore();
   }
-  ctx.restore();
-}
-
-function drawInflationRings(ctx, cx, cy, w, h, p, strength) {
-  if (strength < 0.01) return;
-  ctx.save();
-  ctx.globalCompositeOperation = "lighter";
-  for (let k = 0; k < 6; k++) {
-    const t = (p * 1.6 + k * 0.14) % 1;
-    const r = Math.max(w, h) * (0.04 + t * 0.5);
-    ctx.strokeStyle = rgba(255, 230, 180, 0.14 * strength * (1 - t));
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  drawBloom(ctx, cx, cy, Math.max(w, h) * 0.28, GOLD, 0.35 * strength);
   ctx.restore();
 }
 
@@ -231,104 +262,81 @@ const scene = {
   render(ctx, localProgress, view) {
     const { w, h, quality = 1 } = view;
     const p = clamp(localProgress, 0, 1);
-    const { cx, cy } = stageCenter(view, w, h);
+    const { cx, cy, dim } = stage(view, w, h);
+    const subjectR = dim * 0.72;
 
-    // Era opacities (soft morphs)
-    const flash = Math.max(1 - smoothstep(0.0, 0.14, p), smoothstep(0.0, 0.04, p) * (1 - smoothstep(0.05, 0.14, p)));
-    const infl = smoothstep(0.06, 0.14, p) * (1 - smoothstep(0.18, 0.28, p));
-    const plasma = smoothstep(0.12, 0.28, p) * (1 - smootherstep(0.48, 0.64, p));
-    const fogOpaque = (1 - smootherstep(0.46, 0.60, p)) * clamp(plasma * 0.9 + 0.55 * (1 - smoothstep(0.38, 0.52, p)), 0, 1);
-    const cmb = smootherstep(0.48, 0.60, p) * (1 - smootherstep(0.76, 0.90, p));
-    const dark = smootherstep(0.60, 0.72, p);
-    const stars = smootherstep(0.70, 0.84, p);
-    const gal = smootherstep(0.86, 0.96, p);
+    drawRichBackdrop(ctx, w, h, p, quality);
 
-    const bg = colorTemp(p);
-    const deep = mixRgb(bg, { r: 5, g: 6, b: 15 }, dark * 0.92);
-    ctx.fillStyle = rgba(deep.r, deep.g, deep.b, 1);
-    ctx.fillRect(0, 0, w, h);
+    const flash = Math.max(1 - smoothstep(0.0, 0.12, p), 0);
+    const infl = smoothstep(0.05, 0.14, p) * (1 - smoothstep(0.16, 0.26, p));
+    const plasmaEra = smoothstep(0.10, 0.30, p) * (1 - smootherstep(0.55, 0.72, p));
+    // Mid-clear at 0.52: patchy fog over strong CMB
+    const fogAmt = (1 - smootherstep(0.40, 0.58, p)) * clamp(0.22 + plasmaEra * 0.65, 0, 0.8);
+    const cmbAmt = smootherstep(0.36, 0.50, p) * (1 - smootherstep(0.70, 0.88, p));
+    const dark = smootherstep(0.58, 0.75, p);
+    const stars = smootherstep(0.68, 0.86, p);
+    const gal = smootherstep(0.84, 0.97, p);
 
-    // Big Bang flash
-    if (flash > 0.02) {
+    if (flash > 0.02 || p < 0.1) {
+      const f = Math.max(flash, 1 - smoothstep(0, 0.1, p));
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      const rad = Math.max(w, h) * lerp(0.2, 1.05, smootherstep(0, 0.1, p));
-      drawGlow(ctx, cx, cy, rad, WHITE, 0.95 * flash);
-      drawGlow(ctx, cx, cy, rad * 0.55, GOLD, 0.75 * flash);
-      drawGlow(ctx, cx, cy, rad * 0.22, WHITE, 0.95 * flash);
+      drawGlow(ctx, cx, cy, subjectR * 2.2 * lerp(0.4, 1.3, smootherstep(0, 0.08, p)), WHITE, 0.95 * f);
+      drawGlow(ctx, cx, cy, subjectR * 1.2, GOLD, 0.8 * f);
+      drawGlow(ctx, cx, cy, subjectR * 0.45, WHITE, 0.95 * f);
       ctx.restore();
     }
 
-    drawInflationRings(ctx, cx, cy, w, h, p, infl);
+    drawInflationRings(ctx, cx, cy, subjectR, p, infl);
 
-    // Hot plasma volume (smooth — no cells)
-    drawPlasmaVolume(ctx, w, h, p, quality, Math.max(plasma, fogOpaque * 0.85));
+    if (plasmaEra > 0.05) {
+      drawPlasmaFog(ctx, w, h, p, quality, plasmaEra * 0.75);
+      drawVolumetricHaze(ctx, w, h, {
+        count: Math.floor(lerp(8, 14, quality)),
+        seed: 3,
+        strength: 0.18 * plasmaEra,
+        color: mixRgb(PLASMA_HOT, GOLD, 0.4),
+        progress: p,
+      });
+    }
 
-    // Dense fog that CLEARS at recombination → transparency
-    if (fogOpaque > 0.02) {
+    drawCMBMap(ctx, w, h, cmbAmt, quality);
+    drawPlasmaFog(ctx, w, h, p, quality, fogAmt);
+    // Extra dense billows near stage for volumetric depth at mid-clear
+    if (fogAmt > 0.08) {
       ctx.save();
-      // Optical depth falls as recombination proceeds
-      const depth = fogOpaque;
-      const hazeCol = colorTemp(Math.min(p, 0.55));
-      // Multiple soft layers for volumetric depth
       for (let i = 0; i < 4; i++) {
-        const t = i / 4;
-        const rad = Math.max(w, h) * (0.35 + t * 0.55);
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
-        g.addColorStop(0, rgba(hazeCol.r, hazeCol.g, hazeCol.b, 0.12 * depth * (1 - t * 0.5)));
-        g.addColorStop(0.55, rgba(hazeCol.r, hazeCol.g, hazeCol.b, 0.22 * depth));
-        g.addColorStop(1, rgba(30, 12, 5, 0.4 * depth * (0.6 + t * 0.4)));
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, w, h);
-      }
-      // Extra soft fog sheets as overlapping glows
-      for (let i = 0; i < Math.floor(lerp(4, 8, quality)); i++) {
-        drawGlow(
-          ctx,
-          hash01(i * 2.2 + 5) * w,
-          hash01(i * 4.1 + 6) * h,
-          (0.25 + hash01(i) * 0.4) * Math.max(w, h),
-          hazeCol,
-          0.1 * depth
-        );
+        const x = cx + (hash01(i * 2.5 + 70) - 0.5) * dim * 1.1;
+        const y = cy + (hash01(i * 4.1 + 71) - 0.5) * dim * 0.8;
+        drawGlow(ctx, x, y, dim * (0.28 + hash01(i) * 0.25), mixRgb(PLASMA_HOT, GOLD, hash01(i)), fogAmt * 0.45);
       }
       ctx.restore();
     }
 
-    // CMB emerges as fog clears
-    drawCMBField(ctx, w, h, cmb + fogOpaque * 0.05, quality, p);
-
-    // Drift particles in plasma era
-    if (plasma > 0.05) {
-      const n = Math.floor(lerp(30, 110, quality) * plasma);
+    if (plasmaEra > 0.05 || fogAmt > 0.08) {
+      const n = Math.floor(lerp(40, 140, quality) * Math.max(plasmaEra, fogAmt));
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
       for (let i = 0; i < n; i++) {
-        const layer = (i % 3) + 1;
-        const x = ((hash01(i * 1.7) + p * (0.05 / layer)) % 1) * w;
-        const y = ((hash01(i * 3.9 + 4) + p * 0.02 / layer) % 1) * h;
-        const c = colorTemp(p);
-        ctx.fillStyle = rgba(c.r, c.g, c.b, 0.28 / layer * plasma);
+        const x = ((hash01(i * 1.7) + p * 0.04) % 1) * w;
+        const y = ((hash01(i * 3.9 + 4) + p * 0.02) % 1) * h;
+        const c = colorTemp(Math.min(p, 0.55));
+        ctx.fillStyle = rgba(c.r, c.g, c.b, 0.35 * Math.max(plasmaEra, fogAmt));
         ctx.beginPath();
-        ctx.arc(x, y, (0.6 + hash01(i * 8) * 2) / layer, 0, Math.PI * 2);
+        ctx.arc(x, y, 0.7 + hash01(i * 8) * 2.2, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.restore();
     }
 
-    if (dark > 0.4 && stars < 0.3) {
-      drawStarfield(ctx, w, h, Math.floor(20 * quality), 1, p, 0.15 * dark);
-    }
+    if (dark > 0.3) drawStarfield(ctx, w, h, Math.floor(90 * quality), 1, p, 0.4 * dark);
+    drawFirstStars(ctx, w, h, cx, cy, dim, p, quality, Math.max(stars, gal * 0.4));
+    drawGalaxies(ctx, w, h, cx, cy, dim, p, quality, gal);
+    if (p > 0.75) drawStarfield(ctx, w, h, Math.floor(100 * quality), 4, p, 0.5 * smootherstep(0.75, 0.95, p));
 
-    drawFirstStars(ctx, w, h, cx, cy, p, quality, Math.max(stars, gal * 0.5));
-    drawGalaxies(ctx, w, h, cx, cy, p, quality, gal);
-
-    if (p > 0.78) {
-      drawStarfield(ctx, w, h, Math.floor(50 * quality), 4, p, 0.35 * smootherstep(0.78, 0.95, p));
-    }
-
-    drawVignette(ctx, w, h, 0.48 + dark * 0.2);
-    drawGrain(ctx, w, h, Math.floor(p * 1000), 0.03, quality);
+    drawVignette(ctx, w, h, 0.4 + dark * 0.18);
+    // Keep grain very light so it never reads as a grid over the CMB
+    drawGrain(ctx, w, h, Math.floor(p * 1000), 0.006, quality);
   },
 };
 
