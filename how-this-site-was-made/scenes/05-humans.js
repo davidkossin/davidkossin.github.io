@@ -2,7 +2,7 @@
  * Chapter 5 — Humans (v4c) — dual globes fitted in safeContent, correctly centered
  */
 import { clamp, lerp, smoothstep, smootherstep, hash01, drawGlow, drawVignette, drawGrain, drawStarfield, rgba } from "../util.js";
-import { stage, drawEarthGlobe, drawGlobePath, drawGlobeMarker, project } from "../globe.js?v=b69902c";
+import { stage, drawEarthGlobe, drawGlobePath, drawGlobeMarker, project } from "../globe.js?v=c4a3648";
 
 const checkpoints = [
   { id:"sapiens", at:0.08, timeLabel:"about 300,000 years ago", title:"Homo sapiens",
