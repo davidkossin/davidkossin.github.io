@@ -204,17 +204,20 @@ function drawWedgeCutaway(ctx, cx, cy, radius, progress, quality, safe) {
   const sy = safe?.sy ?? 0;
   const sw = safe?.sw ?? 1280;
   const sh = safe?.sh ?? 800;
-  const rightLimit = sx + sw - 10;
-  const topLimit = sy + 10;
-  const botLimit = sy + sh - 10;
-  const fontPx = Math.max(11, Math.min(14, radius * 0.095));
-  const wantColX = cx + radius * 0.78;
-  const useColumn = wantColX + 36 < rightLimit && radius > 90;
+  const rightLimit = sx + sw - 8;
+  const topLimit = sy + 8;
+  const botLimit = sy + sh - 8;
+  const fontPx = Math.max(10, Math.min(13, radius * 0.09));
+  // Column just past mid-wedge but always clamped inside safe + inside ~0.92 R
+  let labelX = cx + radius * (sw < 480 ? 0.55 : 0.78);
+  labelX = Math.min(labelX, rightLimit - (fontPx * 2.2), cx + radius * 0.88);
+  labelX = Math.max(labelX, cx + radius * 0.28);
 
   ctx.save();
   ctx.font = `700 ${fontPx}px Outfit, system-ui, sans-serif`;
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
+  const spread = Math.min(radius * 0.85, (SHELLS.length - 1) * (fontPx + 5));
   SHELLS.forEach((s, i) => {
     const on = clamp((reveal - i * 0.07) / 0.2, 0, 1);
     if (on < 0.35) return;
@@ -223,40 +226,32 @@ function drawWedgeCutaway(ctx, cx, cy, radius, progress, quality, safe) {
     const rMid = (rOuter + rInner) * 0.5;
     const ax = cx + Math.cos(midAng) * rMid;
     const ay = cy + Math.sin(midAng) * rMid;
-
-    let lx, ly;
-    if (useColumn) {
-      lx = Math.min(wantColX, rightLimit - 30);
-      const spread = Math.min(radius * 0.9, (SHELLS.length - 1) * (fontPx + 6));
-      ly = cy - spread * 0.5 + i * (spread / Math.max(1, SHELLS.length - 1));
-    } else {
-      const labelAng = -0.12 + i * 0.04;
-      lx = cx + Math.cos(labelAng) * Math.min(rMid + fontPx * 0.8, radius * 0.92);
-      ly = cy + Math.sin(labelAng) * Math.min(rMid, radius * 0.55);
-    }
-    lx = clamp(lx, sx + 8, rightLimit - 26);
-    ly = clamp(ly, topLimit + fontPx, botLimit - fontPx);
+    const ly = clamp(
+      cy - spread * 0.5 + i * (spread / Math.max(1, SHELLS.length - 1)),
+      topLimit + fontPx,
+      botLimit - fontPx
+    );
+    const lx = clamp(labelX, sx + 6, rightLimit - 22);
 
     ctx.globalAlpha = 0.95 * on;
-    if (useColumn || Math.hypot(lx - ax, ly - ay) > 10) {
-      ctx.strokeStyle = rgba(230, 235, 255, 0.7);
-      ctx.lineWidth = 1.1;
-      ctx.beginPath();
-      ctx.moveTo(ax, ay);
-      ctx.lineTo(lx - 2, ly);
-      ctx.stroke();
-    }
+    ctx.strokeStyle = rgba(230, 235, 255, 0.65);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(lx - 2, ly);
+    ctx.stroke();
     ctx.fillStyle = rgba(s.c.r, s.c.g, s.c.b, 1);
     ctx.beginPath();
-    ctx.arc(ax, ay, 2.5, 0, Math.PI * 2);
+    ctx.arc(ax, ay, 2.2, 0, Math.PI * 2);
     ctx.fill();
     const tw = ctx.measureText(s.label).width;
-    ctx.fillStyle = rgba(5, 6, 18, 0.75);
-    ctx.fillRect(lx - 3, ly - fontPx * 0.55, tw + 10, fontPx * 1.15);
+    ctx.fillStyle = rgba(5, 6, 18, 0.78);
+    ctx.fillRect(lx - 3, ly - fontPx * 0.55, tw + 8, fontPx * 1.15);
     ctx.fillStyle = "#f0f3ff";
     ctx.fillText(s.label, lx + 1, ly);
   });
   ctx.restore();
+
 }
 
 /** Irregular filamentary remnant — tapered wisps + diffuse emission, not tubes */
@@ -439,8 +434,9 @@ const scene = {
     const { w, h, quality = 1 } = view;
     const p = clamp(localProgress, 0, 1);
     const { cx, cy, dim, sx, sy, sw, sh } = stage(view, w, h);
-    // Whole-star diameter ≈ 68% of safeContent min dim (room for soft bloom)
-    const starR = dim * 0.34;
+    // Whole-star diameter ≈ 65–70% of safeContent min dim (tighter on narrow)
+    const narrow = sw < 420;
+    const starR = dim * (narrow ? 0.30 : 0.34);
 
     drawNebulaBg(ctx, w, h, p, quality);
 
