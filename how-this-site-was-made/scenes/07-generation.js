@@ -121,7 +121,7 @@ function drawTokenization(ctx, st, w, p, q, show) {
   ctx.save();
   ctx.globalAlpha = show;
   softDisc(ctx, st.cx, st.cy, st.aw * 0.45, { r: 80, g: 140, b: 220 }, 0.12);
-  const reveal = smootherstep(0.14, 0.28, p);
+  const reveal = smootherstep(0.14, 0.24, p);
   const nShow = Math.max(1, Math.floor(TOKENS.length * reveal));
   const fontPx = Math.max(10, Math.min(13, st.aw * 0.022));
   ctx.font = `500 ${fontPx}px Outfit,sans-serif`;
@@ -192,7 +192,7 @@ function drawNetwork(ctx, st, p, q, show) {
   });
   // attention arcs (self-attention within a mid layer) — gentle
   const attnLayer = nodes[Math.min(2, nodes.length - 1)];
-  const attnOn = smootherstep(0.30, 0.42, p);
+  const attnOn = smootherstep(0.32, 0.40, p);
   ctx.globalCompositeOperation = "lighter";
   if (attnOn > 0.01 && attnLayer) {
     for (let i = 0; i < attnLayer.length; i++) {
@@ -211,7 +211,7 @@ function drawNetwork(ctx, st, p, q, show) {
     }
   }
   // interlayer links
-  const flow = smootherstep(0.28, 0.48, p);
+  const flow = smootherstep(0.32, 0.44, p);
   for (let li = 0; li < nodes.length - 1; li++) {
     for (const a of nodes[li]) {
       for (const b of nodes[li + 1]) {
@@ -244,7 +244,7 @@ function drawGeneration(ctx, st, w, p, q, show) {
   ctx.save();
   ctx.globalAlpha = show;
   softDisc(ctx, st.cx, st.cy, st.aw * 0.4, { r: 60, g: 160, b: 140 }, 0.12);
-  const reveal = smootherstep(0.48, 0.68, p);
+  const reveal = smootherstep(0.50, 0.66, p);
   const lines = CODE_LINES;
   const lineH = Math.max(14, Math.min(18, st.ah * 0.045));
   const blockW = Math.min(480, st.aw * 0.85);
@@ -277,7 +277,7 @@ function drawGeneration(ctx, st, w, p, q, show) {
     if (shown <= 0 && take < lines[i].length) break;
   }
   // small distribution hint — next-token probabilities
-  const distOn = smootherstep(0.52, 0.64, p) * (1 - smootherstep(0.66, 0.72, p));
+  const distOn = smootherstep(0.52, 0.60, p) * (1 - smootherstep(0.62, 0.68, p));
   if (distOn > 0.01) {
     ctx.globalAlpha = show * distOn;
     const bx = st.cx + blockW * 0.28;
@@ -303,9 +303,9 @@ function drawPublishing(ctx, st, p, q, show) {
   ctx.save();
   ctx.globalAlpha = show;
   softDisc(ctx, st.cx, st.cy, st.aw * 0.4, { r: 100, g: 120, b: 255 }, 0.14);
-  const commitOn = smootherstep(0.68, 0.78, p);
-  const pushOn = smootherstep(0.74, 0.84, p);
-  const pagesOn = smootherstep(0.80, 0.90, p);
+  const commitOn = smootherstep(0.68, 0.72, p);
+  const pushOn = smootherstep(0.70, 0.76, p);
+  const pagesOn = smootherstep(0.74, 0.80, p);
   // repo card
   const rw = Math.min(280, st.aw * 0.5), rh = 90;
   const rx = st.cx - rw * 0.55, ry = st.cy - 40;
@@ -372,7 +372,7 @@ function drawDelivery(ctx, st, w, h, p, q, show) {
     { label: "Parse", sub: "DOM · CSSOM", at: 0.6 },
     { label: "Paint", sub: "pixels on screen", at: 0.75 },
   ];
-  const flow = smootherstep(0.84, 0.98, p);
+  const flow = smootherstep(0.86, 0.98, p);
   const n = steps.length;
   const y = st.cy;
   const x0 = st.cx - st.aw * 0.4;
@@ -431,12 +431,13 @@ const scene = {
     }
     ctx.restore();
 
-    const promptG = smootherstep(0, 0.04, p) * (1 - smootherstep(0.10, 0.18, p));
-    const tok = smoothstep(0.12, 0.22, p) * (1 - smootherstep(0.28, 0.36, p));
-    const net = smoothstep(0.30, 0.40, p) * (1 - smootherstep(0.48, 0.56, p));
-    const gen = smoothstep(0.48, 0.58, p) * (1 - smootherstep(0.66, 0.74, p));
-    const pub = smoothstep(0.66, 0.76, p) * (1 - smootherstep(0.84, 0.92, p));
-    const del = smootherstep(0.84, 0.96, p);
+    // Non-overlapping windows centered on each checkpoint `at`
+    const promptG = smootherstep(0, 0.03, p) * (1 - smootherstep(0.10, 0.15, p));
+    const tok = smoothstep(0.14, 0.19, p) * (1 - smootherstep(0.26, 0.32, p));
+    const net = smoothstep(0.32, 0.37, p) * (1 - smootherstep(0.46, 0.52, p));
+    const gen = smoothstep(0.50, 0.55, p) * (1 - smootherstep(0.64, 0.70, p));
+    const pub = smoothstep(0.68, 0.73, p) * (1 - smootherstep(0.82, 0.87, p));
+    const del = smootherstep(0.86, 0.91, p);
 
     drawPromptBox(ctx, st, w, p, promptG);
     drawTokenization(ctx, st, w, p, quality, tok);
