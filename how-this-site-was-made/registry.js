@@ -8,7 +8,7 @@ import solarSystem from "./scenes/03-solar-system.js?v=cea7ac7";
 import earthAndLife from "./scenes/04-earth-and-life.js?v=cea7ac7";
 import humans from "./scenes/05-humans.js?v=cea7ac7";
 import machines from "./scenes/06-machines.js?v=cea7ac7";
-import generation from "./scenes/07-generation.js?v=title1";
+import generation from "./scenes/07-generation.js?v=cp1";
 import finale from "./scenes/07-finale.js?v=cea7ac7";
 
 /** @type {import('./engine.js').Scene[]} */

@@ -137,7 +137,7 @@ function drawPromptBox(ctx, st, w, p, show) {
   ctx.font = `500 ${Math.max(11, Math.min(13, w * 0.014))}px Outfit,sans-serif`;
   ctx.textAlign = "left";
   ctx.fillText("Prompt · 22 Sep 2026", x + 36, y + 24);
-  const typeProg = smootherstep(0.02, 0.12, p);
+  const typeProg = smootherstep(0.008, 0.052, p); // fully typed before checkpoint at=0.06
   const typed = PROMPT.slice(0, Math.floor(PROMPT.length * typeProg));
   const caret = typeProg < 0.99 && Math.floor(p * 16) % 2 === 0;
   ctx.fillStyle = rgba(232, 236, 255, 0.96);
@@ -152,7 +152,7 @@ function drawTokenization(ctx, st, w, p, q, show) {
   ctx.globalAlpha = show;
   softDisc(ctx, st.cx, st.cy, st.aw * 0.42, { r: 80, g: 140, b: 220 }, 0.14);
 
-  const reveal = smootherstep(0.14, 0.22, p);
+  const reveal = smootherstep(0.142, 0.192, p); // all tokens laid out before at=0.20
   const nShow = Math.max(1, Math.floor(TOKENS.length * reveal));
   const fontPx = Math.max(10, Math.min(13, st.aw * 0.022));
   const chipH = fontPx + 12;
@@ -390,7 +390,7 @@ function drawGeneration(ctx, st, w, p, q, show) {
   ctx.globalAlpha = show;
   softDisc(ctx, st.cx, st.cy, st.aw * 0.42, { r: 60, g: 160, b: 140 }, 0.12);
 
-  const reveal = smootherstep(0.48, 0.58, p); // ~fully written by checkpoint at=0.56
+  const reveal = smootherstep(0.488, 0.552, p); // fully written before checkpoint at=0.56
   const lines = CODE_LINES;
   const maxLines = Math.min(lines.length, q > 0.5 ? 23 : 18);
   const lineH = Math.max(11, Math.min(15, (st.ah * 0.78) / (maxLines + 2)));
@@ -496,10 +496,10 @@ function drawPublishing(ctx, st, w, h, p, q, show) {
   ctx.globalAlpha = show;
   softDisc(ctx, st.cx, st.cy, st.aw * 0.48, { r: 100, g: 120, b: 255 }, 0.12);
 
-  const commitOn = smootherstep(0.68, 0.72, p);
-  const pushOn = smootherstep(0.70, 0.74, p);
-  const pagesOn = smootherstep(0.72, 0.76, p);
-  const edgeOn = smootherstep(0.73, 0.78, p);
+  const commitOn = smootherstep(0.676, 0.700, p);
+  const pushOn = smootherstep(0.690, 0.714, p);
+  const pagesOn = smootherstep(0.704, 0.728, p);
+  const edgeOn = smootherstep(0.714, 0.736, p);
 
   // Horizontal flow layout inside safeContent
   const cardH = Math.min(96, st.ah * 0.26);
