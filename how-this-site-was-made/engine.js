@@ -109,6 +109,58 @@ export function createEngine({ canvas, scenes, ui }) {
     return active;
   }
 
+
+  /** Rectangle free of placard / topbar / scrubber — scenes should center art here. */
+  function getSafeContentRect() {
+    const pad = 12;
+    let top = pad + 48; // below brand
+    let left = pad;
+    let right = cssW - pad;
+    let bottom = cssH - pad;
+
+    if (ui.scrubber) {
+      const r = ui.scrubber.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      bottom = Math.min(bottom, r.top - canvasRect.top - pad);
+    } else if (ui.track) {
+      const r = ui.track.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      bottom = Math.min(bottom, r.top - canvasRect.top - 36);
+    }
+
+    if (ui.placard) {
+      const r = ui.placard.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      const px = r.left - canvasRect.left;
+      const py = r.top - canvasRect.top;
+      const pr = px + r.width;
+      const pb = py + r.height;
+      const narrow = cssW < 700;
+      if (narrow) {
+        // Placard spans width — stage sits below it
+        top = Math.max(top, pb + pad);
+      } else {
+        // Desktop: prefer stage to the right of the placard if that yields a usable width
+        const rightWidth = cssW - pr - pad * 2;
+        const belowHeight = bottom - (pb + pad);
+        if (rightWidth >= cssW * 0.38) {
+          left = Math.max(left, pr + pad);
+          top = Math.max(top, py); // align roughly with placard top band
+        } else if (belowHeight > 120) {
+          top = Math.max(top, pb + pad);
+        } else {
+          left = Math.max(left, pr + pad);
+        }
+      }
+    }
+
+    const x = clamp(left, 0, cssW);
+    const y = clamp(top, 0, cssH);
+    const w = Math.max(40, right - x);
+    const h = Math.max(40, bottom - y);
+    return { x, y, w, h, cx: x + w * 0.5, cy: y + h * 0.5 };
+  }
+
   function renderFrame(ts) {
     const dt = Math.min(0.05, (ts - lastTs) / 1000);
     lastTs = ts;
@@ -155,6 +207,7 @@ export function createEngine({ canvas, scenes, ui }) {
       resize();
     }
 
+    const safeContent = getSafeContentRect();
     const view = {
       w: cssW,
       h: cssH,
@@ -162,6 +215,7 @@ export function createEngine({ canvas, scenes, ui }) {
       quality,
       reducedMotion,
       time: ts / 1000,
+      safeContent,
     };
 
     ctx.fillStyle = "#05060f";

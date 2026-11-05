@@ -40,7 +40,9 @@ Each scene file default-exports an object:
 
 **Checkpoint fields:** `id`, `at` (0–1), `timeLabel`, `title`, `body` (2–4 sentences). Placard copy lives here — not inside `render`.
 
-**`view` argument:** `{ w, h, dpr, quality, reducedMotion, time }` where `quality` is `0–1` (engine lowers it if frames are slow).
+**`view` argument:** `{ w, h, dpr, quality, reducedMotion, time, safeContent }` where `quality` is `0–1` (engine lowers it if frames are slow).
+
+**`view.safeContent`:** `{ x, y, w, h, cx, cy }` — the largest practical rectangle **not covered** by the museum placard, top brand, or bottom scrubber. On desktop this is usually to the right of the placard; on mobile it is usually below the placard. Center titles, planets, stars, and other focal art at `(cx, cy)` (or within `x,y,w,h`) so they never collide with UI chrome.
 
 ### Editing rules
 

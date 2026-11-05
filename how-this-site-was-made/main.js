@@ -3,6 +3,7 @@ import { createEngine } from "./engine.js";
 
 const canvas = document.getElementById("timeline-canvas");
 const ui = {
+  scrubber: document.querySelector(".scrubber"),
   track: document.getElementById("scrub-track"),
   thumb: document.getElementById("scrub-thumb"),
   fill: document.getElementById("scrub-fill"),
