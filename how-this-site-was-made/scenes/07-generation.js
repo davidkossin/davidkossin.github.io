@@ -169,7 +169,11 @@ function drawTokenization(ctx, st, w, p, q, show) {
   for (let i = 0; i < nShow; i++) {
     const raw = TOKENS[i];
     const chip = raw.trim() || "·";
-    const id = 400 + i * 17 + ((hash01(i * 1.7) * 200) | 0);
+    // Same token string → same vocabulary ID and same embedding (deterministic lookup).
+    let th = 0;
+    for (let c = 0; c < raw.length; c++) th = (th * 31 + raw.charCodeAt(c)) % 100003;
+    const id = 100 + (th % 900);
+    const ts = th * 0.0137;
     const tw = ctx.measureText(chip).width + 16;
     const chipW = Math.max(tw, 28);
 
@@ -204,8 +208,8 @@ function drawTokenization(ctx, st, w, p, q, show) {
     const dims = 6;
     const bw = Math.max(2.5, (chipW - 6) / dims - 1.5);
     for (let k = 0; k < dims; k++) {
-      const h = 3 + hash01(i * 5.1 + k * 2.3) * (barH - 3);
-      ctx.fillStyle = rgba(90, 170, 255, 0.35 + 0.45 * hash01(i + k));
+      const h = 3 + hash01(ts * 5.1 + k * 2.3) * (barH - 3);
+      ctx.fillStyle = rgba(90, 170, 255, 0.35 + 0.45 * hash01(ts + k));
       ctx.fillRect(x + 3 + k * (bw + 1.5), barY + barH - h, bw, h);
     }
 
