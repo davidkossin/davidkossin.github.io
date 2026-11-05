@@ -158,55 +158,80 @@ export function drawEarthGlobe(ctx, cx, cy, r, opts = {}) {
 
   if (rings && molten < 0.85) {
     const baseLand = landRgb || (night > 0.55
-      ? { r: 32, g: 58, b: 40 }
-      : mixRgb({ r: 72, g: 115, b: 55 }, { r: 45, g: 120, b: 65 }, ox));
-    const maxRings = quality > 0.65 ? rings.length : quality > 0.35 ? Math.min(rings.length, 60) : Math.min(rings.length, 32);
-    const alpha = 0.95 * (1 - molten * 0.9);
-    ctx.fillStyle = rgba(baseLand.r, baseLand.g, baseLand.b, alpha);
-    ctx.strokeStyle = rgba(baseLand.r - 20, baseLand.g - 10, baseLand.b - 15, 0.45 * alpha);
-    ctx.lineWidth = 1;
+      ? { r: 28, g: 48, b: 36 }
+      : mixRgb({ r: 96, g: 118, b: 62 }, { r: 58, g: 110, b: 58 }, ox));
+    const maxRings = quality > 0.65 ? rings.length : quality > 0.35 ? Math.min(rings.length, 70) : Math.min(rings.length, 40);
+    const alpha = 0.97 * (1 - molten * 0.9);
+
+    function fillFrontRuns(ring, fillStyle) {
+      const raw = ring.map(([lon, lat]) => projectRaw(lon, lat, cx, cy, r, rotLon));
+      let run = [];
+      const flush = () => {
+        if (run.length < 2) { run = []; return; }
+        ctx.beginPath();
+        ctx.moveTo(run[0].x, run[0].y);
+        for (let k = 1; k < run.length; k++) ctx.lineTo(run[k].x, run[k].y);
+        const a = run[run.length - 1], b = run[0];
+        if (Math.abs(a.z) < 0.28 && Math.abs(b.z) < 0.28) {
+          const a0 = Math.atan2(a.y - cy, a.x - cx);
+          const a1 = Math.atan2(b.y - cy, b.x - cx);
+          let d = a1 - a0;
+          while (d > Math.PI) d -= Math.PI * 2;
+          while (d < -Math.PI) d += Math.PI * 2;
+          const steps = Math.max(2, Math.ceil(Math.abs(d) / 0.18));
+          for (let s = 1; s <= steps; s++) {
+            const t = s / steps;
+            const ang = a0 + d * t;
+            ctx.lineTo(cx + Math.cos(ang) * r, cy + Math.sin(ang) * r);
+          }
+        } else {
+          ctx.closePath();
+        }
+        ctx.fillStyle = fillStyle;
+        ctx.fill();
+        run = [];
+      };
+      for (let i = 0; i < raw.length; i++) {
+        const cur = raw[i];
+        const prev = raw[(i - 1 + raw.length) % raw.length];
+        const curF = cur.z > 0.02;
+        const prevF = prev.z > 0.02;
+        if (curF && prevF) {
+          if (!run.length) run.push(prev);
+          run.push(cur);
+        } else if (curF && !prevF) {
+          flush();
+          run.push(limbPoint(cur, prev, cx, cy, r));
+          run.push(cur);
+        } else if (!curF && prevF) {
+          if (!run.length) run.push(prev);
+          run.push(limbPoint(prev, cur, cx, cy, r));
+          flush();
+        }
+      }
+      flush();
+    }
 
     for (let ri = 0; ri < maxRings; ri++) {
       const ring = rings[ri];
       if (ring.length < 4) continue;
-      // Build front-facing path with limb stitching
-      const raw = ring.map(([lon, lat]) => projectRaw(lon, lat, cx, cy, r, rotLon));
-      ctx.beginPath();
-      let drawing = false;
-      for (let i = 0; i < raw.length; i++) {
-        const cur = raw[i];
-        const prev = raw[(i - 1 + raw.length) % raw.length];
-        const curFront = cur.z > 0.0;
-        const prevFront = prev.z > 0.0;
-        if (curFront && prevFront) {
-          if (!drawing) { ctx.moveTo(prev.x, prev.y); drawing = true; }
-          ctx.lineTo(cur.x, cur.y);
-        } else if (curFront && !prevFront) {
-          const lp = limbPoint(cur, prev, cx, cy, r);
-          if (!drawing) { ctx.moveTo(lp.x, lp.y); drawing = true; }
-          else ctx.lineTo(lp.x, lp.y);
-          ctx.lineTo(cur.x, cur.y);
-        } else if (!curFront && prevFront) {
-          const lp = limbPoint(prev, cur, cx, cy, r);
-          if (!drawing) { ctx.moveTo(prev.x, prev.y); drawing = true; }
-          ctx.lineTo(lp.x, lp.y);
-          // stop run at limb — continue building same path via subsequent front segments
-        }
-      }
-      if (drawing) {
-        ctx.closePath();
-        ctx.fill();
-      }
+      fillFrontRuns(ring, rgba(baseLand.r, baseLand.g, baseLand.b, alpha));
     }
 
-    // Coastline for definition
+    ctx.strokeStyle = rgba(
+      Math.max(20, baseLand.r - 35),
+      Math.max(30, baseLand.g - 25),
+      Math.max(20, baseLand.b - 20),
+      0.55 * alpha
+    );
+    ctx.lineWidth = 1.15;
     ctx.beginPath();
-    for (let ri = 0; ri < Math.min(maxRings, 35); ri++) {
+    for (let ri = 0; ri < Math.min(maxRings, 45); ri++) {
       const ring = rings[ri];
       let prev = null;
       for (let i = 0; i < ring.length; i++) {
         const pt = project(ring[i][0], ring[i][1], cx, cy, r, rotLon);
-        if (!pt || pt.z < 0.08) { prev = null; continue; }
+        if (!pt || pt.z < 0.06) { prev = null; continue; }
         if (prev) { ctx.moveTo(prev.x, prev.y); ctx.lineTo(pt.x, pt.y); }
         prev = pt;
       }
@@ -214,7 +239,7 @@ export function drawEarthGlobe(ctx, cx, cy, r, opts = {}) {
     ctx.stroke();
 
     if (night < 0.7 && molten < 0.3) {
-      softDisc(ctx, cx - r * 0.3, cy - r * 0.35, r * 0.55, { r: 180, g: 200, b: 140 }, 0.08);
+      softDisc(ctx, cx - r * 0.3, cy - r * 0.35, r * 0.55, { r: 200, g: 210, b: 150 }, 0.07);
     }
   }
 
