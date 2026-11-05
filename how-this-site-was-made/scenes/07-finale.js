@@ -18,12 +18,13 @@ function softDisc(ctx,x,y,rad,color,a){const g=ctx.createRadialGradient(x,y,0,x,
 function roundRect(ctx,x,y,w,h,rad){ctx.beginPath();ctx.moveTo(x+rad,y);ctx.arcTo(x+w,y,x+w,y+h,rad);ctx.arcTo(x+w,y+h,x,y+h,rad);ctx.arcTo(x,y+h,x,y,rad);ctx.arcTo(x,y,x+w,y,rad);ctx.closePath();}
 function wrapText(ctx,text,x,y,maxW,lineH){const words=text.split(" ");let line="",yy=y;for(let i=0;i<words.length;i++){const test=line?line+" "+words[i]:words[i];if(ctx.measureText(test).width>maxW&&line){ctx.fillText(line,x,yy);line=words[i];yy+=lineH;}else line=test;}if(line)ctx.fillText(line,x,yy);}
 
-/** Fit title font so full string sits inside safeContent with margin. */
-function fitTitle(ctx, title, maxW, maxPx, minPx = 18) {
+/** Fit title font so full string sits inside safeContent with margin.
+ *  Orbitron loads late — measure with a 1.08 safety factor so we do not clip. */
+function fitTitle(ctx, title, maxW, maxPx, minPx = 16) {
   let size = maxPx;
   while (size > minPx) {
     ctx.font = `700 ${size}px Orbitron,sans-serif`;
-    if (ctx.measureText(title).width <= maxW) break;
+    if (ctx.measureText(title).width * 1.08 <= maxW) break;
     size -= 1;
   }
   return size;
@@ -41,15 +42,22 @@ const scene={id:"finale",title:"Finale",weight:1.0,checkpoints,
     const assemble=smootherstep(0.36,0.55,p);
     if(assemble>0.01){
       const title="Objects In Space";
-      const margin = Math.max(16, st.aw * 0.04);
-      const maxW = Math.max(120, st.aw - margin * 2);
-      const maxPx = Math.min(56, st.ah * 0.16, st.aw * 0.11);
+      const margin = Math.max(24, st.aw * 0.06);
+      const maxW = Math.max(100, Math.min(st.aw - margin * 2, w - st.x - margin - 16));
+      const maxPx = Math.min(48, st.ah * 0.14, maxW * 0.095);
       ctx.save();
-      const fontSize = fitTitle(ctx, title, maxW, maxPx, 18);
+      let fontSize = fitTitle(ctx, title, maxW, maxPx, 16);
       ctx.font = `700 ${fontSize}px Orbitron,sans-serif`;
-      const tw = ctx.measureText(title).width;
-      // Center title in safeContent (never clip right edge)
-      const tx = st.x + (st.aw - tw) * 0.5;
+      let tw = ctx.measureText(title).width;
+      // Center in safeContent; re-shrink if still past canvas right
+      let tx = st.x + Math.max(0, (st.aw - tw) * 0.5);
+      while (tx + tw > w - 20 && fontSize > 16) {
+        fontSize -= 1;
+        ctx.font = `700 ${fontSize}px Orbitron,sans-serif`;
+        tw = ctx.measureText(title).width;
+        tx = st.x + Math.max(0, (st.aw - tw) * 0.5);
+      }
+      if (tx + tw > w - 16) tx = Math.max(12, w - 16 - tw);
       const ty = st.y + st.ah * 0.42;
       ctx.restore();
 
@@ -130,12 +138,13 @@ const scene={id:"finale",title:"Finale",weight:1.0,checkpoints,
       ctx.save();
       // Keep assembled title faintly under the marker so the beat doesn't feel empty
       const title="Objects In Space";
-      const margin=Math.max(16, st.aw*0.04);
-      const maxW=Math.max(120, st.aw-margin*2);
-      const fontSize=fitTitle(ctx, title, maxW, Math.min(40, st.ah*0.12), 16);
+      const margin=Math.max(24, st.aw*0.06);
+      const maxW=Math.max(100, Math.min(st.aw-margin*2, w-st.x-margin-16));
+      let fontSize=fitTitle(ctx, title, maxW, Math.min(36, st.ah*0.11), 14);
       ctx.font=`700 ${fontSize}px Orbitron,sans-serif`;
-      const tw=ctx.measureText(title).width;
-      const tx=st.x+(st.aw-tw)*0.5;
+      let tw=ctx.measureText(title).width;
+      let tx=st.x+Math.max(0,(st.aw-tw)*0.5);
+      if (tx+tw > w-16) tx = Math.max(12, w-16-tw);
       const ty=st.y+st.ah*0.36;
       ctx.globalAlpha=here*0.35;
       ctx.fillStyle="#e8ecff";

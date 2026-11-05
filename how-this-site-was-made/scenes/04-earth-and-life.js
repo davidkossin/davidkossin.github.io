@@ -66,38 +66,34 @@ function drawCambrian(ctx,st,p,q,show,view){if(show<0.01)return;const{w,h}=view;
   }
   const swim=p*2.4;
   // Proper trilobite — top-down/oblique: cephalon + genal spines, 3-lobed thorax, pygidium; tiny edge legs only
-  function trilobite(x,y,sc,ang,tint){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.scale(sc,sc*0.92);
-    softDisc(ctx,0,0,36,{r:tint[0],g:tint[1],b:tint[2]},0.22);
-    const shell=rgba(tint[0],tint[1],tint[2],0.94);
-    const ridge=rgba(Math.min(255,tint[0]+35),Math.min(255,tint[1]+30),Math.min(255,tint[2]+25),0.75);
-    // Cephalon (semicircular head)
-    ctx.fillStyle=shell;ctx.beginPath();ctx.ellipse(0,-22,18,14,0,0,Math.PI*2);ctx.fill();
-    // Glabella (axial lobe of head)
-    ctx.fillStyle=ridge;ctx.beginPath();ctx.ellipse(0,-20,7,10,0,0,Math.PI*2);ctx.fill();
-    // Genal spines (rearward from cheeks)
-    ctx.strokeStyle=shell;ctx.lineWidth=2.4;ctx.lineCap="round";
-    ctx.beginPath();ctx.moveTo(-15,-16);ctx.quadraticCurveTo(-24,-8,-26,6);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(15,-16);ctx.quadraticCurveTo(24,-8,26,6);ctx.stroke();
-    // Thorax: 8 segments × three lobes (pleural | axial | pleural)
-    for(let s=0;s<8;s++){const sy=-6+s*7.2;const halfW=16-s*0.55;
-      // pleural lobes
-      ctx.fillStyle=shell;ctx.beginPath();ctx.ellipse(-halfW*0.55,sy,halfW*0.42,3.4,0,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.ellipse(halfW*0.55,sy,halfW*0.42,3.4,0,0,Math.PI*2);ctx.fill();
-      // axial lobe
-      ctx.fillStyle=ridge;ctx.beginPath();ctx.ellipse(0,sy,5.2,3.6,0,0,Math.PI*2);ctx.fill();
-      // furrow lines
-      ctx.strokeStyle=rgba(15,25,35,0.35);ctx.lineWidth=0.8;
-      ctx.beginPath();ctx.moveTo(-halfW*0.9,sy);ctx.lineTo(halfW*0.9,sy);ctx.stroke();
-      // tiny legs only at outer edges
-      if(s%2===0){ctx.strokeStyle=rgba(tint[0],tint[1],tint[2],0.55);ctx.lineWidth=1.2;
-        ctx.beginPath();ctx.moveTo(-halfW*0.95,sy);ctx.lineTo(-halfW*0.95-5,sy+3);ctx.stroke();
-        ctx.beginPath();ctx.moveTo(halfW*0.95,sy);ctx.lineTo(halfW*0.95+5,sy+3);ctx.stroke();}
+  function trilobite(x,y,sc,ang,tint){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.scale(sc,sc);
+    softDisc(ctx,0,0,28,{r:tint[0],g:tint[1],b:tint[2]},0.2);
+    const shell=rgba(tint[0],tint[1],tint[2],0.95);
+    const ridge=rgba(Math.min(255,tint[0]+40),Math.min(255,tint[1]+32),Math.min(255,tint[2]+28),0.8);
+    // Top-down oval body plan: cephalon → thorax → pygidium
+    // Cephalon
+    ctx.fillStyle=shell;ctx.beginPath();ctx.ellipse(0,-16,15,11,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=ridge;ctx.beginPath();ctx.ellipse(0,-15,5.5,8,0,0,Math.PI*2);ctx.fill(); // glabella
+    // Genal spines (short, rearward)
+    ctx.strokeStyle=shell;ctx.lineWidth=2.2;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(-13,-12);ctx.quadraticCurveTo(-18,-4,-17,4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(13,-12);ctx.quadraticCurveTo(18,-4,17,4);ctx.stroke();
+    // Thorax — three distinct lobes per segment (compact, not comb-like)
+    for(let s=0;s<7;s++){const sy=-4+s*5.2;const hw=13-s*0.4;
+      ctx.fillStyle=shell;
+      ctx.beginPath();ctx.ellipse(-hw*0.55,sy,hw*0.38,2.6,0,0,Math.PI*2);ctx.fill(); // left pleural
+      ctx.beginPath();ctx.ellipse(hw*0.55,sy,hw*0.38,2.6,0,0,Math.PI*2);ctx.fill();  // right pleural
+      ctx.fillStyle=ridge;ctx.beginPath();ctx.ellipse(0,sy,4.2,2.8,0,0,Math.PI*2);ctx.fill(); // axial
+      ctx.strokeStyle=rgba(12,20,30,0.3);ctx.lineWidth=0.7;ctx.beginPath();ctx.moveTo(-hw*0.85,sy);ctx.lineTo(hw*0.85,sy);ctx.stroke();
+      // tiny edge legs only
+      if(s%3===0){ctx.strokeStyle=rgba(tint[0],tint[1],tint[2],0.45);ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(-hw*0.9,sy);ctx.lineTo(-hw*0.9-3.5,sy+2);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(hw*0.9,sy);ctx.lineTo(hw*0.9+3.5,sy+2);ctx.stroke();}
     }
-    // Pygidium (tail shield)
-    ctx.fillStyle=shell;ctx.beginPath();ctx.ellipse(0,52,12,9,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=ridge;ctx.beginPath();ctx.ellipse(0,50,5,6,0,0,Math.PI*2);ctx.fill();
-    // Eye ridges (subtle)
-    ctx.globalCompositeOperation="lighter";softDisc(ctx,-10,-24,5,{r:160,g:200,b:140},0.35);softDisc(ctx,10,-24,5,{r:160,g:200,b:140},0.35);
+    // Pygidium
+    ctx.fillStyle=shell;ctx.beginPath();ctx.ellipse(0,34,10,7,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=ridge;ctx.beginPath();ctx.ellipse(0,33,4,5,0,0,Math.PI*2);ctx.fill();
+    ctx.globalCompositeOperation="lighter";softDisc(ctx,-8,-18,4,{r:150,g:190,b:130},0.3);softDisc(ctx,8,-18,4,{r:150,g:190,b:130},0.3);
     ctx.restore();}
   trilobite(cx-aw*0.28,floorY-36,1.55,0.15,[40,58,72]);
   trilobite(cx-aw*0.02,floorY-22,1.25,-0.25,[48,65,78]);
@@ -161,12 +157,14 @@ function drawCambrian(ctx,st,p,q,show,view){if(show<0.01)return;const{w,h}=view;
   ctx.globalCompositeOperation="lighter";for(let i=0;i<Math.floor(lerp(40,90,q));i++)softDisc(ctx,hash01(i*1.1)*w,hash01(i*2.2)*h*0.85,2+hash01(i)*5,{r:140,g:210,b:240},0.25*show);
   // Soft fog falloff into edges (behind translucent placard)
   ctx.globalCompositeOperation="source-over";
-  const fog=ctx.createRadialGradient(cx,cy,Math.min(w,h)*0.28,cx,cy,Math.max(w,h)*0.72);
-  fog.addColorStop(0,rgba(0,0,0,0));fog.addColorStop(0.55,rgba(4,10,20,0.15));fog.addColorStop(1,rgba(3,6,14,0.72));
+  // Soft continuous vignette into all edges (no portal/box shape)
+  const fog=ctx.createRadialGradient(w*0.55,h*0.45,Math.min(w,h)*0.45,w*0.5,h*0.5,Math.max(w,h)*0.85);
+  fog.addColorStop(0,rgba(0,0,0,0));fog.addColorStop(0.65,rgba(4,12,24,0.08));fog.addColorStop(1,rgba(3,8,16,0.55));
   ctx.fillStyle=fog;ctx.fillRect(0,0,w,h);
-  // Extra soft vignette for seamless edges
-  const edge=ctx.createLinearGradient(0,0,0,h*0.12);edge.addColorStop(0,rgba(3,6,14,0.55));edge.addColorStop(1,rgba(3,6,14,0));ctx.fillStyle=edge;ctx.fillRect(0,0,w,h*0.14);
-  const edgeB=ctx.createLinearGradient(0,h*0.88,0,h);edgeB.addColorStop(0,rgba(3,6,14,0));edgeB.addColorStop(1,rgba(3,6,14,0.65));ctx.fillStyle=edgeB;ctx.fillRect(0,h*0.86,w,h*0.14);
+  const edgeL=ctx.createLinearGradient(0,0,w*0.18,0);edgeL.addColorStop(0,rgba(3,8,16,0.5));edgeL.addColorStop(1,rgba(3,8,16,0));ctx.fillStyle=edgeL;ctx.fillRect(0,0,w*0.2,h);
+  const edgeR=ctx.createLinearGradient(w,0,w*0.82,0);edgeR.addColorStop(0,rgba(3,8,16,0.5));edgeR.addColorStop(1,rgba(3,8,16,0));ctx.fillStyle=edgeR;ctx.fillRect(w*0.8,0,w*0.2,h);
+  const edgeT=ctx.createLinearGradient(0,0,0,h*0.1);edgeT.addColorStop(0,rgba(3,8,16,0.4));edgeT.addColorStop(1,rgba(3,8,16,0));ctx.fillStyle=edgeT;ctx.fillRect(0,0,w,h*0.12);
+  const edgeB=ctx.createLinearGradient(0,h,0,h*0.88);edgeB.addColorStop(0,rgba(3,8,16,0.55));edgeB.addColorStop(1,rgba(3,8,16,0));ctx.fillStyle=edgeB;ctx.fillRect(0,h*0.86,w,h*0.14);
   ctx.restore();}
 
 

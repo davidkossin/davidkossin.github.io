@@ -62,7 +62,7 @@ const scene = { id:"humans", title:"Humans", weight:1.15, checkpoints,
     const overlay=smootherstep(0.62,0.78,p);
     // Dual-hemisphere during dispersal so Old World + Americas routes all read
     const dual = smootherstep(0.08,0.16,p) * (1 - smootherstep(0.36,0.46,p));
-    const single = 1 - dual * 0.92;
+    const single = 1 - dual;
 
     if (dual > 0.02) {
       const gap = Math.min(28, aw * 0.04);

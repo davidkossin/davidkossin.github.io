@@ -32,48 +32,38 @@ function drawTransistor(ctx,cx,cy,size,p,q,show){
     softDisc(ctx,cx-S*0.25,cy-S*0.45,S*1.5,{r:255,g:245,b:220},0.2); softDisc(ctx,cx+S*0.3,cy+S*0.1,S*1.1,{r:120,g:160,b:210},0.1);
     // Mount / base plate (label-free)
     ctx.fillStyle=rgba(36,34,42,0.96); roundRect(ctx,cx-S*0.58,cy+S*0.28,S*1.16,S*0.18,8); ctx.fill();
-    // Germanium block — darker metallic slab under the wedge
-    const geTop = cy+S*0.02;
-    const geBot = cy+S*0.30;
-    ctx.fillStyle=rgba(55,58,68,0.98);
+    // Germanium block — darker metallic slab under the wedge (no vertical leads)
+    const geTop = cy+S*0.04;
+    const geBot = cy+S*0.26;
+    ctx.fillStyle=rgba(48,52,62,0.98);
+    roundRect(ctx, cx-S*0.32, geTop, S*0.64, geBot-geTop, 4); ctx.fill();
+    const ge=ctx.createLinearGradient(cx, geTop, cx, geBot);
+    ge.addColorStop(0,rgba(150,155,165,0.5)); ge.addColorStop(0.4,rgba(70,74,84,0.3)); ge.addColorStop(1,rgba(28,30,38,0.75));
+    ctx.fillStyle=ge; roundRect(ctx, cx-S*0.32, geTop, S*0.64, geBot-geTop, 4); ctx.fill();
+    // Cream polystyrene wedge resting on the slab
+    const wedge=ctx.createLinearGradient(cx-S*0.3,cy-S*0.55,cx+S*0.3,geTop);
+    wedge.addColorStop(0,rgba(245,235,210,0.98)); wedge.addColorStop(0.5,rgba(228,212,180,0.98)); wedge.addColorStop(1,rgba(198,182,152,0.98));
+    ctx.fillStyle=wedge; ctx.beginPath(); ctx.moveTo(cx,cy-S*0.55); ctx.lineTo(cx+S*0.36,geTop); ctx.lineTo(cx-S*0.36,geTop); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle=rgba(160,140,110,0.45); ctx.lineWidth=1.4; ctx.stroke();
+    // Gold foil strips tapering to contact points on the germanium face
+    const touchY = geTop + (geBot-geTop)*0.42;
+    ctx.fillStyle=rgba(255,198,70,0.96);
     ctx.beginPath();
-    ctx.moveTo(cx-S*0.36, geBot); ctx.lineTo(cx+S*0.36, geBot);
-    ctx.lineTo(cx+S*0.28, geTop); ctx.lineTo(cx-S*0.28, geTop);
+    ctx.moveTo(cx-S*0.14, cy-S*0.46); ctx.lineTo(cx-S*0.065, cy-S*0.46);
+    ctx.lineTo(cx-S*0.095, touchY); ctx.lineTo(cx-S*0.11, touchY);
     ctx.closePath(); ctx.fill();
-    const ge=ctx.createLinearGradient(cx-S*0.2, geTop, cx+S*0.25, geBot);
-    ge.addColorStop(0,rgba(140,145,155,0.55)); ge.addColorStop(0.45,rgba(70,75,85,0.35)); ge.addColorStop(1,rgba(30,32,40,0.7));
-    ctx.fillStyle=ge; ctx.fill();
-    // Specular edge on germanium
-    ctx.strokeStyle=rgba(190,200,215,0.35); ctx.lineWidth=1.2;
-    ctx.beginPath(); ctx.moveTo(cx-S*0.26, geTop+2); ctx.lineTo(cx+S*0.26, geTop+2); ctx.stroke();
-    // Cream polystyrene triangular wedge sitting on the slab
-    const wedge=ctx.createLinearGradient(cx-S*0.3,cy-S*0.55,cx+S*0.3,cy+S*0.02);
-    wedge.addColorStop(0,rgba(245,235,210,0.98)); wedge.addColorStop(0.45,rgba(230,215,185,0.98)); wedge.addColorStop(1,rgba(200,185,155,0.98));
-    ctx.fillStyle=wedge; ctx.beginPath(); ctx.moveTo(cx,cy-S*0.58); ctx.lineTo(cx+S*0.38,geTop+2); ctx.lineTo(cx-S*0.38,geTop+2); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle=rgba(160,140,110,0.5); ctx.lineWidth=1.5; ctx.stroke();
-    ctx.strokeStyle=rgba(255,250,235,0.4); ctx.lineWidth=1.1; ctx.beginPath(); ctx.moveTo(cx,cy-S*0.5); ctx.lineTo(cx+S*0.28,geTop+4); ctx.lineTo(cx-S*0.28,geTop+4); ctx.closePath(); ctx.stroke();
-    // Gold foil contacts — taper to a point where they touch the germanium
-    const touchY = geTop + (geBot-geTop)*0.35;
-    ctx.fillStyle=rgba(255,200,80,0.95);
-    // left foil
     ctx.beginPath();
-    ctx.moveTo(cx-S*0.15, cy-S*0.48); ctx.lineTo(cx-S*0.07, cy-S*0.48);
-    ctx.lineTo(cx-S*0.085, touchY); ctx.lineTo(cx-S*0.115, touchY);
+    ctx.moveTo(cx+S*0.065, cy-S*0.46); ctx.lineTo(cx+S*0.14, cy-S*0.46);
+    ctx.lineTo(cx+S*0.11, touchY); ctx.lineTo(cx+S*0.095, touchY);
     ctx.closePath(); ctx.fill();
-    // right foil
-    ctx.beginPath();
-    ctx.moveTo(cx+S*0.07, cy-S*0.48); ctx.lineTo(cx+S*0.15, cy-S*0.48);
-    ctx.lineTo(cx+S*0.115, touchY); ctx.lineTo(cx+S*0.085, touchY);
-    ctx.closePath(); ctx.fill();
-    // Point-contact glow on germanium (no stray vertical lead)
     ctx.globalCompositeOperation="lighter";
-    drawGlow(ctx,cx-S*0.10,touchY,S*0.14,{r:255,g:220,b:100},0.7);
-    drawGlow(ctx,cx+S*0.10,touchY,S*0.14,{r:255,g:220,b:100},0.7);
+    drawGlow(ctx,cx-S*0.102,touchY,S*0.12,{r:255,g:220,b:100},0.65);
+    drawGlow(ctx,cx+S*0.102,touchY,S*0.12,{r:255,g:220,b:100},0.65);
     ctx.fillStyle=rgba(255,245,180,0.95);
-    ctx.beginPath(); ctx.arc(cx-S*0.10,touchY,3.5,0,Math.PI*2); ctx.arc(cx+S*0.10,touchY,3.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx-S*0.102,touchY,3.2,0,Math.PI*2); ctx.arc(cx+S*0.102,touchY,3.2,0,Math.PI*2); ctx.fill();
     ctx.globalCompositeOperation="source-over";
     ctx.fillStyle=rgba(230,210,160,0.9); ctx.font=`${Math.max(13,size*0.065)}px Outfit,sans-serif`; ctx.textAlign="center";
-    ctx.fillText("1947 · point-contact transistor",cx,cy+S*0.62);
+    ctx.fillText("1947 · point-contact transistor",cx,cy+S*0.55);
     ctx.restore();
   }
   if(ic>0.05){ ctx.save(); ctx.globalAlpha=show*smootherstep(0.05,0.6,ic); softDisc(ctx,cx,cy,size*1.05,{r:40,g:130,b:190},0.18); const n=Math.floor(lerp(8,18,q)); const cell=size*0.1; const dieW=n*cell*1.2;
