@@ -31,15 +31,18 @@ function drawTransistor(ctx,cx,cy,size,p,q,show){
     // Soft lab lighting
     softDisc(ctx,cx-S*0.25,cy-S*0.45,S*1.5,{r:255,g:245,b:220},0.2); softDisc(ctx,cx+S*0.3,cy+S*0.1,S*1.1,{r:120,g:160,b:210},0.1);
     // Mount / base plate (label-free)
-    ctx.fillStyle=rgba(36,34,42,0.96); roundRect(ctx,cx-S*0.58,cy+S*0.28,S*1.16,S*0.18,8); ctx.fill();
-    // Germanium block — darker metallic slab under the wedge (no vertical leads)
+    ctx.fillStyle=rgba(36,34,42,1); roundRect(ctx,cx-S*0.58,cy+S*0.28,S*1.16,S*0.18,8); ctx.fill();
+    // Germanium block — opaque metallic slab (must be opaque so grid lines do not show through)
     const geTop = cy+S*0.04;
     const geBot = cy+S*0.26;
-    ctx.fillStyle=rgba(48,52,62,0.98);
-    roundRect(ctx, cx-S*0.32, geTop, S*0.64, geBot-geTop, 4); ctx.fill();
+    ctx.fillStyle=rgba(42,46,56,1);
+    roundRect(ctx, cx-S*0.34, geTop, S*0.68, geBot-geTop, 5); ctx.fill();
     const ge=ctx.createLinearGradient(cx, geTop, cx, geBot);
-    ge.addColorStop(0,rgba(150,155,165,0.5)); ge.addColorStop(0.4,rgba(70,74,84,0.3)); ge.addColorStop(1,rgba(28,30,38,0.75));
-    ctx.fillStyle=ge; roundRect(ctx, cx-S*0.32, geTop, S*0.64, geBot-geTop, 4); ctx.fill();
+    ge.addColorStop(0,rgba(120,126,138,1)); ge.addColorStop(0.35,rgba(62,66,76,1)); ge.addColorStop(1,rgba(28,30,38,1));
+    ctx.fillStyle=ge; roundRect(ctx, cx-S*0.34, geTop, S*0.68, geBot-geTop, 5); ctx.fill();
+    // soft top highlight only (horizontal, not a vertical lead)
+    ctx.fillStyle=rgba(180,188,200,0.22);
+    roundRect(ctx, cx-S*0.3, geTop+1, S*0.6, 3, 1); ctx.fill();
     // Cream polystyrene wedge resting on the slab
     const wedge=ctx.createLinearGradient(cx-S*0.3,cy-S*0.55,cx+S*0.3,geTop);
     wedge.addColorStop(0,rgba(245,235,210,0.98)); wedge.addColorStop(0.5,rgba(228,212,180,0.98)); wedge.addColorStop(1,rgba(198,182,152,0.98));
