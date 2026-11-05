@@ -1,5 +1,5 @@
 import { scenes } from "./registry.js?v=title1";
-import { createEngine } from "./engine.js?v=fade1";
+import { createEngine } from "./engine.js?v=nav1";
 
 const canvas = document.getElementById("timeline-canvas");
 const ui = {
@@ -11,6 +11,8 @@ const ui = {
   eras: document.getElementById("scrub-eras"),
   slider: document.getElementById("scrub-track"),
   playBtn: document.getElementById("play-btn"),
+  prevBtn: document.getElementById("prev-btn"),
+  nextBtn: document.getElementById("next-btn"),
   placard: document.getElementById("placard"),
   placardTime: document.getElementById("placard-time"),
   placardTitle: document.getElementById("placard-title"),

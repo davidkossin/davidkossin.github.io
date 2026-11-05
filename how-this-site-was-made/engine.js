@@ -6,7 +6,9 @@ import { clamp, lerp, smoothstep, smootherstep } from "./util.js";
 
 const CROSSFADE = 0.035; // fraction of global progress for chapter blends
 const SNAP_RADIUS = 0.018; // global scrub units
-const PLAY_SPEED = 0.012; // global progress per second (slow)
+const DWELL_SEC = 10; // seconds held at each checkpoint while playing
+const SNAP_GAIN = 3.2; // lower = smoother, slower travel between checkpoints
+const SNAP_DAMP = 0.86;
 
 /**
  * @typedef {{ id: string, at: number, timeLabel: string, title: string, body: string }} Checkpoint
@@ -63,6 +65,7 @@ export function createEngine({ canvas, scenes, ui }) {
 
   let progress = 0; // global 0..1
   let playing = false;
+  let dwellLeft = 0;
   let pointerDragging = false;
   let snapTarget = null;
   let snapVel = 0;
@@ -184,21 +187,32 @@ export function createEngine({ canvas, scenes, ui }) {
     if (frameMsEma > 22) quality = Math.max(0.3, quality - 0.02);
     else if (frameMsEma < 14) quality = Math.min(1, quality + 0.01);
 
-    // Snap ease
+    // Snap ease (used by Next/Prev and by Play between checkpoints)
     if (snapTarget != null && !pointerDragging) {
       const diff = snapTarget - progress;
-      if (Math.abs(diff) < 0.0004) {
+      if (Math.abs(diff) < 0.00035) {
         progress = snapTarget;
         snapTarget = null;
         snapVel = 0;
+        if (playing) dwellLeft = DWELL_SEC;
       } else {
-        // Smooth critically-damped-ish ease
-        snapVel = snapVel * 0.75 + diff * 8 * dt;
+        snapVel = snapVel * SNAP_DAMP + diff * SNAP_GAIN * dt;
         progress = clamp(progress + snapVel, 0, 1);
       }
     } else if (playing && !pointerDragging && !reducedMotion) {
-      progress = clamp(progress + PLAY_SPEED * dt, 0, 1);
-      if (progress >= 1) playing = false;
+      // Hold on the current checkpoint so the placard can be read, then ease to the next.
+      if (dwellLeft > 0) {
+        dwellLeft -= dt;
+      } else {
+        const next = allCheckpoints.find((c) => c.globalAt > progress + 0.0015);
+        if (next) {
+          snapTarget = next.globalAt;
+          snapVel = 0;
+        } else {
+          playing = false;
+          dwellLeft = 0;
+        }
+      }
     }
 
     // Placard transition
@@ -415,8 +429,25 @@ export function createEngine({ canvas, scenes, ui }) {
   ui.playBtn?.addEventListener("click", () => {
     if (reducedMotion) return;
     playing = !playing;
-    if (progress >= 1) progress = 0;
+    if (playing) {
+      if (progress >= 0.999) progress = 0;
+      snapTarget = null;
+      snapVel = 0;
+      // Start the dwell clock on whatever checkpoint we're on (or the nearest ahead).
+      const here = allCheckpoints.find((c) => Math.abs(c.globalAt - progress) < 0.002);
+      if (here) dwellLeft = DWELL_SEC;
+      else {
+        const next = allCheckpoints.find((c) => c.globalAt > progress + 0.001);
+        if (next) { snapTarget = next.globalAt; dwellLeft = 0; }
+        else dwellLeft = DWELL_SEC;
+      }
+    } else {
+      dwellLeft = 0;
+    }
   });
+
+  ui.prevBtn?.addEventListener("click", () => jumpCheckpoint(-1));
+  ui.nextBtn?.addEventListener("click", () => jumpCheckpoint(1));
 
   // Expose for debugging / tests
   const api = {

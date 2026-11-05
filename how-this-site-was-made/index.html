@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=title2" />
+  <link rel="stylesheet" href="styles.css?v=nav1" />
   <!-- Cloudflare Web Analytics --><script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "ed4660d74de24898991981cdb05e73b9"}'></script><!-- End Cloudflare Web Analytics -->
 </head>
 <body class="hsm-page">
@@ -29,7 +29,11 @@
   <div id="live" class="sr-only" aria-live="polite"></div>
 
   <footer class="scrubber" role="region" aria-label="Timeline scrubber">
-    <button type="button" id="play-btn" class="play-btn" aria-pressed="false" title="Play or pause auto-advance">Play</button>
+    <div class="transport" role="group" aria-label="Timeline controls">
+      <button type="button" id="prev-btn" class="nav-btn" title="Previous checkpoint" aria-label="Previous checkpoint">Prev</button>
+      <button type="button" id="play-btn" class="play-btn" aria-pressed="false" title="Play or pause auto-advance">Play</button>
+      <button type="button" id="next-btn" class="nav-btn" title="Next checkpoint" aria-label="Next checkpoint">Next</button>
+    </div>
     <div class="scrub-wrap">
       <div class="scrub-eras" id="scrub-eras" aria-hidden="true"></div>
       <div
@@ -40,7 +44,7 @@
         aria-valuemin="0"
         aria-valuemax="1000"
         aria-valuenow="0"
-        aria-label="Cosmic timeline. Use arrow keys to jump between checkpoints."
+        aria-label="Cosmic timeline. Use Prev and Next, or the arrow keys, to move between checkpoints."
       >
         <div class="scrub-fill" id="scrub-fill"></div>
         <div class="scrub-ticks" id="scrub-ticks"></div>
@@ -49,6 +53,6 @@
     </div>
   </footer>
 
-  <script type="module" src="main.js?v=title1"></script>
+  <script type="module" src="main.js?v=nav1"></script>
 </body>
 </html>

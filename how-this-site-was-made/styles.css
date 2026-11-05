@@ -140,13 +140,20 @@ html, body {
   -webkit-backdrop-filter: blur(8px);
 }
 
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 0 0 auto;
+}
+.nav-btn,
 .play-btn {
   flex: 0 0 auto;
   font-family: "Outfit", system-ui, sans-serif;
   font-size: 0.85rem;
   font-weight: 500;
   letter-spacing: 0.04em;
-  padding: 0.55rem 0.95rem;
+  padding: 0.55rem 0.9rem;
   border-radius: 999px;
   border: 1px solid rgba(232, 236, 255, 0.28);
   background: rgba(255, 255, 255, 0.05);
@@ -154,11 +161,16 @@ html, body {
   cursor: pointer;
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
+.nav-btn:hover,
 .play-btn:hover,
 .play-btn[aria-pressed="true"] {
   border-color: var(--accent);
   background: rgba(125, 211, 252, 0.12);
   box-shadow: 0 0 18px rgba(125, 211, 252, 0.25);
+}
+.nav-btn:active,
+.play-btn:active {
+  transform: translateY(1px);
 }
 
 .scrub-wrap {
@@ -277,7 +289,8 @@ html, body {
   /* Thin checkpoint ticks — every other mark — so ~46 ticks stay readable */
   .tick:nth-child(even) { opacity: 0.25; height: 0.35rem; }
   .scrubber { gap: 0.5rem; padding-left: 0.65rem; padding-right: 0.65rem; }
-  .play-btn { padding: 0.5rem 0.75rem; font-size: 0.8rem; }
+  .nav-btn, .play-btn { padding: 0.5rem 0.7rem; font-size: 0.78rem; }
+  .transport { gap: 0.3rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

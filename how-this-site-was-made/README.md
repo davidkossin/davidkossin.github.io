@@ -58,7 +58,7 @@ Absolute cosmic time is *not* linear on the scrubber. Each chapter owns a slice 
 
 ### Motion & accessibility
 
-Default is **paused** (scrub-driven). Play advances slowly. `prefers-reduced-motion: reduce` disables autoplay drift; scrubbing still works. All camera-like motion stays slow — no fast zooms or rushing starfields. Adaptive quality reduces particle counts and resolution when frame times are high.
+Default is **paused** (scrub-driven). **Play** holds about 10 seconds on each checkpoint so the placard can be read, then eases smoothly to the next. **Prev** / **Next** (and the arrow keys) ease to the neighboring checkpoint. `prefers-reduced-motion: reduce` disables autoplay; scrubbing and Prev/Next still work. All camera-like motion stays slow — no fast zooms or rushing starfields. Adaptive quality reduces particle counts and resolution when frame times are high.
 
 ### Prompt-to-page chapter
 
