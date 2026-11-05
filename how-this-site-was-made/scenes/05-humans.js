@@ -1,5 +1,5 @@
 /**
- * Chapter 5 — Humans (v3) — Natural Earth globe + accurate routes/centers
+ * Chapter 5 — Humans (v4b) — dual-hemisphere dispersal so all major routes read
  */
 import { clamp, lerp, smoothstep, smootherstep, hash01, drawGlow, drawVignette, drawGrain, drawStarfield, rgba } from "../util.js";
 import { stage, drawEarthGlobe, drawGlobePath, drawGlobeMarker, project } from "../globe.js?v=e6afa06";
@@ -19,14 +19,24 @@ const checkpoints = [
     body:"Mechanical reproduction of text multiplies the reach of ideas. Movable type appears in East Asia centuries before Gutenberg’s European press accelerates literacy, scientific correspondence, and religious and political upheaval. Information begins to scale in a new way." },
 ];
 
-const ROUTES = [
-  { start:0.14, end:0.28, pts:[[36,4],[38,15],[36,25],[35,32],[38,35]] },
-  { start:0.16, end:0.32, pts:[[36,22],[45,18],[58,20],[72,15],[80,12],[95,10]] },
-  { start:0.20, end:0.36, pts:[[100,5],[110,0],[120,-5],[130,-12],[135,-20],[145,-25]] },
-  { start:0.22, end:0.38, pts:[[35,35],[28,40],[15,45],[5,48],[-5,45]] },
-  { start:0.24, end:0.40, pts:[[80,30],[95,35],[110,38],[120,35],[130,40]] },
-  { start:0.30, end:0.46, pts:[[140,55],[160,62],[180,65],[-160,64],[-140,60],[-120,55],[-100,45]] },
-  { start:0.38, end:0.52, pts:[[-100,25],[-90,15],[-80,5],[-70,-10],[-65,-25],[-70,-40]] },
+/** Major routes; start/end chosen so all are visible at dispersal checkpoint (at≈0.24). */
+const ROUTES_OLD = [
+  // Africa → Levant / Arabia (~65–50 kya corridor)
+  { label:"~65 kya", start:0.10, end:0.20, pts:[[36,4],[38,12],[36,22],[35,30],[38,34]] },
+  // → South Asia
+  { label:"S Asia", start:0.12, end:0.22, pts:[[36,22],[48,20],[62,18],[78,14],[90,12],[98,8]] },
+  // → Sahul
+  { label:"Sahul", start:0.14, end:0.24, pts:[[100,5],[112,0],[122,-6],[132,-14],[140,-22],[148,-28]] },
+  // → Europe ~45 kya
+  { label:"Europe", start:0.13, end:0.23, pts:[[35,34],[28,40],[18,45],[8,48],[0,46],[-5,43]] },
+  // → East Asia
+  { label:"E Asia", start:0.14, end:0.24, pts:[[80,28],[95,34],[110,38],[122,36],[130,42],[138,38]] },
+];
+const ROUTES_NEW = [
+  // Beringia → Americas ~16–15 kya
+  { label:"Beringia", start:0.16, end:0.26, pts:[[160,62],[175,65],[-170,65],[-150,62],[-130,55],[-115,48]] },
+  // south through Americas
+  { label:"Americas", start:0.18, end:0.28, pts:[[-115,45],[-105,35],[-95,25],[-85,15],[-75,0],[-70,-15],[-68,-30],[-70,-42]] },
 ];
 const AGRI = [
   { lon:43, lat:35, at:0.0 }, { lon:112, lat:34, at:0.08 }, { lon:-98, lat:19, at:0.14 }, { lon:-75, lat:-13, at:0.20 },
@@ -37,18 +47,65 @@ const CITIES = [[31.2,30],[44.4,33.3],[12.5,41.9],[2.35,48.85],[-0.12,51.5],[37.
 function softDisc(ctx,x,y,rad,color,a){const g=ctx.createRadialGradient(x,y,0,x,y,rad);g.addColorStop(0,rgba(color.r,color.g,color.b,a));g.addColorStop(0.55,rgba(color.r,color.g,color.b,a*0.35));g.addColorStop(1,rgba(color.r,color.g,color.b,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);ctx.fill();}
 function roundRect(ctx,x,y,w,h,rad){ctx.beginPath();ctx.moveTo(x+rad,y);ctx.arcTo(x+w,y,x+w,y+h,rad);ctx.arcTo(x+w,y+h,x,y+h,rad);ctx.arcTo(x,y+h,x,y,rad);ctx.arcTo(x,y,x+w,y,rad);ctx.closePath();}
 
+function drawRoutesOnGlobe(ctx, routes, cx, cy, R, rotLon, p, disp) {
+  for (const route of routes) {
+    const on = smoothstep(route.start, route.end, p) * disp;
+    if (on > 0.01) drawGlobePath(ctx, route.pts, cx, cy, R, rotLon, Math.min(1, on * 1.15), { r:255, g:190, b:90 }, 2.3);
+  }
+}
+
 const scene = { id:"humans", title:"Humans", weight:1.15, checkpoints,
   render(ctx, localProgress, view) {
-    const { w,h,quality=1 }=view; const p=clamp(localProgress,0,1); const st=stage(view); const {cx,cy,aw,ah}=st; const R=Math.min(aw,ah)*0.50;
+    const { w,h,quality=1 }=view; const p=clamp(localProgress,0,1); const st=stage(view); const {cx,cy,aw,ah}=st;
     ctx.fillStyle="#05060f"; ctx.fillRect(0,0,w,h); drawStarfield(ctx,w,h,Math.floor(50*quality),51,p*0.12,0.4);
-    const night=smootherstep(0.48,0.65,p), rotLon=15+p*28, overlay=smootherstep(0.62,0.78,p);
-    if (1-overlay*0.55>0.05) { ctx.save(); ctx.globalAlpha=1-overlay*0.55; drawEarthGlobe(ctx,cx,cy,R,{landMode:"modern",rotLon,ox:0.9,night,clouds:0.4,quality}); ctx.restore(); }
-    const disp=smootherstep(0.10,0.40,p)*(1-smootherstep(0.38,0.48,p));
-    if (disp>0.01) {
-      const origin=project(36,5,cx,cy,R,rotLon);
-      if (origin) { ctx.save(); ctx.globalCompositeOperation="lighter"; drawGlow(ctx,origin.x,origin.y,20,{r:255,g:210,b:100},0.55*disp); ctx.restore(); }
-      for (const route of ROUTES) { const on=smoothstep(route.start,route.end,p); if(on>0.01) drawGlobePath(ctx,route.pts,cx,cy,R,rotLon,on,{r:255,g:190,b:90},2.4); }
+    const night=smootherstep(0.48,0.65,p);
+    const overlay=smootherstep(0.62,0.78,p);
+    // Dual-hemisphere during dispersal so Old World + Americas routes all read
+    const dual = smootherstep(0.08,0.16,p) * (1 - smootherstep(0.36,0.46,p));
+    const single = 1 - dual * 0.92;
+
+    if (dual > 0.02) {
+      const gap = Math.min(28, aw * 0.04);
+      const R2 = Math.min(aw * 0.28, ah * 0.46);
+      const lx = cx - R2 - gap * 0.5;
+      const rx = cx + R2 + gap * 0.5;
+      // Slow rotation through the span
+      const rotOld = 35 + p * 22;
+      const rotNew = -140 + p * 18;
+      ctx.save(); ctx.globalAlpha = dual;
+      drawEarthGlobe(ctx, lx, cy, R2, { landMode:"modern", rotLon:rotOld, ox:0.9, night:0.05, clouds:0.35, quality });
+      drawEarthGlobe(ctx, rx, cy, R2, { landMode:"modern", rotLon:rotNew, ox:0.9, night:0.05, clouds:0.35, quality });
+      const origin = project(36, 5, lx, cy, R2, rotOld);
+      if (origin) { ctx.globalCompositeOperation="lighter"; drawGlow(ctx, origin.x, origin.y, 16, {r:255,g:210,b:100}, 0.55*dual); ctx.globalCompositeOperation="source-over"; }
+      drawRoutesOnGlobe(ctx, ROUTES_OLD, lx, cy, R2, rotOld, p, dual);
+      drawRoutesOnGlobe(ctx, ROUTES_NEW, rx, cy, R2, rotNew, p, dual);
+      // Tiny optional date labels near route tips (colorblind-safe amber)
+      ctx.globalAlpha = dual * 0.75;
+      ctx.fillStyle = rgba(255, 210, 140, 0.85);
+      ctx.font = `500 ${Math.max(9, R2*0.07)}px Outfit,sans-serif`;
+      ctx.textAlign = "center";
+      const tipOld = project(148, -28, lx, cy, R2, rotOld);
+      if (tipOld && tipOld.z > 0.15) ctx.fillText("~50 kya", tipOld.x, tipOld.y + 14);
+      const tipEu = project(-5, 43, lx, cy, R2, rotOld);
+      if (tipEu && tipEu.z > 0.15) ctx.fillText("~45 kya", tipEu.x, tipEu.y - 10);
+      const tipAm = project(-70, -30, rx, cy, R2, rotNew);
+      if (tipAm && tipAm.z > 0.15) ctx.fillText("~15 kya", tipAm.x, tipAm.y + 14);
+      ctx.restore();
     }
+
+    const R = Math.min(aw, ah) * 0.50;
+    const rotLon = 20 + p * 30;
+    if (single > 0.05) {
+      ctx.save(); ctx.globalAlpha = single * (1 - overlay * 0.55);
+      drawEarthGlobe(ctx, cx, cy, R, { landMode:"modern", rotLon, ox:0.9, night, clouds:0.4, quality });
+      ctx.restore();
+      // Keep routes faintly on single globe as dual fades
+      const dispFade = smootherstep(0.34,0.40,p) * (1 - smootherstep(0.42,0.50,p));
+      if (dispFade > 0.01) {
+        drawRoutesOnGlobe(ctx, [...ROUTES_OLD, ...ROUTES_NEW], cx, cy, R, rotLon, Math.min(1, p + 0.15), dispFade);
+      }
+    }
+
     const agr=smootherstep(0.34,0.52,p)*(1-smootherstep(0.56,0.68,p)*0.35);
     if (agr>0.01) { ctx.save(); ctx.globalCompositeOperation="lighter"; for (const c of AGRI) { const on=clamp((agr-c.at)/0.22,0,1); if(on>0) drawGlobeMarker(ctx,c.lon,c.lat,cx,cy,R,rotLon,{r:140,g:230,b:150},8*on,"diamond"); } ctx.restore(); }
     const city=smootherstep(0.50,0.70,p);

@@ -37,82 +37,138 @@ function drawEukaryote(ctx,cx,cy,R,p,q,show){if(show<0.01)return;const s=R*0.95;
 
 function drawEdiacaran(ctx,cx,cy,R,p,q,show){if(show<0.01)return;ctx.save();ctx.globalAlpha=show;softDisc(ctx,cx,cy,R*1.25,{r:20,g:50,b:70},0.55);const floor=cy+R*0.42;softDisc(ctx,cx,floor+20,R*1.4,{r:70,g:60,b:40},0.5);[[-0.55,1],[-0.2,1.2],[0.15,1.05],[0.5,0.9]].forEach(([ox,sc],i)=>{const x=cx+ox*R,h=R*0.55*sc,sw=Math.sin(p*2.5+i)*10;ctx.strokeStyle=rgba(150,200,170,0.75);ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x,floor);ctx.quadraticCurveTo(x+sw*0.5,floor-h*0.5,x+sw,floor-h);ctx.stroke();for(let s=0;s<8;s++){const t=(s+0.5)/8;ctx.fillStyle=rgba(130,185,155,0.4);ctx.beginPath();ctx.ellipse(x+sw*t,floor-h*t,(1-t*0.25)*R*0.1*sc,R*0.045*sc,0,0,Math.PI*2);ctx.fill();}});ctx.restore();}
 
-function drawCambrian(ctx,st,p,q,show){if(show<0.01)return;const{cx,cy,aw,ah,x:x0,y:y0}=st;ctx.save();ctx.globalAlpha=show;
-  // FULL-BLEED luminous underwater (no bubble)
-  const water=ctx.createLinearGradient(x0,y0,x0,y0+ah);
-  water.addColorStop(0,rgba(8,55,105,0.98));water.addColorStop(0.35,rgba(14,95,135,0.96));water.addColorStop(0.7,rgba(20,75,95,0.97));water.addColorStop(1,rgba(35,55,48,0.98));
-  ctx.fillStyle=water;ctx.fillRect(x0,y0,aw,ah);
-  softDisc(ctx,cx-aw*0.08,cy-ah*0.32,Math.max(aw,ah)*0.55,{r:100,g:190,b:240},0.32);
-  softDisc(ctx,cx+aw*0.25,cy-ah*0.1,aw*0.35,{r:60,g:140,b:200},0.18);
-  // Caustic light rays
+function drawCambrian(ctx,st,p,q,show,view){if(show<0.01)return;const{w,h}=view;const{cx,cy,aw,ah}=st;ctx.save();ctx.globalAlpha=show;
+  // FULL-CANVAS underwater — soft fog into edges (no hard rectangle)
+  const water=ctx.createLinearGradient(0,0,0,h);
+  water.addColorStop(0,rgba(6,40,85,0.98));water.addColorStop(0.35,rgba(12,85,125,0.97));water.addColorStop(0.7,rgba(18,70,90,0.97));water.addColorStop(1,rgba(30,48,42,0.98));
+  ctx.fillStyle=water;ctx.fillRect(0,0,w,h);
+  softDisc(ctx,cx-aw*0.05,cy-ah*0.28,Math.max(w,h)*0.42,{r:90,g:180,b:230},0.28);
+  softDisc(ctx,cx+aw*0.2,cy-ah*0.05,Math.max(w,h)*0.28,{r:50,g:130,b:190},0.16);
+  // Caustic rays
   ctx.save();ctx.globalCompositeOperation="lighter";
-  for(let i=0;i<Math.floor(lerp(8,18,q));i++){const X=cx+(hash01(i*3.1)-0.5)*aw*1.05;const sway=Math.sin(p*2+i)*12;const g=ctx.createLinearGradient(X,y0,X+sway+40,y0+ah);g.addColorStop(0,rgba(160,220,255,0));g.addColorStop(0.35,rgba(160,220,255,0.16*show));g.addColorStop(1,rgba(160,220,255,0));ctx.fillStyle=g;ctx.fillRect(X-14,y0,32,ah);}ctx.restore();
-  // Sediment floor + sponge textures
-  const floorY=cy+ah*0.34;softDisc(ctx,cx,floorY+55,aw*0.85,{r:95,g:75,b:45},0.78);
-  for(let i=0;i<14;i++){const x=cx-aw*0.45+i*aw*0.07,h=28+hash01(i*4.2)*55,w=8+hash01(i*2)*10;ctx.fillStyle=rgba(110+hash01(i)*40,95,70,0.55);ctx.beginPath();ctx.moveTo(x-w,floorY);ctx.quadraticCurveTo(x-w*1.2,floorY-h*0.55,x,floorY-h);ctx.quadraticCurveTo(x+w*1.2,floorY-h*0.55,x+w,floorY);ctx.fill();
-    // sponge pores
-    for(let k=0;k<4;k++){ctx.fillStyle=rgba(40,50,45,0.35);ctx.beginPath();ctx.arc(x+(hash01(i+k)-0.5)*w,floorY-h*(0.3+hash01(k)*0.5),1.5+hash01(k+i)*2,0,Math.PI*2);ctx.fill();}}
-  const swim=p*2.4;
-  // Detailed trilobites (cephalon, thorax segments, pygidium, legs)
-  function trilobite(x,y,sc,flip,tint){ctx.save();ctx.translate(x,y);ctx.scale(flip?-sc:sc,sc);softDisc(ctx,0,0,48,{r:tint[0],g:tint[1],b:tint[2]},0.28);
-    // cephalon
-    const shell=rgba(tint[0],tint[1],tint[2],0.95);ctx.fillStyle=shell;ctx.beginPath();ctx.ellipse(-26,0,20,17,0,0,Math.PI*2);ctx.fill();
-    // glabella ridge
-    ctx.fillStyle=rgba(tint[0]+30,tint[1]+25,tint[2]+20,0.7);ctx.beginPath();ctx.ellipse(-26,0,10,12,0,0,Math.PI*2);ctx.fill();
-    // genal spines
-    ctx.strokeStyle=shell;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(-30,-14);ctx.lineTo(-52,-26);ctx.moveTo(-30,14);ctx.lineTo(-52,26);ctx.stroke();
-    // thorax
-    for(let s=0;s<9;s++){const sx=-4+s*8.5;const hh=15-s*0.85;ctx.fillStyle=shell;ctx.beginPath();ctx.ellipse(sx,0,6.5,hh,0,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle=rgba(20,30,40,0.45);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sx,-hh*0.7);ctx.lineTo(sx,hh*0.7);ctx.stroke();
-      // walking legs
-      ctx.strokeStyle=rgba(tint[0]-10,tint[1]-10,tint[2],0.75);ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(sx,hh*0.85);ctx.quadraticCurveTo(sx+4,hh+10,sx+2,hh+18);ctx.moveTo(sx,-hh*0.85);ctx.quadraticCurveTo(sx+4,-hh-10,sx+2,-hh-18);ctx.stroke();}
-    // pygidium
-    ctx.fillStyle=shell;ctx.beginPath();ctx.ellipse(68,0,14,12,0,0,Math.PI*2);ctx.fill();
-    // eye ridges glow
-    ctx.globalCompositeOperation="lighter";softDisc(ctx,-22,-10,8,{r:180,g:220,b:140},0.45);softDisc(ctx,-22,10,8,{r:180,g:220,b:140},0.45);
-    ctx.restore();}
-  trilobite(cx-aw*0.32,floorY-30,1.85,false,[35,55,70]);trilobite(cx-aw*0.05,floorY-20,1.55,true,[40,60,75]);trilobite(cx+aw*0.24,floorY-38,1.7,false,[30,50,65]);trilobite(cx+aw*0.4,floorY-16,1.25,true,[45,65,80]);
-  // Anomalocaris — large predator with frontal appendages + lateral flaps
-  const ax=cx+aw*0.18+Math.sin(swim)*24,ay=cy-ah*0.14+Math.cos(swim*0.7)*14;
-  ctx.save();ctx.translate(ax,ay);ctx.rotate(-0.12+Math.sin(swim)*0.05);softDisc(ctx,0,0,110,{r:70,g:120,b:160},0.32);
-  // body lobes
-  ctx.fillStyle=rgba(22,40,60,0.92);ctx.beginPath();ctx.ellipse(0,0,95,32,-0.05,0,Math.PI*2);ctx.fill();
-  for(let i=0;i<11;i++){const bx=-50+i*10;ctx.globalAlpha=show*(0.45+0.2*Math.sin(swim+i));ctx.fillStyle=rgba(35,60,85,0.85);ctx.beginPath();ctx.ellipse(bx,22,14,7,0.3,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(bx,-22,14,7,-0.3,0,Math.PI*2);ctx.fill();}
-  ctx.globalAlpha=show;
-  // circular mouth + eyes
-  softDisc(ctx,-70,0,18,{r:40,g:80,b:100},0.4);ctx.fillStyle=rgba(200,80,60,0.7);ctx.beginPath();ctx.arc(-72,0,8,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle=rgba(220,230,120,0.85);ctx.beginPath();ctx.arc(-55,-18,5,0,Math.PI*2);ctx.arc(-55,18,5,0,Math.PI*2);ctx.fill();
-  // frontal appendages (barbed)
-  ctx.strokeStyle=rgba(25,45,65,0.95);ctx.lineWidth=4.5;ctx.lineCap="round";
-  ctx.beginPath();ctx.moveTo(-78,-10);ctx.quadraticCurveTo(-115,-48,-145,-22);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(-78,10);ctx.quadraticCurveTo(-115,48,-145,22);ctx.stroke();
-  for(let k=0;k<5;k++){const t=(k+1)/6;ctx.strokeStyle=rgba(40,70,90,0.8);ctx.lineWidth=2;
-    const x1=lerp(-78,-145,t),y1=lerp(-10,-22,t)+lerp(0,-26,Math.sin(t*Math.PI));ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x1-6,y1-12);ctx.stroke();
-    const x2=lerp(-78,-145,t),y2=lerp(10,22,t)+lerp(0,26,Math.sin(t*Math.PI));ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-6,y2+12);ctx.stroke();}
-  // tail fan
-  ctx.fillStyle=rgba(22,40,60,0.9);ctx.beginPath();ctx.moveTo(80,0);ctx.lineTo(125,-38);ctx.lineTo(105,0);ctx.lineTo(125,38);ctx.closePath();ctx.fill();
+  for(let i=0;i<Math.floor(lerp(8,18,q));i++){const X=w*(0.08+hash01(i*3.1)*0.84);const sway=Math.sin(p*2+i)*18;const g=ctx.createLinearGradient(X,0,X+sway+50,h);g.addColorStop(0,rgba(150,215,255,0));g.addColorStop(0.35,rgba(150,215,255,0.14*show));g.addColorStop(1,rgba(150,215,255,0));ctx.fillStyle=g;ctx.fillRect(X-16,0,36,h);}ctx.restore();
+  // Far hazy silhouettes (depth layer)
+  ctx.save();ctx.globalAlpha=show*0.28;
+  for(let i=0;i<7;i++){const fx=w*(0.1+hash01(i*2.2)*0.8),fy=h*(0.25+hash01(i*3.3)*0.35),fs=30+hash01(i)*50;ctx.fillStyle=rgba(20,50,70,0.9);ctx.beginPath();ctx.ellipse(fx,fy,fs,fs*0.28,hash01(i)-0.5,0,Math.PI*2);ctx.fill();}
   ctx.restore();
-  // Opabinia — five eyes + proboscis
-  ctx.save();ctx.translate(cx-aw*0.14+Math.sin(swim*0.85)*18,cy+ah*0.0);softDisc(ctx,0,0,55,{r:80,g:140,b:110},0.28);ctx.fillStyle=rgba(45,85,70,0.92);ctx.beginPath();ctx.ellipse(10,0,42,15,0.08,0,Math.PI*2);ctx.fill();
-  for(let i=0;i<5;i++){const ea=-1.0+i*0.5;ctx.fillStyle=rgba(230,240,120,0.9);ctx.beginPath();ctx.arc(Math.cos(ea)*20-18,Math.sin(ea)*14-12,5.5,0,Math.PI*2);ctx.fill();ctx.fillStyle=rgba(30,40,20,0.8);ctx.beginPath();ctx.arc(Math.cos(ea)*20-18,Math.sin(ea)*14-12,2,0,Math.PI*2);ctx.fill();}
-  ctx.strokeStyle=rgba(45,85,70,0.95);ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-28,0);ctx.quadraticCurveTo(-60,-32,-88,-8);ctx.stroke();
-  ctx.fillStyle=rgba(45,85,70,0.95);ctx.beginPath();ctx.arc(-88,-8,8,0,Math.PI*2);ctx.fill();
-  ctx.strokeStyle=rgba(45,85,70,0.7);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-88,-8);ctx.lineTo(-100,-14);ctx.moveTo(-88,-8);ctx.lineTo(-100,-2);ctx.stroke();ctx.restore();
+  // Seafloor sediment across full width
+  const floorY=h*0.72;softDisc(ctx,w*0.5,floorY+80,w*0.7,{r:90,g:70,b:42},0.75);
+  softDisc(ctx,w*0.3,floorY+40,w*0.35,{r:70,g:55,b:35},0.4);softDisc(ctx,w*0.7,floorY+50,w*0.4,{r:80,g:60,b:38},0.45);
+  // Sponges / algae along seafloor
+  for(let i=0;i<18;i++){const x=w*(0.05+i/18*0.9),hh=24+hash01(i*4.2)*70,ww=7+hash01(i*2)*12;const kind=hash01(i*7);
+    if(kind<0.45){ // vase sponge
+      ctx.fillStyle=rgba(100+hash01(i)*50,90,65,0.55);ctx.beginPath();ctx.moveTo(x-ww,floorY);ctx.quadraticCurveTo(x-ww*1.15,floorY-hh*0.5,x-ww*0.35,floorY-hh);ctx.lineTo(x+ww*0.35,floorY-hh);ctx.quadraticCurveTo(x+ww*1.15,floorY-hh*0.5,x+ww,floorY);ctx.closePath();ctx.fill();
+      for(let k=0;k<3;k++){ctx.fillStyle=rgba(35,45,40,0.35);ctx.beginPath();ctx.arc(x+(hash01(i+k)-0.5)*ww*0.6,floorY-hh*(0.35+hash01(k)*0.45),1.5+hash01(k+i)*2.2,0,Math.PI*2);ctx.fill();}
+    } else { // branching algae
+      ctx.strokeStyle=rgba(60,110,80,0.55);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,floorY);ctx.quadraticCurveTo(x+(hash01(i)-0.5)*16,floorY-hh*0.5,x+(hash01(i*2)-0.5)*10,floorY-hh);ctx.stroke();
+      for(let b=0;b<3;b++){const t=0.35+b*0.2;ctx.beginPath();ctx.moveTo(lerp(x,x+(hash01(i*2)-0.5)*10,t),lerp(floorY,floorY-hh,t));ctx.lineTo(lerp(x,x+(hash01(i*2)-0.5)*10,t)+(hash01(b+i)-0.5)*18,lerp(floorY,floorY-hh,t)-10);ctx.stroke();}
+    }
+  }
+  const swim=p*2.4;
+  // Proper trilobite — top-down/oblique: cephalon + genal spines, 3-lobed thorax, pygidium; tiny edge legs only
+  function trilobite(x,y,sc,ang,tint){ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.scale(sc,sc*0.92);
+    softDisc(ctx,0,0,36,{r:tint[0],g:tint[1],b:tint[2]},0.22);
+    const shell=rgba(tint[0],tint[1],tint[2],0.94);
+    const ridge=rgba(Math.min(255,tint[0]+35),Math.min(255,tint[1]+30),Math.min(255,tint[2]+25),0.75);
+    // Cephalon (semicircular head)
+    ctx.fillStyle=shell;ctx.beginPath();ctx.ellipse(0,-22,18,14,0,0,Math.PI*2);ctx.fill();
+    // Glabella (axial lobe of head)
+    ctx.fillStyle=ridge;ctx.beginPath();ctx.ellipse(0,-20,7,10,0,0,Math.PI*2);ctx.fill();
+    // Genal spines (rearward from cheeks)
+    ctx.strokeStyle=shell;ctx.lineWidth=2.4;ctx.lineCap="round";
+    ctx.beginPath();ctx.moveTo(-15,-16);ctx.quadraticCurveTo(-24,-8,-26,6);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(15,-16);ctx.quadraticCurveTo(24,-8,26,6);ctx.stroke();
+    // Thorax: 8 segments × three lobes (pleural | axial | pleural)
+    for(let s=0;s<8;s++){const sy=-6+s*7.2;const halfW=16-s*0.55;
+      // pleural lobes
+      ctx.fillStyle=shell;ctx.beginPath();ctx.ellipse(-halfW*0.55,sy,halfW*0.42,3.4,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(halfW*0.55,sy,halfW*0.42,3.4,0,0,Math.PI*2);ctx.fill();
+      // axial lobe
+      ctx.fillStyle=ridge;ctx.beginPath();ctx.ellipse(0,sy,5.2,3.6,0,0,Math.PI*2);ctx.fill();
+      // furrow lines
+      ctx.strokeStyle=rgba(15,25,35,0.35);ctx.lineWidth=0.8;
+      ctx.beginPath();ctx.moveTo(-halfW*0.9,sy);ctx.lineTo(halfW*0.9,sy);ctx.stroke();
+      // tiny legs only at outer edges
+      if(s%2===0){ctx.strokeStyle=rgba(tint[0],tint[1],tint[2],0.55);ctx.lineWidth=1.2;
+        ctx.beginPath();ctx.moveTo(-halfW*0.95,sy);ctx.lineTo(-halfW*0.95-5,sy+3);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(halfW*0.95,sy);ctx.lineTo(halfW*0.95+5,sy+3);ctx.stroke();}
+    }
+    // Pygidium (tail shield)
+    ctx.fillStyle=shell;ctx.beginPath();ctx.ellipse(0,52,12,9,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=ridge;ctx.beginPath();ctx.ellipse(0,50,5,6,0,0,Math.PI*2);ctx.fill();
+    // Eye ridges (subtle)
+    ctx.globalCompositeOperation="lighter";softDisc(ctx,-10,-24,5,{r:160,g:200,b:140},0.35);softDisc(ctx,10,-24,5,{r:160,g:200,b:140},0.35);
+    ctx.restore();}
+  trilobite(cx-aw*0.28,floorY-36,1.55,0.15,[40,58,72]);
+  trilobite(cx-aw*0.02,floorY-22,1.25,-0.25,[48,65,78]);
+  trilobite(cx+aw*0.22,floorY-48,1.4,0.35,[35,52,68]);
+  trilobite(cx+aw*0.38,floorY-18,1.05,-0.1,[50,68,82]);
+  // Anomalocaris — lateral flaps, segmented frontal appendages, stalked eyes
+  const ax=cx+aw*0.16+Math.sin(swim)*22,ay=cy-ah*0.12+Math.cos(swim*0.7)*12;
+  ctx.save();ctx.translate(ax,ay);ctx.rotate(-0.1+Math.sin(swim)*0.04);softDisc(ctx,0,0,100,{r:60,g:110,b:150},0.28);
+  // lateral swimming flaps (behind body)
+  for(let i=0;i<12;i++){const bx=-48+i*9;const flap=10+Math.sin(swim*1.5+i*0.6)*3;ctx.globalAlpha=show*(0.4+0.25*Math.sin(swim+i));
+    ctx.fillStyle=rgba(30,55,80,0.8);ctx.beginPath();ctx.ellipse(bx,20,11,flap,0.15,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(bx,-20,11,flap,-0.15,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=show;
+  // body
+  ctx.fillStyle=rgba(22,42,62,0.94);ctx.beginPath();ctx.ellipse(0,0,78,26,-0.04,0,Math.PI*2);ctx.fill();
+  // body segmentation hint
+  ctx.strokeStyle=rgba(40,70,95,0.4);ctx.lineWidth=1;
+  for(let i=0;i<8;i++){ctx.beginPath();ctx.ellipse(-40+i*12,0,6,22,0,0,Math.PI*2);ctx.stroke();}
+  // circular mouth
+  softDisc(ctx,-68,0,14,{r:50,g:90,b:110},0.45);ctx.fillStyle=rgba(180,70,55,0.75);ctx.beginPath();ctx.arc(-70,0,7,0,Math.PI*2);ctx.fill();
+  // stalked eyes
+  ctx.strokeStyle=rgba(30,55,75,0.9);ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.moveTo(-52,-12);ctx.lineTo(-62,-28);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-52,12);ctx.lineTo(-62,28);ctx.stroke();
+  ctx.fillStyle=rgba(230,235,120,0.92);ctx.beginPath();ctx.arc(-64,-30,6,0,Math.PI*2);ctx.arc(-64,30,6,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=rgba(30,40,20,0.85);ctx.beginPath();ctx.arc(-64,-30,2.5,0,Math.PI*2);ctx.arc(-64,30,2.5,0,Math.PI*2);ctx.fill();
+  // Segmented frontal appendages
+  function appendage(side){const sy=side*10;ctx.save();ctx.translate(-72,sy);ctx.rotate(side*0.55+Math.sin(swim)*0.08);
+    for(let seg=0;seg<6;seg++){const a=-0.35*seg;ctx.rotate(a*0.15);ctx.fillStyle=rgba(28,50,70,0.92);ctx.beginPath();ctx.roundRect?ctx.roundRect(0,-4,16,8,3):(ctx.rect(0,-4,16,8));ctx.fill();
+      // inward spines
+      ctx.strokeStyle=rgba(40,70,95,0.85);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(10,-side*10);ctx.stroke();
+      ctx.translate(14,0);}
+    ctx.restore();}
+  // fallback if roundRect missing — use ellipse segments instead
+  function appendageSafe(side){const sy=side*12;let px=-74,py=sy,ang=side*0.9;
+    for(let seg=0;seg<6;seg++){ang+=side*0.18;px+=Math.cos(ang)*13;py+=Math.sin(ang)*13;
+      ctx.fillStyle=rgba(28,50,70,0.92);ctx.beginPath();ctx.ellipse(px,py,8,3.5,ang,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle=rgba(50,80,105,0.8);ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+Math.cos(ang-side*1.2)*9,py+Math.sin(ang-side*1.2)*9);ctx.stroke();}}
+  appendageSafe(-1);appendageSafe(1);
+  // tail fan
+  ctx.fillStyle=rgba(22,42,62,0.9);ctx.beginPath();ctx.moveTo(70,0);ctx.lineTo(110,-32);ctx.lineTo(92,0);ctx.lineTo(110,32);ctx.closePath();ctx.fill();
+  ctx.restore();
+  // Opabinia
+  ctx.save();ctx.translate(cx-aw*0.12+Math.sin(swim*0.85)*16,cy+ah*0.02);softDisc(ctx,0,0,50,{r:70,g:130,b:100},0.24);ctx.fillStyle=rgba(42,82,68,0.92);ctx.beginPath();ctx.ellipse(8,0,40,14,0.08,0,Math.PI*2);ctx.fill();
+  for(let i=0;i<5;i++){const ea=-1.0+i*0.5;const ex=Math.cos(ea)*18-16,ey=Math.sin(ea)*13-11;ctx.fillStyle=rgba(230,240,120,0.9);ctx.beginPath();ctx.arc(ex,ey,5,0,Math.PI*2);ctx.fill();ctx.fillStyle=rgba(30,40,20,0.8);ctx.beginPath();ctx.arc(ex,ey,1.8,0,Math.PI*2);ctx.fill();}
+  ctx.strokeStyle=rgba(42,82,68,0.95);ctx.lineWidth=3.5;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(-28,0);ctx.quadraticCurveTo(-58,-28,-84,-6);ctx.stroke();
+  ctx.fillStyle=rgba(42,82,68,0.95);ctx.beginPath();ctx.arc(-84,-6,7,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=rgba(42,82,68,0.7);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-84,-6);ctx.lineTo(-96,-12);ctx.moveTo(-84,-6);ctx.lineTo(-96,0);ctx.stroke();ctx.restore();
   // Hallucigenia
-  ctx.save();ctx.translate(cx+aw*0.1,floorY-40);ctx.strokeStyle=rgba(70,55,85,0.9);ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-34,0);ctx.quadraticCurveTo(0,-8,34,0);ctx.stroke();
-  for(let i=0;i<8;i++){const x=-28+i*8;ctx.strokeStyle=rgba(90,70,110,0.9);ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x,-3);ctx.lineTo(x-4,-28-(i%2)*8);ctx.stroke();ctx.beginPath();ctx.moveTo(x,3);ctx.lineTo(x+3,16);ctx.stroke();
-    ctx.fillStyle=rgba(180,140,220,0.55);ctx.beginPath();ctx.arc(x-4,-28-(i%2)*8,3,0,Math.PI*2);ctx.fill();}ctx.restore();
+  ctx.save();ctx.translate(cx+aw*0.08,floorY-44);ctx.strokeStyle=rgba(70,55,85,0.88);ctx.lineWidth=3.5;ctx.beginPath();ctx.moveTo(-30,0);ctx.quadraticCurveTo(0,-6,30,0);ctx.stroke();
+  for(let i=0;i<7;i++){const x=-24+i*8;ctx.strokeStyle=rgba(90,70,110,0.88);ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(x,-2);ctx.lineTo(x-3,-24-(i%2)*6);ctx.stroke();ctx.beginPath();ctx.moveTo(x,2);ctx.lineTo(x+2,12);ctx.stroke();
+    ctx.fillStyle=rgba(180,140,220,0.5);ctx.beginPath();ctx.arc(x-3,-24-(i%2)*6,2.5,0,Math.PI*2);ctx.fill();}ctx.restore();
   // Marrella
-  ctx.save();ctx.translate(cx-aw*0.34+Math.cos(swim*0.55)*14,cy-ah*0.08);softDisc(ctx,0,0,40,{r:50,g:90,b:130},0.22);ctx.fillStyle=rgba(35,60,85,0.9);ctx.beginPath();ctx.ellipse(0,0,20,12,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle=rgba(50,90,120,0.85);ctx.lineWidth=2.2;
-  for(let i=0;i<8;i++){const a=-0.85+i*0.24;ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(Math.cos(a)*28,Math.sin(a)*24-14,Math.cos(a)*52,Math.sin(a)*36-8);ctx.stroke();}ctx.restore();
-  // Pikaia — chordate ribbon
-  ctx.save();ctx.lineWidth=6;ctx.lineCap="round";const pg=ctx.createLinearGradient(cx-aw*0.2,0,cx+aw*0.25,0);pg.addColorStop(0,rgba(40,80,95,0.2));pg.addColorStop(0.5,rgba(50,110,120,0.9));pg.addColorStop(1,rgba(40,80,95,0.2));ctx.strokeStyle=pg;ctx.beginPath();
-  for(let i=0;i<=36;i++){const t=i/36,x=cx-aw*0.12-70+t*170,y=cy+ah*0.12+Math.sin(t*Math.PI*3.5+swim)*14;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
-  // notochord hint
-  ctx.strokeStyle=rgba(180,220,200,0.35);ctx.lineWidth=1.5;ctx.beginPath();for(let i=0;i<=36;i++){const t=i/36,x=cx-aw*0.12-70+t*170,y=cy+ah*0.12+Math.sin(t*Math.PI*3.5+swim)*14;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.restore();
+  ctx.save();ctx.translate(cx-aw*0.32+Math.cos(swim*0.55)*12,cy-ah*0.06);softDisc(ctx,0,0,36,{r:45,g:85,b:120},0.2);ctx.fillStyle=rgba(32,55,78,0.9);ctx.beginPath();ctx.ellipse(0,0,18,10,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle=rgba(48,85,115,0.85);ctx.lineWidth=2;
+  for(let i=0;i<8;i++){const a=-0.85+i*0.24;ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(Math.cos(a)*26,Math.sin(a)*22-12,Math.cos(a)*48,Math.sin(a)*32-6);ctx.stroke();}ctx.restore();
+  // Pikaia
+  ctx.save();ctx.lineWidth=5.5;ctx.lineCap="round";const pg=ctx.createLinearGradient(cx-aw*0.2,0,cx+aw*0.22,0);pg.addColorStop(0,rgba(40,80,95,0.15));pg.addColorStop(0.5,rgba(50,110,120,0.88));pg.addColorStop(1,rgba(40,80,95,0.15));ctx.strokeStyle=pg;ctx.beginPath();
+  for(let i=0;i<=36;i++){const t=i/36,x=cx-aw*0.1-60+t*150,y=cy+ah*0.14+Math.sin(t*Math.PI*3.5+swim)*12;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
+  ctx.strokeStyle=rgba(180,220,200,0.3);ctx.lineWidth=1.4;ctx.beginPath();for(let i=0;i<=36;i++){const t=i/36,x=cx-aw*0.1-60+t*150,y=cy+ah*0.14+Math.sin(t*Math.PI*3.5+swim)*12;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();ctx.restore();
   // Marine snow
-  ctx.globalCompositeOperation="lighter";for(let i=0;i<Math.floor(lerp(35,80,q));i++)softDisc(ctx,cx+(hash01(i*1.1)-0.5)*aw,cy+(hash01(i*2.2)-0.5)*ah*0.85,2+hash01(i)*6,{r:140,g:210,b:240},0.28*show);
+  ctx.globalCompositeOperation="lighter";for(let i=0;i<Math.floor(lerp(40,90,q));i++)softDisc(ctx,hash01(i*1.1)*w,hash01(i*2.2)*h*0.85,2+hash01(i)*5,{r:140,g:210,b:240},0.25*show);
+  // Soft fog falloff into edges (behind translucent placard)
+  ctx.globalCompositeOperation="source-over";
+  const fog=ctx.createRadialGradient(cx,cy,Math.min(w,h)*0.28,cx,cy,Math.max(w,h)*0.72);
+  fog.addColorStop(0,rgba(0,0,0,0));fog.addColorStop(0.55,rgba(4,10,20,0.15));fog.addColorStop(1,rgba(3,6,14,0.72));
+  ctx.fillStyle=fog;ctx.fillRect(0,0,w,h);
+  // Extra soft vignette for seamless edges
+  const edge=ctx.createLinearGradient(0,0,0,h*0.12);edge.addColorStop(0,rgba(3,6,14,0.55));edge.addColorStop(1,rgba(3,6,14,0));ctx.fillStyle=edge;ctx.fillRect(0,0,w,h*0.14);
+  const edgeB=ctx.createLinearGradient(0,h*0.88,0,h);edgeB.addColorStop(0,rgba(3,6,14,0));edgeB.addColorStop(1,rgba(3,6,14,0.65));ctx.fillStyle=edgeB;ctx.fillRect(0,h*0.86,w,h*0.14);
   ctx.restore();}
+
 
 function drawLandLife(ctx,cx,cy,R,p,q,show){if(show<0.01)return;ctx.save();ctx.globalAlpha=show;ctx.save();ctx.globalAlpha=show*0.3;drawEarthGlobe(ctx,cx,cy,R*0.9,{landMode:"pangaea",rotLon:p*10,ox:0.7,clouds:0.3,quality:q*0.8});ctx.restore();
   const ground=cy+R*0.35;softDisc(ctx,cx,ground+30,R*1.5,{r:50,g:80,b:40},0.5);for(let i=0;i<Math.floor(lerp(10,20,q));i++){const x=cx+(hash01(i*4)-0.5)*R*1.9,h=R*(0.3+hash01(i*2)*0.5);ctx.strokeStyle=rgba(50,120,65,0.85);ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(x,ground);ctx.quadraticCurveTo(x+(hash01(i)-0.5)*14,ground-h*0.5,x,ground-h);ctx.stroke();ctx.fillStyle=rgba(70,150,85,0.75);ctx.beginPath();ctx.ellipse(x,ground-h,12+hash01(i*3)*14,8+hash01(i)*8,0.2,0,Math.PI*2);ctx.fill();}
@@ -125,6 +181,6 @@ const scene={id:"earth-and-life",title:"Earth and life",weight:1.4,checkpoints,
     ctx.fillStyle="#05060f";ctx.fillRect(0,0,w,h);drawStarfield(ctx,w,h,Math.floor(55*quality),40,p*0.15,0.45);
     const oceansG=1-smootherstep(0.10,0.16,p),life=smoothstep(0.10,0.17,p)*(1-smootherstep(0.20,0.26,p)),goe=smoothstep(0.22,0.30,p)*(1-smootherstep(0.34,0.40,p)),euk=smoothstep(0.34,0.42,p)*(1-smootherstep(0.46,0.52,p)),edi=smoothstep(0.46,0.52,p)*(1-smootherstep(0.54,0.58,p)),cam=smoothstep(0.54,0.64,p)*(1-smootherstep(0.68,0.76,p)),land=smoothstep(0.66,0.76,p)*(1-smootherstep(0.80,0.88,p)),kpg=smootherstep(0.80,0.92,p);
     if(oceansG>0.02){ctx.save();ctx.globalAlpha=oceansG;const molten=1-smootherstep(0,0.08,p);drawEarthGlobe(ctx,cx,cy,R,{landMode:"ocean",rotLon:p*20,ox:0.05,molten,clouds:0,quality});ctx.restore();}
-    drawStromatolites(ctx,cx,cy,R,p,quality,life);drawGOE(ctx,cx,cy,R,p,quality,goe);drawEukaryote(ctx,cx,cy,R,p,quality,euk);drawEdiacaran(ctx,cx,cy,R,p,quality,edi);drawCambrian(ctx,st,p,quality,cam);drawLandLife(ctx,cx,cy,R,p,quality,land);if(kpg>0.02)drawKPg(ctx,cx,cy,R,p,quality,kpg);
+    drawStromatolites(ctx,cx,cy,R,p,quality,life);drawGOE(ctx,cx,cy,R,p,quality,goe);drawEukaryote(ctx,cx,cy,R,p,quality,euk);drawEdiacaran(ctx,cx,cy,R,p,quality,edi);drawCambrian(ctx,st,p,quality,cam,view);drawLandLife(ctx,cx,cy,R,p,quality,land);if(kpg>0.02)drawKPg(ctx,cx,cy,R,p,quality,kpg);
     drawVignette(ctx,w,h,0.5);drawGrain(ctx,w,h,Math.floor(p*700+200),0.026,quality);}};
 export default scene;
