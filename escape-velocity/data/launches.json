@@ -1,54 +1,8 @@
 {
-  "updated": "2026-11-06T07:00:14Z",
+  "updated": "2026-11-06T16:00:24Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
-    {
-      "id": "711de6bc-f755-475b-a12f-ec5240da3a11",
-      "name": "Long March 2C | Yaogan 51-07 to 09",
-      "slug": "long-march-2c-yaogan-51-07-to-09",
-      "net": "2026-11-05T15:58:00Z",
-      "window_start": "2026-11-05T15:52:00Z",
-      "window_end": "2026-11-05T16:16:00Z",
-      "status": {
-        "id": 3,
-        "name": "Launch Successful",
-        "abbrev": "Success"
-      },
-      "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
-      },
-      "provider": "China Aerospace Science and Technology Corporation",
-      "provider_abbrev": "CASC",
-      "vehicle": {
-        "name": "Long March 2C",
-        "family": "long-march",
-        "description": "The Long March 2C is a family of expendable launch vehicles made and operated by China. It is a two stage launch vehicle with storable propellants, consisting of Nitrogen Tetroxide and Unsymmetrical Dimethylhydrazine.",
-        "length_m": 42.0,
-        "diameter_m": 3.35
-      },
-      "mission": {
-        "name": "Yaogan 51-07 to 09",
-        "type": "Government/Top Secret",
-        "description": "3 Chinese military “remote sensing” satellite of unknown purposes.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "Launch Complex 3 (LC-3/LA-1)",
-        "location": "Xichang Satellite Launch Center, People's Republic of China",
-        "country_code": "CN"
-      },
-      "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193713.jpeg",
-        "credit": null
-      },
-      "probability": null
-    },
     {
       "id": "e91d1da2-819b-4523-95bf-39ac7daa871d",
       "name": "Ceres-2 | Unknown Payload",
@@ -99,7 +53,7 @@
       "id": "54d471e8-695c-4fa7-a3cf-dbd8b389e8ae",
       "name": "Falcon 9 Block 5 | USSF-432",
       "slug": "falcon-9-block-5-ussf-432",
-      "net": "2026-11-07T00:46:00Z",
+      "net": "2026-11-07T00:48:42Z",
       "window_start": "2026-11-07T00:46:00Z",
       "window_end": "2026-11-07T04:46:00Z",
       "status": {
@@ -108,8 +62,8 @@
         "abbrev": "Go"
       },
       "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
+        "abbrev": "SEC",
+        "name": "Second"
       },
       "provider": "SpaceX",
       "provider_abbrev": "SpX",
@@ -254,9 +208,9 @@
       "id": "9e27a1ed-e81a-4918-b32b-0380cf3a9f8f",
       "name": "Mir | Demo Flight",
       "slug": "mir-demo-flight",
-      "net": "2026-11-10T06:00:00Z",
-      "window_start": "2026-11-10T06:00:00Z",
-      "window_end": "2026-11-10T09:00:00Z",
+      "net": "2026-11-11T05:00:00Z",
+      "window_start": "2026-11-11T05:00:00Z",
+      "window_end": "2026-11-11T09:00:00Z",
       "status": {
         "id": 1,
         "name": "Go for Launch",
@@ -478,7 +432,13 @@
         "country_code": "US"
       },
       "vandenberg": false,
-      "webcasts": [],
+      "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=qM5A1ZO9oh8",
+          "title": "Rocket Launch: Vulcan Leo 1",
+          "type": "Official Webcast"
+        }
+      ],
       "webcast_live": false,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193955.jpeg",
@@ -1398,6 +1358,52 @@
       },
       "mission": {
         "name": "BlackSky Gen-3 6",
+        "type": "Earth Science",
+        "description": "BlackSky Gen-3 Earth-imaging satellites",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "Unknown Pad",
+        "location": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand",
+        "country_code": "NZ"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193613.jpeg",
+        "credit": null
+      },
+      "probability": null
+    },
+    {
+      "id": "5aa3575e-f3ff-48ec-969f-e7e4c669f866",
+      "name": "Electron | BlackSky Gen-3 7",
+      "slug": "electron-blacksky-gen-3-7",
+      "net": "2026-12-31T00:00:00Z",
+      "window_start": "2026-12-31T00:00:00Z",
+      "window_end": "2026-12-31T00:00:00Z",
+      "status": {
+        "id": 2,
+        "name": "To Be Determined",
+        "abbrev": "TBD"
+      },
+      "net_precision": {
+        "abbrev": "Q4",
+        "name": "Quarter 4"
+      },
+      "provider": "Rocket Lab",
+      "provider_abbrev": "RL",
+      "vehicle": {
+        "name": "Electron",
+        "family": "electron",
+        "description": "Electron is a two-stage orbital expendable launch vehicle (with an optional third stage) developed by the American aerospace company Rocket Lab. Electron is a small-lift launch vehicle designed to launch small satellites and cubesats to sun-synchronous orbit and low earth orbit. The Electron is the first orbital class rocket to use electric-pump-fed engines, powered by the 9 Rutherford engines on the first stage. It is also used as a suborbital testbed (called HASTE) for hypersonics research.",
+        "length_m": 18.0,
+        "diameter_m": 1.2
+      },
+      "mission": {
+        "name": "BlackSky Gen-3 7",
         "type": "Earth Science",
         "description": "BlackSky Gen-3 Earth-imaging satellites",
         "orbit": "Low Earth Orbit",
