@@ -1,23 +1,23 @@
 {
-  "updated": "2026-11-06T16:00:24Z",
+  "updated": "2026-11-07T02:01:47Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
     {
       "id": "e91d1da2-819b-4523-95bf-39ac7daa871d",
-      "name": "Ceres-2 | Unknown Payload",
-      "slug": "ceres-2-unknown-payload",
-      "net": "2026-11-06T23:35:00Z",
+      "name": "Ceres-2 | 4 satellites",
+      "slug": "ceres-2-4-satellites",
+      "net": "2026-11-06T23:37:00Z",
       "window_start": "2026-11-06T23:28:00Z",
       "window_end": "2026-11-06T23:50:00Z",
       "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
+        "id": 3,
+        "name": "Launch Successful",
+        "abbrev": "Success"
       },
       "net_precision": {
-        "abbrev": "HR",
-        "name": "Hour"
+        "abbrev": "MIN",
+        "name": "Minute"
       },
       "provider": "Galactic Energy",
       "provider_abbrev": "GE",
@@ -29,11 +29,11 @@
         "diameter_m": 3.35
       },
       "mission": {
-        "name": "Unknown Payload",
-        "type": "Unknown",
-        "description": "Details TBD.",
-        "orbit": "Unknown",
-        "orbit_abbrev": "N/A"
+        "name": "4 satellites",
+        "type": "Earth Science",
+        "description": "Share-ride of 4 commercial Earth observation and technology demonstration satellites to SSO, details TBD.",
+        "orbit": "Sun-Synchronous Orbit",
+        "orbit_abbrev": "SSO"
       },
       "pad": {
         "name": "Launch Area 95A",
@@ -44,7 +44,7 @@
       "webcasts": [],
       "webcast_live": false,
       "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ceres-2_illustr_image_thumbnail_20251210054658.png",
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ceres-2_y3_lift_image_thumbnail_20261107010856.jpeg",
         "credit": "Galactic Energy"
       },
       "probability": null
@@ -57,9 +57,9 @@
       "window_start": "2026-11-07T00:46:00Z",
       "window_end": "2026-11-07T04:46:00Z",
       "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
+        "id": 6,
+        "name": "Launch in Flight",
+        "abbrev": "In Flight"
       },
       "net_precision": {
         "abbrev": "SEC",
@@ -89,17 +89,22 @@
       "vandenberg": true,
       "webcasts": [
         {
-          "url": "https://www.youtube.com/watch?v=cANr44iNjd8",
-          "title": "GO! - SpaceX - Falcon 9 - USSF-432 - SLC-4E - Vandenberg SFB, CA - Space Affairs Live",
+          "url": "https://www.youtube.com/watch?v=x6z8DpYqTho",
+          "title": "SpaceX USSF-432",
           "type": "Unofficial Re-stream"
         },
         {
-          "url": "https://x.com/i/broadcasts/1kKzDPYrZNdJv",
-          "title": "USSF-432 Mission",
-          "type": "Official Webcast"
+          "url": "https://www.youtube.com/watch?v=5zPZKJicp0s",
+          "title": "SpaceX Falcon 9 rocket launches classified U.S. Space Force mission from California",
+          "type": "Unofficial Webcast"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=e3oGHhO3xpw",
+          "title": "Maximum Power Incoming - The Flame Trench",
+          "type": "Unofficial Webcast"
         }
       ],
-      "webcast_live": false,
+      "webcast_live": true,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_thumbnail_20260816171423.jpeg",
         "credit": "SpaceX"
