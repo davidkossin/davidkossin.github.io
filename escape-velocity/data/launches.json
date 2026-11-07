@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-07T16:31:55Z",
+  "updated": "2026-11-07T22:01:21Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -119,9 +119,9 @@
       "window_start": "2026-11-07T07:00:00Z",
       "window_end": "2026-11-07T21:00:00Z",
       "status": {
-        "id": 6,
-        "name": "Launch in Flight",
-        "abbrev": "In Flight"
+        "id": 3,
+        "name": "Launch Successful",
+        "abbrev": "Success"
       },
       "net_precision": {
         "abbrev": "HR",
@@ -144,7 +144,7 @@
         "orbit_abbrev": "MEO"
       },
       "pad": {
-        "name": "Unknown Pad",
+        "name": "43/3 (43L)",
         "location": "Plesetsk Cosmodrome, Russian Federation",
         "country_code": "RU"
       },
