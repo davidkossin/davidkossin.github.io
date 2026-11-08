@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-08T16:44:10Z",
+  "updated": "2026-11-08T22:16:58Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -7,17 +7,17 @@
       "id": "a2423132-f965-423f-8b03-6891b775dc54",
       "name": "Long March 12 | SatNet LEO Group TBD?",
       "slug": "long-march-12-satnet-leo-group-tbd",
-      "net": "2026-11-08T20:25:00Z",
+      "net": "2026-11-08T20:24:00Z",
       "window_start": "2026-11-08T20:17:00Z",
       "window_end": "2026-11-08T20:47:00Z",
       "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
+        "id": 6,
+        "name": "Launch in Flight",
+        "abbrev": "In Flight"
       },
       "net_precision": {
-        "abbrev": "HR",
-        "name": "Hour"
+        "abbrev": "MIN",
+        "name": "Minute"
       },
       "provider": "China Aerospace Science and Technology Corporation",
       "provider_abbrev": "CASC",
@@ -41,7 +41,18 @@
         "country_code": "CN"
       },
       "vandenberg": false,
-      "webcasts": [],
+      "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=rQWLSUjfJ-Q",
+          "title": "Live: Long March 12 Launches SatNet LEO Group 29 (No Commentary)",
+          "type": "Unofficial Webcast"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=LhEjaM500Ek",
+          "title": "Watch Long March 12 Launch SatNet LEO Group 29 from Wenchang, LIVE!!",
+          "type": "Unofficial Webcast"
+        }
+      ],
       "webcast_live": false,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_thumbnail_20241128132937.jpeg",
