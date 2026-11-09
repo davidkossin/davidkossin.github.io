@@ -1,19 +1,19 @@
 {
-  "updated": "2026-11-08T22:16:58Z",
+  "updated": "2026-11-09T01:47:28Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
     {
       "id": "a2423132-f965-423f-8b03-6891b775dc54",
-      "name": "Long March 12 | SatNet LEO Group TBD?",
-      "slug": "long-march-12-satnet-leo-group-tbd",
+      "name": "Long March 12 | SatNet LEO Group 29",
+      "slug": "long-march-12-satnet-leo-group-29",
       "net": "2026-11-08T20:24:00Z",
       "window_start": "2026-11-08T20:17:00Z",
       "window_end": "2026-11-08T20:47:00Z",
       "status": {
-        "id": 6,
-        "name": "Launch in Flight",
-        "abbrev": "In Flight"
+        "id": 3,
+        "name": "Launch Successful",
+        "abbrev": "Success"
       },
       "net_precision": {
         "abbrev": "MIN",
@@ -29,7 +29,7 @@
         "diameter_m": 3.8
       },
       "mission": {
-        "name": "SatNet LEO Group TBD?",
+        "name": "SatNet LEO Group 29",
         "type": "Communications",
         "description": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group.\r\n\r\nThe constellation will eventually consists of 13000 satellites.",
         "orbit": "Low Earth Orbit",
@@ -541,7 +541,7 @@
     {
       "id": "5ce59e3a-c343-430f-ae4e-e608ba536754",
       "name": "Long March 12 | SatNet LEO Group TBD?",
-      "slug": "long-march-12-satnet-leo-group-tbd-2",
+      "slug": "long-march-12-satnet-leo-group-tbd",
       "net": "2026-11-24T07:00:00Z",
       "window_start": "2026-11-24T07:00:00Z",
       "window_end": "2026-11-24T10:00:00Z",
