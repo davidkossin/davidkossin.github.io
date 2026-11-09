@@ -1,70 +1,13 @@
 {
-  "updated": "2026-11-09T01:47:28Z",
+  "updated": "2026-11-09T20:51:20Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
     {
-      "id": "a2423132-f965-423f-8b03-6891b775dc54",
-      "name": "Long March 12 | SatNet LEO Group 29",
-      "slug": "long-march-12-satnet-leo-group-29",
-      "net": "2026-11-08T20:24:00Z",
-      "window_start": "2026-11-08T20:17:00Z",
-      "window_end": "2026-11-08T20:47:00Z",
-      "status": {
-        "id": 3,
-        "name": "Launch Successful",
-        "abbrev": "Success"
-      },
-      "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
-      },
-      "provider": "China Aerospace Science and Technology Corporation",
-      "provider_abbrev": "CASC",
-      "vehicle": {
-        "name": "Long March 12",
-        "family": "long-march",
-        "description": "The Long March 12 carrier rocket is a Chinese medium-lift launch vehicle currently under development by the Shanghai Academy of Spaceflight Technology, using kerosene and liquid oxygen as propellant. It will be capable of placing at least 10 tonnes of payload in low Earth orbit and at least 6 tonnes in a 700 km Sun-synchronous orbit.",
-        "length_m": 62.0,
-        "diameter_m": 3.8
-      },
-      "mission": {
-        "name": "SatNet LEO Group 29",
-        "type": "Communications",
-        "description": "A batch of 9 Low Earth Orbit communication satellites for the Chinese state owned SatNet constellation operated by the China Satellite Network Group.\r\n\r\nThe constellation will eventually consists of 13000 satellites.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "Commercial LC-2",
-        "location": "Wenchang Space Launch Site, People's Republic of China",
-        "country_code": "CN"
-      },
-      "vandenberg": false,
-      "webcasts": [
-        {
-          "url": "https://www.youtube.com/watch?v=rQWLSUjfJ-Q",
-          "title": "Live: Long March 12 Launches SatNet LEO Group 29 (No Commentary)",
-          "type": "Unofficial Webcast"
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=LhEjaM500Ek",
-          "title": "Watch Long March 12 Launch SatNet LEO Group 29 from Wenchang, LIVE!!",
-          "type": "Unofficial Webcast"
-        }
-      ],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-12_on_its_la_image_thumbnail_20241128132937.jpeg",
-        "credit": "Unknown"
-      },
-      "probability": null
-    },
-    {
       "id": "6aa7b90b-e5ed-45d8-a52e-04fbf399d178",
       "name": "Falcon 9 Block 5 | USSF-627",
       "slug": "falcon-9-block-5-ussf-627",
-      "net": "2026-11-10T03:03:00Z",
+      "net": "2026-11-10T04:59:49Z",
       "window_start": "2026-11-10T03:03:00Z",
       "window_end": "2026-11-10T07:03:00Z",
       "status": {
@@ -73,8 +16,8 @@
         "abbrev": "Go"
       },
       "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
+        "abbrev": "SEC",
+        "name": "Second"
       },
       "provider": "SpaceX",
       "provider_abbrev": "SpX",
@@ -99,6 +42,11 @@
       },
       "vandenberg": true,
       "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=1jhH0mR5ICA",
+          "title": "GO! - SpaceX - Falcon 9 - USSF-627 - SLC-4E - Vandenberg SFB, CA - Space Affairs Live",
+          "type": "Unofficial Re-stream"
+        },
         {
           "url": "https://x.com/i/broadcasts/2brkWyolnlBbLM",
           "title": "USSF-627 Mission",
@@ -201,6 +149,52 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193719.jpeg",
         "credit": null
+      },
+      "probability": null
+    },
+    {
+      "id": "e2523821-9760-4cb4-ad1f-7ce2e30419bd",
+      "name": "Kuaizhou 11 | Unknown Payload",
+      "slug": "kuaizhou-11-unknown-payload",
+      "net": "2026-11-12T19:50:00Z",
+      "window_start": "2026-11-12T19:44:00Z",
+      "window_end": "2026-11-12T20:29:00Z",
+      "status": {
+        "id": 1,
+        "name": "Go for Launch",
+        "abbrev": "Go"
+      },
+      "net_precision": {
+        "abbrev": "HR",
+        "name": "Hour"
+      },
+      "provider": "ExPace",
+      "provider_abbrev": "EP",
+      "vehicle": {
+        "name": "Kuaizhou 11",
+        "family": "generic",
+        "description": "The Kuaizhou-11 (KZ-11), is a planned Chinese commercial launch vehicle.\r\n\r\nReportedly, the payload is about 1000 kg for low earth orbit and 700 kg for a sun-synchronous orbit.\r\n\r\nThe three stage rocket is possibly based on the DF-31 missile. It consists of three solid-fueled stages. The principal diameter is 2.2 m and the launch weight is 78 tons. the first stage features four grid rudders. The vehicle is launched from a launch truck.",
+        "length_m": null,
+        "diameter_m": 2.2
+      },
+      "mission": {
+        "name": "Unknown Payload",
+        "type": "Unknown",
+        "description": "Details TBD.",
+        "orbit": "Unknown",
+        "orbit_abbrev": "N/A"
+      },
+      "pad": {
+        "name": "Launch Area 95A",
+        "location": "Jiuquan Satellite Launch Center, People's Republic of China",
+        "country_code": "CN"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/kuaizhou_11_lif_image_thumbnail_20240520155835.jpeg",
+        "credit": "中国航天科工"
       },
       "probability": null
     },
