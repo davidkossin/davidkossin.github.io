@@ -1,15 +1,61 @@
 {
-  "updated": "2026-11-10T04:12:01Z",
+  "updated": "2026-11-10T20:54:37Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
     {
+      "id": "d66590ab-b273-47ff-b85a-608b62851b4b",
+      "name": "Long March 2D | Unknown Payload",
+      "slug": "long-march-2d-unknown-payload",
+      "net": "2026-11-11T11:40:00Z",
+      "window_start": "2026-11-11T11:32:00Z",
+      "window_end": "2026-11-11T12:05:00Z",
+      "status": {
+        "id": 1,
+        "name": "Go for Launch",
+        "abbrev": "Go"
+      },
+      "net_precision": {
+        "abbrev": "HR",
+        "name": "Hour"
+      },
+      "provider": "China Aerospace Science and Technology Corporation",
+      "provider_abbrev": "CASC",
+      "vehicle": {
+        "name": "Long March 2D",
+        "family": "long-march",
+        "description": "The Long March 2D, also known as the Chang Zheng 2D, CZ-2D and LM-2D, is a Chinese orbital carrier rocket. It is a 2-stage carrier rocket mainly used for launching LEO and SSO satellites.",
+        "length_m": 38.3,
+        "diameter_m": 3.35
+      },
+      "mission": {
+        "name": "Unknown Payload",
+        "type": "Unknown",
+        "description": "Details TBD.",
+        "orbit": "Unknown",
+        "orbit_abbrev": "N/A"
+      },
+      "pad": {
+        "name": "Launch Area 94 (SLS-2 / 603)",
+        "location": "Jiuquan Satellite Launch Center, People's Republic of China",
+        "country_code": "CN"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193719.jpeg",
+        "credit": null
+      },
+      "probability": null
+    },
+    {
       "id": "6aa7b90b-e5ed-45d8-a52e-04fbf399d178",
       "name": "Falcon 9 Block 5 | USSF-627",
       "slug": "falcon-9-block-5-ussf-627",
-      "net": "2026-11-11T02:49:00Z",
-      "window_start": "2026-11-11T02:49:00Z",
-      "window_end": "2026-11-11T06:49:00Z",
+      "net": "2026-11-12T02:35:00Z",
+      "window_start": "2026-11-12T02:35:00Z",
+      "window_end": "2026-11-12T06:35:00Z",
       "status": {
         "id": 1,
         "name": "Go for Launch",
@@ -61,98 +107,6 @@
       "probability": null
     },
     {
-      "id": "9e27a1ed-e81a-4918-b32b-0380cf3a9f8f",
-      "name": "Mir | Demo Flight",
-      "slug": "mir-demo-flight",
-      "net": "2026-11-11T05:00:00Z",
-      "window_start": "2026-11-11T05:00:00Z",
-      "window_end": "2026-11-11T09:00:00Z",
-      "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
-      },
-      "net_precision": {
-        "abbrev": "HR",
-        "name": "Hour"
-      },
-      "provider": "Agency for Defense Development",
-      "provider_abbrev": "ADD",
-      "vehicle": {
-        "name": "Mir",
-        "family": "generic",
-        "description": "Mir (Korean for a kind of dragon, and previously only known as \"Solid-fuel space launch vehicle\") is a South Korean military developed small satellite launch vehicle for \"quick response\" usage. First orbital test launch in December 2023 omits the 2nd stage but still carries satellite into orbit.",
-        "length_m": null,
-        "diameter_m": null
-      },
-      "mission": {
-        "name": "Demo Flight",
-        "type": "Test Flight",
-        "description": "Note: Launch vehicle name is provisional.\r\n\r\nFirst orbital full version launch of the South Korean military small satellite launch vehicle, after 2 sub-orbital tests of individual stages on 30 March and 30 December 2022, and 1 orbital test flight without the 2nd stage on 4 December 2023. Details TBD.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "ADD Offshore launch platform",
-        "location": "Sea Launch",
-        "country_code": "??"
-      },
-      "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192440.png",
-        "credit": "Yonhap"
-      },
-      "probability": null
-    },
-    {
-      "id": "d66590ab-b273-47ff-b85a-608b62851b4b",
-      "name": "Long March 2D | Unknown Payload",
-      "slug": "long-march-2d-unknown-payload",
-      "net": "2026-11-11T11:40:00Z",
-      "window_start": "2026-11-11T11:32:00Z",
-      "window_end": "2026-11-11T12:05:00Z",
-      "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
-      },
-      "net_precision": {
-        "abbrev": "HR",
-        "name": "Hour"
-      },
-      "provider": "China Aerospace Science and Technology Corporation",
-      "provider_abbrev": "CASC",
-      "vehicle": {
-        "name": "Long March 2D",
-        "family": "long-march",
-        "description": "The Long March 2D, also known as the Chang Zheng 2D, CZ-2D and LM-2D, is a Chinese orbital carrier rocket. It is a 2-stage carrier rocket mainly used for launching LEO and SSO satellites.",
-        "length_m": 38.3,
-        "diameter_m": 3.35
-      },
-      "mission": {
-        "name": "Unknown Payload",
-        "type": "Unknown",
-        "description": "Details TBD.",
-        "orbit": "Unknown",
-        "orbit_abbrev": "N/A"
-      },
-      "pad": {
-        "name": "Launch Area 94 (SLS-2 / 603)",
-        "location": "Jiuquan Satellite Launch Center, People's Republic of China",
-        "country_code": "CN"
-      },
-      "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193719.jpeg",
-        "credit": null
-      },
-      "probability": null
-    },
-    {
       "id": "e2523821-9760-4cb4-ad1f-7ce2e30419bd",
       "name": "Kuaizhou 11 | Unknown Payload",
       "slug": "kuaizhou-11-unknown-payload",
@@ -195,6 +149,52 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/kuaizhou_11_lif_image_thumbnail_20240520155835.jpeg",
         "credit": "中国航天科工"
+      },
+      "probability": null
+    },
+    {
+      "id": "9e27a1ed-e81a-4918-b32b-0380cf3a9f8f",
+      "name": "Mir | Demo Flight",
+      "slug": "mir-demo-flight",
+      "net": "2026-11-13T05:00:00Z",
+      "window_start": "2026-11-13T05:00:00Z",
+      "window_end": "2026-11-13T09:00:00Z",
+      "status": {
+        "id": 1,
+        "name": "Go for Launch",
+        "abbrev": "Go"
+      },
+      "net_precision": {
+        "abbrev": "HR",
+        "name": "Hour"
+      },
+      "provider": "Agency for Defense Development",
+      "provider_abbrev": "ADD",
+      "vehicle": {
+        "name": "Mir",
+        "family": "generic",
+        "description": "Mir (Korean for a kind of dragon, and previously only known as \"Solid-fuel space launch vehicle\") is a South Korean military developed small satellite launch vehicle for \"quick response\" usage. First orbital test launch in December 2023 omits the 2nd stage but still carries satellite into orbit.",
+        "length_m": null,
+        "diameter_m": null
+      },
+      "mission": {
+        "name": "Demo Flight",
+        "type": "Test Flight",
+        "description": "Note: Launch vehicle name is provisional.\r\n\r\nFirst orbital full version launch of the South Korean military small satellite launch vehicle, after 2 sub-orbital tests of individual stages on 30 March and 30 December 2022, and 1 orbital test flight without the 2nd stage on 4 December 2023. Details TBD.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "ADD Offshore launch platform",
+        "location": "Sea Launch",
+        "country_code": "??"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192440.png",
+        "credit": "Yonhap"
       },
       "probability": null
     },
@@ -297,58 +297,6 @@
       "probability": null
     },
     {
-      "id": "76617033-4dc0-4448-b50c-e5b0d5a18539",
-      "name": "Falcon 9 Block 5 | USSF-317",
-      "slug": "falcon-9-block-5-ussf-317",
-      "net": "2026-11-14T04:09:00Z",
-      "window_start": "2026-11-14T04:09:00Z",
-      "window_end": "2026-11-14T08:09:00Z",
-      "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
-      },
-      "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
-      },
-      "provider": "SpaceX",
-      "provider_abbrev": "SpX",
-      "vehicle": {
-        "name": "Falcon 9 Block 5",
-        "family": "falcon9",
-        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
-        "length_m": 70.0,
-        "diameter_m": 3.65
-      },
-      "mission": {
-        "name": "USSF-317",
-        "type": "Government/Top Secret",
-        "description": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "Space Launch Complex 4E",
-        "location": "Vandenberg SFB, CA, USA",
-        "country_code": "US"
-      },
-      "vandenberg": true,
-      "webcasts": [
-        {
-          "url": "https://x.com/i/broadcasts/2lgkMvaRVPMdYR",
-          "title": "USSF-317 Mission",
-          "type": "Official Webcast"
-        }
-      ],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_thumbnail_20260816171423.jpeg",
-        "credit": "SpaceX"
-      },
-      "probability": null
-    },
-    {
       "id": "db3500ac-965b-4ad8-b417-cb8d8d005586",
       "name": "Electron | The Mountain God Rises (iQPS Launch 10)",
       "slug": "electron-the-mountain-god-rises-iqps-launch-10",
@@ -395,12 +343,64 @@
       "probability": null
     },
     {
+      "id": "76617033-4dc0-4448-b50c-e5b0d5a18539",
+      "name": "Falcon 9 Block 5 | USSF-317",
+      "slug": "falcon-9-block-5-ussf-317",
+      "net": "2026-11-15T03:55:00Z",
+      "window_start": "2026-11-15T03:55:00Z",
+      "window_end": "2026-11-15T07:55:00Z",
+      "status": {
+        "id": 1,
+        "name": "Go for Launch",
+        "abbrev": "Go"
+      },
+      "net_precision": {
+        "abbrev": "MIN",
+        "name": "Minute"
+      },
+      "provider": "SpaceX",
+      "provider_abbrev": "SpX",
+      "vehicle": {
+        "name": "Falcon 9 Block 5",
+        "family": "falcon9",
+        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
+        "length_m": 70.0,
+        "diameter_m": 3.65
+      },
+      "mission": {
+        "name": "USSF-317",
+        "type": "Government/Top Secret",
+        "description": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "Space Launch Complex 4E",
+        "location": "Vandenberg SFB, CA, USA",
+        "country_code": "US"
+      },
+      "vandenberg": true,
+      "webcasts": [
+        {
+          "url": "https://x.com/i/broadcasts/2lgkMvaRVPMdYR",
+          "title": "USSF-317 Mission",
+          "type": "Official Webcast"
+        }
+      ],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_thumbnail_20260816171423.jpeg",
+        "credit": "SpaceX"
+      },
+      "probability": null
+    },
+    {
       "id": "460d9db7-eaf6-4cd9-b095-cff433534c09",
       "name": "Falcon 9 Block 5 | USSF-266",
       "slug": "falcon-9-block-5-ussf-266",
-      "net": "2026-11-17T16:58:00Z",
-      "window_start": "2026-11-17T16:58:00Z",
-      "window_end": "2026-11-17T20:58:00Z",
+      "net": "2026-11-18T16:49:00Z",
+      "window_start": "2026-11-18T16:49:00Z",
+      "window_end": "2026-11-18T20:49:00Z",
       "status": {
         "id": 1,
         "name": "Go for Launch",
