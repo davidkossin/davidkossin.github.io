@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-11T17:56:37Z",
+  "updated": "2026-11-12T00:51:40Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -53,7 +53,7 @@
       "id": "6aa7b90b-e5ed-45d8-a52e-04fbf399d178",
       "name": "Falcon 9 Block 5 | USSF-627",
       "slug": "falcon-9-block-5-ussf-627",
-      "net": "2026-11-12T02:36:18Z",
+      "net": "2026-11-12T04:36:30Z",
       "window_start": "2026-11-12T02:35:00Z",
       "window_end": "2026-11-12T06:35:00Z",
       "status": {
@@ -204,7 +204,7 @@
       "slug": "vulcan-vc6l-amazon-leo-lv-01",
       "net": "2026-11-13T17:54:00Z",
       "window_start": "2026-11-13T17:54:00Z",
-      "window_end": "2026-11-13T18:24:00Z",
+      "window_end": "2026-11-13T18:23:00Z",
       "status": {
         "id": 1,
         "name": "Go for Launch",
@@ -248,7 +248,7 @@
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193955.jpeg",
         "credit": "United Launch Alliance"
       },
-      "probability": null
+      "probability": 90
     },
     {
       "id": "0f867f0c-5422-4d44-93b8-d7faaae7019b",
