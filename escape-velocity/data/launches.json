@@ -1,60 +1,8 @@
 {
-  "updated": "2026-11-13T09:44:08Z",
+  "updated": "2026-11-13T17:53:03Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
-    {
-      "id": "ef9850ad-1096-425b-9d27-f7bbd186e61a",
-      "name": "Vulcan VC6L | Amazon Leo (LV-01)",
-      "slug": "vulcan-vc6l-amazon-leo-lv-01",
-      "net": "2026-11-13T17:54:00Z",
-      "window_start": "2026-11-13T17:54:00Z",
-      "window_end": "2026-11-13T18:23:00Z",
-      "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
-      },
-      "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
-      },
-      "provider": "United Launch Alliance",
-      "provider_abbrev": "ULA",
-      "vehicle": {
-        "name": "Vulcan VC6L",
-        "family": "vulcan",
-        "description": "Vulcan Centaur is a two-stage-to-orbit, heavy-lift launch vehicle under development by United Launch Alliance (ULA) since 2014. It is principally designed to meet launch demands for the U.S. government's National Security Space Launch (NSSL) program for use by the United States Space Force and U.S. intelligence agencies for national security satellite launches. It will replace both of ULA's existing launchers (Atlas V and Delta IV Heavy) in this role, as these launchers are retiring.",
-        "length_m": 67.4,
-        "diameter_m": 5.4
-      },
-      "mission": {
-        "name": "Amazon Leo (LV-01)",
-        "type": "Communications",
-        "description": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to be composed of 3,276 satellites. The satellites are projected to be placed in 98 orbital planes in three orbital layers, one at 590 km, 610 km and 630 km altitude.\r\n\r\n45 satellites will be carried on each Vulcan launch.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "Space Launch Complex 41",
-        "location": "Cape Canaveral SFS, FL, USA",
-        "country_code": "US"
-      },
-      "vandenberg": false,
-      "webcasts": [
-        {
-          "url": "https://www.youtube.com/watch?v=qM5A1ZO9oh8",
-          "title": "Rocket Launch: Vulcan Leo 1",
-          "type": "Official Webcast"
-        }
-      ],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193955.jpeg",
-        "credit": "United Launch Alliance"
-      },
-      "probability": 90
-    },
     {
       "id": "0f867f0c-5422-4d44-93b8-d7faaae7019b",
       "name": "Starship | Starlink Group 31-2 (Starship Flight 15)",
@@ -105,7 +53,7 @@
       "id": "bff2fc91-eddd-4dfc-af26-ac0674cfab4d",
       "name": "Soyuz 2.1b/Fregat-M | MKA Kinosputnik, KOEN and others",
       "slug": "soyuz-21bfregat-m-mka-kinosputnik-koen-and-others",
-      "net": "2026-11-14T00:50:00Z",
+      "net": "2026-11-14T01:16:00Z",
       "window_start": "2026-11-14T00:50:00Z",
       "window_end": "2026-11-14T01:50:00Z",
       "status": {
@@ -114,8 +62,8 @@
         "abbrev": "Go"
       },
       "net_precision": {
-        "abbrev": "HR",
-        "name": "Hour"
+        "abbrev": "MIN",
+        "name": "Minute"
       },
       "provider": "Russian Federal Space Agency (ROSCOSMOS)",
       "provider_abbrev": "RFSA",
@@ -200,6 +148,63 @@
       "probability": null
     },
     {
+      "id": "ef9850ad-1096-425b-9d27-f7bbd186e61a",
+      "name": "Vulcan VC6L | Amazon Leo (LV-01)",
+      "slug": "vulcan-vc6l-amazon-leo-lv-01",
+      "net": "2026-11-14T17:32:30Z",
+      "window_start": "2026-11-14T17:32:00Z",
+      "window_end": "2026-11-14T18:01:00Z",
+      "status": {
+        "id": 1,
+        "name": "Go for Launch",
+        "abbrev": "Go"
+      },
+      "net_precision": {
+        "abbrev": "SEC",
+        "name": "Second"
+      },
+      "provider": "United Launch Alliance",
+      "provider_abbrev": "ULA",
+      "vehicle": {
+        "name": "Vulcan VC6L",
+        "family": "vulcan",
+        "description": "Vulcan Centaur is a two-stage-to-orbit, heavy-lift launch vehicle under development by United Launch Alliance (ULA) since 2014. It is principally designed to meet launch demands for the U.S. government's National Security Space Launch (NSSL) program for use by the United States Space Force and U.S. intelligence agencies for national security satellite launches. It will replace both of ULA's existing launchers (Atlas V and Delta IV Heavy) in this role, as these launchers are retiring.",
+        "length_m": 67.4,
+        "diameter_m": 5.4
+      },
+      "mission": {
+        "name": "Amazon Leo (LV-01)",
+        "type": "Communications",
+        "description": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit that will offer broadband internet access, this constellation will be managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to be composed of 3,276 satellites. The satellites are projected to be placed in 98 orbital planes in three orbital layers, one at 590 km, 610 km and 630 km altitude.\r\n\r\n45 satellites will be carried on each Vulcan launch.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "Space Launch Complex 41",
+        "location": "Cape Canaveral SFS, FL, USA",
+        "country_code": "US"
+      },
+      "vandenberg": false,
+      "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=qM5A1ZO9oh8",
+          "title": "Rocket Launch: Vulcan Leo 1",
+          "type": "Official Webcast"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=qcA9uMBhTmo",
+          "title": "Watch live: ULA Vulcan rocket launches from Cape Canaveral with 40 satellites for Amazon Leo",
+          "type": "Unofficial Webcast"
+        }
+      ],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193955.jpeg",
+        "credit": "United Launch Alliance"
+      },
+      "probability": null
+    },
+    {
       "id": "76617033-4dc0-4448-b50c-e5b0d5a18539",
       "name": "Falcon 9 Block 5 | USSF-317",
       "slug": "falcon-9-block-5-ussf-317",
@@ -241,58 +246,6 @@
         {
           "url": "https://x.com/i/broadcasts/2lgkMvaRVPMdYR",
           "title": "USSF-317 Mission",
-          "type": "Official Webcast"
-        }
-      ],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_thumbnail_20260816171423.jpeg",
-        "credit": "SpaceX"
-      },
-      "probability": null
-    },
-    {
-      "id": "460d9db7-eaf6-4cd9-b095-cff433534c09",
-      "name": "Falcon 9 Block 5 | USSF-266",
-      "slug": "falcon-9-block-5-ussf-266",
-      "net": "2026-11-18T16:49:00Z",
-      "window_start": "2026-11-18T16:49:00Z",
-      "window_end": "2026-11-18T20:49:00Z",
-      "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
-      },
-      "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
-      },
-      "provider": "SpaceX",
-      "provider_abbrev": "SpX",
-      "vehicle": {
-        "name": "Falcon 9 Block 5",
-        "family": "falcon9",
-        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
-        "length_m": 70.0,
-        "diameter_m": 3.65
-      },
-      "mission": {
-        "name": "USSF-266",
-        "type": "Government/Top Secret",
-        "description": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Layer launches.",
-        "orbit": "Polar Orbit",
-        "orbit_abbrev": "PO"
-      },
-      "pad": {
-        "name": "Space Launch Complex 4E",
-        "location": "Vandenberg SFB, CA, USA",
-        "country_code": "US"
-      },
-      "vandenberg": true,
-      "webcasts": [
-        {
-          "url": "https://x.com/i/broadcasts/2JQXBjLyYOQrpX",
-          "title": "USSF-266 Mission",
           "type": "Official Webcast"
         }
       ],
@@ -494,6 +447,58 @@
       "probability": null
     },
     {
+      "id": "460d9db7-eaf6-4cd9-b095-cff433534c09",
+      "name": "Falcon 9 Block 5 | USSF-266",
+      "slug": "falcon-9-block-5-ussf-266",
+      "net": "2026-11-23T16:04:00Z",
+      "window_start": "2026-11-23T16:04:00Z",
+      "window_end": "2026-11-23T20:04:00Z",
+      "status": {
+        "id": 1,
+        "name": "Go for Launch",
+        "abbrev": "Go"
+      },
+      "net_precision": {
+        "abbrev": "MIN",
+        "name": "Minute"
+      },
+      "provider": "SpaceX",
+      "provider_abbrev": "SpX",
+      "vehicle": {
+        "name": "Falcon 9 Block 5",
+        "family": "falcon9",
+        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
+        "length_m": 70.0,
+        "diameter_m": 3.65
+      },
+      "mission": {
+        "name": "USSF-266",
+        "type": "Government/Top Secret",
+        "description": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Layer launches.",
+        "orbit": "Polar Orbit",
+        "orbit_abbrev": "PO"
+      },
+      "pad": {
+        "name": "Space Launch Complex 4E",
+        "location": "Vandenberg SFB, CA, USA",
+        "country_code": "US"
+      },
+      "vandenberg": true,
+      "webcasts": [
+        {
+          "url": "https://x.com/i/broadcasts/2JQXBjLyYOQrpX",
+          "title": "USSF-266 Mission",
+          "type": "Official Webcast"
+        }
+      ],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_thumbnail_20260816171423.jpeg",
+        "credit": "SpaceX"
+      },
+      "probability": null
+    },
+    {
       "id": "8dd5de11-831b-445f-86f0-bffefe0550d9",
       "name": "Soyuz 2.1b | Progress MS-36 (97P)",
       "slug": "soyuz-21b-progress-ms-36-97p",
@@ -681,9 +686,9 @@
       "id": "d74afbc7-0de5-491c-be05-4e9c31f736ac",
       "name": "Falcon 9 Block 5 | Cygnus CRS-2 NG-25",
       "slug": "falcon-9-block-5-cygnus-crs-2-ng-25",
-      "net": "2026-11-29T15:49:00Z",
-      "window_start": "2026-11-29T15:49:00Z",
-      "window_end": "2026-11-29T15:49:00Z",
+      "net": "2026-11-29T15:47:00Z",
+      "window_start": "2026-11-29T15:47:00Z",
+      "window_end": "2026-11-29T15:47:00Z",
       "status": {
         "id": 1,
         "name": "Go for Launch",
