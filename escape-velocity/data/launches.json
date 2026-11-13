@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-13T17:53:03Z",
+  "updated": "2026-11-13T23:42:57Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -7,17 +7,17 @@
       "id": "0f867f0c-5422-4d44-93b8-d7faaae7019b",
       "name": "Starship | Starlink Group 31-2 (Starship Flight 15)",
       "slug": "starship-starlink-group-31-2-starship-flight-15",
-      "net": "2026-11-13T22:45:00Z",
+      "net": "2026-11-13T22:47:36Z",
       "window_start": "2026-11-13T22:45:00Z",
       "window_end": "2026-11-14T00:00:00Z",
       "status": {
-        "id": 8,
-        "name": "To Be Confirmed",
-        "abbrev": "TBC"
+        "id": 6,
+        "name": "Launch in Flight",
+        "abbrev": "In Flight"
       },
       "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
+        "abbrev": "SEC",
+        "name": "Second"
       },
       "provider": "SpaceX",
       "provider_abbrev": "SpX",
@@ -41,8 +41,24 @@
         "country_code": "US"
       },
       "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
+      "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=dl4O6RqbvOs",
+          "title": "STREAM 1 - GO! - SpaceX - Starship - Starship Flight 15 - Pad 2 - Starbase, TX - Space Affairs Live",
+          "type": "Unofficial Re-stream"
+        },
+        {
+          "url": "https://x.com/i/broadcasts/2brajgZlOKRMka",
+          "title": "Starship Flight 15",
+          "type": "Official Webcast"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=QlR1agMLyMk",
+          "title": "Watch Live: SpaceX Starship launches on 15th flight with double catch planned",
+          "type": "Unofficial Webcast"
+        }
+      ],
+      "webcast_live": true,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_on_the_image_thumbnail_20260724044615.jpeg",
         "credit": "SpaceX"
