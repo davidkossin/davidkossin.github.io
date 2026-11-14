@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Starlink Constellation — every Starlink launch since 2018, one dot per satellite, from public satellite catalog data." />
+  <title>Starlink Constellation · Escape Velocity · Objects In Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://dkossin.com/styles.css" />
+  <link rel="stylesheet" href="../escape-velocity.css?v=sl1" />
+  <link rel="stylesheet" href="starlink.css?v=sl1" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="starlink.js?v=sl1"></script>
+  <!-- Cloudflare Web Analytics --><script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "ed4660d74de24898991981cdb05e73b9"}'></script><!-- End Cloudflare Web Analytics -->
+</head>
+<body class="ev-page sl-page">
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="nebula" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="https://dkossin.com/">Objects In Space</a>
+    <nav>
+      <a href="https://dkossin.com/">Home</a>
+      <a href="https://dkossin.com/quantum-realm/">Quantum Realm</a>
+      <a class="active" href="../">Escape Velocity</a>
+      <a href="https://dkossin.com/stellar-events/">Stellar Events</a>
+      <a href="https://dkossin.com/orrery/">Orrery</a>
+    </nav>
+  </header>
+
+  <main class="ev-main sl-main">
+    <nav class="ev-tabs" aria-label="Escape Velocity sections">
+      <a href="../">Launches</a>
+      <a href="./" aria-current="page">Starlink Constellation</a>
+    </nav>
+
+    <section class="sl-stage" id="sl-stage" aria-label="Starlink constellation over time">
+      <canvas id="sl-canvas" role="img" aria-label="Globe showing Starlink satellites in orbit at the selected date"></canvas>
+
+      <div class="sl-title">
+        <h1>Starlink</h1>
+        <p id="sl-span">Every launch 2018–2026</p>
+      </div>
+
+      <div class="sl-clock" aria-live="off">
+        <p class="sl-year" id="sl-year">—</p>
+        <p class="sl-date" id="sl-date">—</p>
+      </div>
+
+      <dl class="sl-stats" id="sl-stats">
+        <div><dt>Satellites launched</dt><dd id="sl-launched">0</dd></div>
+        <div><dt>In orbit</dt><dd id="sl-inorbit">0</dd></div>
+        <div><dt>Launches</dt><dd id="sl-launches">0</dd></div>
+      </dl>
+
+      <p class="sl-latest" id="sl-latest"></p>
+      <p class="sl-loading" id="sl-loading">Loading satellite data…</p>
+    </section>
+
+    <div class="sl-controls">
+      <button type="button" class="sl-play" id="sl-play" aria-label="Pause">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-pause" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/><path class="i-play" d="M8 5.5v13l11-6.5z"/></svg>
+      </button>
+      <div class="sl-track">
+        <input type="range" id="sl-slider" min="0" max="1" step="1" value="0" aria-label="Date" />
+        <div class="sl-ticks" id="sl-ticks" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <footer class="ev-credits sl-credits">
+      <p>Each dot is one Starlink satellite. Satellite catalog and orbital elements: CelesTrak SATCAT and GP data (Starlink group). Launch times and pads: Jonathan McDowell, General Catalog of Artificial Space Objects (planet4589.org). Coastlines: Natural Earth. Includes the Tintin A and B prototypes launched 22 February 2018. Orbital planes, inclinations, and altitudes are from the catalog; positions of satellites along their orbits before the data date are approximate.</p>
+      <p id="sl-asof"></p>
+    </footer>
+  </main>
+
+  <script src="https://dkossin.com/stars.js"></script>
+</body>
+</html>

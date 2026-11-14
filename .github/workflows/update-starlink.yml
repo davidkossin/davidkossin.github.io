@@ -1,0 +1,46 @@
+name: Update Starlink constellation data
+
+on:
+  schedule:
+    # Weekly, Mondays 09:40 UTC
+    - cron: "40 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-escape-velocity-starlink
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch Starlink catalog and elements
+        run: python3 escape-velocity/scripts/fetch_starlink.py
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- escape-velocity/data/starlink.json; then
+            echo "No Starlink data changes"
+            exit 0
+          fi
+          ASOF=$(python3 -c 'import json; print(json.load(open("escape-velocity/data/starlink.json"))["asOf"])')
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add escape-velocity/data/starlink.json
+          git commit -m "Update Starlink constellation data (${ASOF})"
+          for i in 1 2 3; do
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push && exit 0
+            sleep 10
+          done
+          exit 1

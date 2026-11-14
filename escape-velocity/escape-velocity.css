@@ -567,3 +567,48 @@ a:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
+
+/* Section tabs */
+.ev-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0 auto 1.6rem;
+  padding: 0.3rem;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 999px;
+  background: rgba(8, 10, 24, 0.55);
+  border: 1px solid rgba(232, 236, 255, 0.14);
+  backdrop-filter: blur(10px);
+}
+
+.ev-tabs a {
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--muted);
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.ev-tabs a:hover {
+  color: var(--text);
+}
+
+.ev-tabs a[aria-current="page"] {
+  color: #05060f;
+  background: var(--accent);
+}
+
+@media (max-width: 520px) {
+  .ev-tabs a {
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    padding: 0.55rem 0.8rem;
+  }
+}
