@@ -4,24 +4,34 @@
 // - Time axis D is days relative to the data reference instant (newest GP epoch).
 //   D controls which satellites exist, orbit raising after launch, and decay.
 // - Orbital phase, RAAN precession (J2) and Earth rotation run on a separate
-//   gentle clock (tau, 60x real time). At D = 0, tau = 0 the satellites are at
-//   their catalogued positions and Earth is at the matching sidereal angle.
-//   Running phase and precession on the date axis would strobe at playback speed.
+//   gentle clock (tau). A typical 550 km orbit takes ORBIT_PERIOD_SEC of wall
+//   time, so the planes read as motion without strobing at playback speed.
+//   At D = 0, tau = 0 the satellites are at their catalogued positions and
+//   Earth is at the matching sidereal angle.
 // - Orbits are circular (Starlink eccentricity ~1e-4). Satellites with no current
 //   elements use SATCAT inclination, a launch-group altitude and pseudo-random
 //   RAAN/phase (see scripts/fetch_starlink.py).
 // - After launch each batch sits in a short "train" along the insertion orbit
 //   above the launch trail, then blends into its operational plane and altitude
 //   over the orbit-raising period; decaying satellites lower and fade out.
+// - Faint along-track trails (TRAIL_ARC of each orbit) are drawn in the shader
+//   so the shells read as orbit lines. Positions propagate on the GPU from
+//   catalogued elements plus tau, including while autoplay is paused or held.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-const V = "sl1";
+const V = "sl2";
 const RE = 6378.137;
 const MU = 398600.4418;
 const J2 = 1.08262668e-3;
 const DAY = 86400;
-const TAU_RATE = 60 / DAY; // visual clock: days of orbital motion per real second
+const TYPICAL_ALT = 550;
+const ORBIT_PERIOD_SEC = 64; // wall-clock seconds for one typical 550 km orbit
+const typicalA = RE + TYPICAL_ALT;
+const typicalPeriodDays = 2 * Math.PI * Math.sqrt(typicalA * typicalA * typicalA / MU) / DAY;
+const TAU_RATE = typicalPeriodDays / ORBIT_PERIOD_SEC; // days of orbital motion per real second
+const TRAIL_SEGS = 12;
+const TRAIL_ARC = 0.24 * 2 * Math.PI; // radians of each satellite's own orbit
 const PLAY_SECONDS = 52;
 const TRAIL_DAYS = 26;
 const INSERT_ALT = 300;
@@ -32,6 +42,8 @@ const SITES = [
   [34.6321, -120.6106],
   [25.997, -97.157],
 ];
+const TEX_COLS = 1024;
+const TEX_ROWS = 5;
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -89,6 +101,148 @@ async function loadJSON(url) {
   if (!res.ok) throw new Error(url + " " + res.status);
   return res.json();
 }
+
+function smooth(x) { return x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x); }
+
+function rotY(x, y, z, th) {
+  const c = Math.cos(th), s = Math.sin(th);
+  return [c * x + s * z, y, -s * x + c * z];
+}
+
+// Shared orbital state at (Dcur, tauc) for satellite i. lagRad delays mean
+// anomaly (and RAAN) by that many radians along the satellite's own orbit.
+function positionOf(i, Dcur, tauc, lagRad, arrays) {
+  const { sTL, sTD, sCi, sSi, sRf, sO0, sOd, sU0, sN, sR, sIdx, lCount, data, trailEnd } = arrays;
+  const tl = sTL[i];
+  const td = sTD[i];
+  if (Dcur < tl || Dcur >= td) return null;
+  const age = Dcur - tl;
+  const n = sN[i];
+  const lagDays = n > 1e-9 ? lagRad / n : 0;
+  const t = tauc - lagDays;
+  const Om = sO0[i] + sOd[i] * t;
+  const u = sU0[i] + n * t;
+  const cO = Math.cos(Om), sO = Math.sin(Om), cu = Math.cos(u), su = Math.sin(u);
+  let fx = cO * cu - sO * su * sCi[i];
+  let fy = su * sSi[i];
+  let fz = -(sO * cu + cO * su * sCi[i]);
+  let rr = sRf[i];
+  let alpha = 0.9;
+  const s = smooth((age - 1.5) / Math.max(sR[i], 1e-3));
+  if (s < 1) {
+    const k = data.L[i];
+    const cnt = lCount[k];
+    const spread = Math.min(5.2, 0.05 + age * 0.12);
+    const d = (cnt > 1 ? sIdx[i] / (cnt - 1) : 0) * spread;
+    const theta = arrays.theta0 + 2 * Math.PI * 1.00273781191 * tauc;
+    const te = trailEnd[k];
+    const site = rotY(te.site.x, te.site.y, te.site.z, theta);
+    let ex = te.end.x, ey = te.end.y, ez = te.end.z;
+    const ev = rotY(ex, ey, ez, theta);
+    const elen = Math.hypot(ev[0], ev[1], ev[2]) || 1;
+    ev[0] /= elen; ev[1] /= elen; ev[2] /= elen;
+    const nx = site[1] * ev[2] - site[2] * ev[1];
+    const ny = site[2] * ev[0] - site[0] * ev[2];
+    const nz = site[0] * ev[1] - site[1] * ev[0];
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    const bx = (ny / nl) * ev[2] - (nz / nl) * ev[1];
+    const by = (nz / nl) * ev[0] - (nx / nl) * ev[2];
+    const bz = (nx / nl) * ev[1] - (ny / nl) * ev[0];
+    const cd = Math.cos(d), sd = Math.sin(d);
+    const px = ev[0] * cd + bx * sd;
+    const py = ev[1] * cd + by * sd;
+    const pz = ev[2] * cd + bz * sd;
+    let x = px + (fx - px) * s, y = py + (fy - py) * s, z = pz + (fz - pz) * s;
+    const l = Math.hypot(x, y, z) || 1;
+    fx = x / l; fy = y / l; fz = z / l;
+    rr = (1 + INSERT_ALT / RE) + (sRf[i] - (1 + INSERT_ALT / RE)) * s;
+    alpha = 0.55 + 0.4 * s + (age < 0.5 ? 0.3 : 0);
+  }
+  if (td !== Infinity) {
+    const life = td - tl;
+    const L = Math.min(50, life * 0.4);
+    const left = td - Dcur;
+    if (left < L) {
+      const q = 1 - left / L;
+      const floor = 1 + 150 / RE;
+      rr = rr + (floor - rr) * q;
+      alpha *= q > 0.6 ? (1 - q) / 0.4 : 1;
+    }
+  }
+  return { x: fx * rr, y: fy * rr, z: fz * rr, a: alpha };
+}
+
+const SAT_GLSL = `
+  uniform sampler2D uData;
+  uniform float uCols, uTexW, uTexH;
+  uniform float uD, uTau, uTheta, uR0, uFloor, uTrailArc, uTrailSegs;
+  attribute float aSat;
+  vec4 fetchSat(float i, float row) {
+    float x = mod(i, uCols) + 0.5;
+    float y = floor(i / uCols) * 5.0 + row + 0.5;
+    return texture2D(uData, vec2(x / uTexW, y / uTexH));
+  }
+  float smoother(float x) {
+    return x <= 0.0 ? 0.0 : (x >= 1.0 ? 1.0 : x * x * (3.0 - 2.0 * x));
+  }
+  vec3 rotY(vec3 p, float th) {
+    float c = cos(th), s = sin(th);
+    return vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);
+  }
+  // lagRad is an along-track lag in radians; returns xyz + alpha
+  vec4 satState(float lagRad) {
+    float i = aSat;
+    vec4 r0 = fetchSat(i, 0.0);
+    vec4 r1 = fetchSat(i, 1.0);
+    vec4 r2 = fetchSat(i, 2.0);
+    vec4 r3 = fetchSat(i, 3.0);
+    vec4 r4 = fetchSat(i, 4.0);
+    float tl = r0.x, td = r0.y, ci = r0.z, si = r0.w;
+    float rf = r1.x, o0 = r1.y, od = r1.z, u0 = r1.w;
+    float n = r2.x, raise = r2.y, idx = r2.z, count = r2.w;
+    vec3 site = r3.xyz;
+    vec3 end0 = r4.xyz;
+    if (uD < tl || uD >= td) return vec4(0.0);
+    float age = uD - tl;
+    float lagDays = n > 1e-9 ? lagRad / n : 0.0;
+    float t = uTau - lagDays;
+    float Om = o0 + od * t;
+    float u = u0 + n * t;
+    float cO = cos(Om), sO = sin(Om), cu = cos(u), su = sin(u);
+    vec3 f = vec3(
+      cO * cu - sO * su * ci,
+      su * si,
+      -(sO * cu + cO * su * ci)
+    );
+    float rr = rf;
+    float alpha = 0.9;
+    float s = smoother((age - 1.5) / raise);
+    if (s < 1.0) {
+      float spread = min(5.2, 0.05 + age * 0.12);
+      float d = (count > 1.0 ? idx / (count - 1.0) : 0.0) * spread;
+      vec3 siteI = rotY(site, uTheta);
+      vec3 endI = normalize(rotY(end0, uTheta));
+      vec3 tn = normalize(cross(siteI, endI));
+      vec3 tb = cross(tn, endI);
+      float cd = cos(d), sd = sin(d);
+      vec3 p = endI * cd + tb * sd;
+      f = normalize(mix(p, f, s));
+      rr = uR0 + (rf - uR0) * s;
+      alpha = 0.55 + 0.4 * s + (age < 0.5 ? 0.3 : 0.0);
+    }
+    if (td < 1e19) {
+      float life = td - tl;
+      float L = min(50.0, life * 0.4);
+      float left = td - uD;
+      if (left < L) {
+        float q = 1.0 - left / L;
+        rr = rr + (uFloor - rr) * q;
+        alpha *= q > 0.6 ? (1.0 - q) / 0.4 : 1.0;
+      }
+    }
+    return vec4(f * rr, alpha);
+  }
+`;
 
 async function main() {
   const [data, coast] = await Promise.all([
@@ -286,28 +440,68 @@ async function main() {
   trails.frustumCulled = false;
   earth.add(trails);
 
-  // satellites
-  const satPos = new Float32Array(N * 3);
-  const satAlpha = new Float32Array(N);
+  // ---- orbital-element texture (GPU propagation)
+  const texH = Math.ceil(N / TEX_COLS) * TEX_ROWS;
+  const texData = new Float32Array(TEX_COLS * texH * 4);
+  function setTex(i, row, r, g, b, a) {
+    const x = i % TEX_COLS;
+    const y = Math.floor(i / TEX_COLS) * TEX_ROWS + row;
+    const o = (y * TEX_COLS + x) * 4;
+    texData[o] = r; texData[o + 1] = g; texData[o + 2] = b; texData[o + 3] = a;
+  }
+  for (let i = 0; i < N; i++) {
+    const k = data.L[i];
+    const te = trailEnd[k];
+    const elen = te.end.length() || 1;
+    setTex(i, 0, sTL[i], Number.isFinite(sTD[i]) ? sTD[i] : 1e20, sCi[i], sSi[i]);
+    setTex(i, 1, sRf[i], sO0[i], sOd[i], sU0[i]);
+    setTex(i, 2, sN[i], Math.max(sR[i], 1e-3), sIdx[i], lCount[k]);
+    setTex(i, 3, te.site.x, te.site.y, te.site.z, 0);
+    setTex(i, 4, te.end.x / elen, te.end.y / elen, te.end.z / elen, 0);
+  }
+  const satDataTex = new THREE.DataTexture(texData, TEX_COLS, texH, THREE.RGBAFormat, THREE.FloatType);
+  satDataTex.magFilter = THREE.NearestFilter;
+  satDataTex.minFilter = THREE.NearestFilter;
+  satDataTex.wrapS = THREE.ClampToEdgeWrapping;
+  satDataTex.wrapT = THREE.ClampToEdgeWrapping;
+  satDataTex.needsUpdate = true;
+  if ("NoColorSpace" in THREE) satDataTex.colorSpace = THREE.NoColorSpace;
+
+  const satUniforms = {
+    uData: { value: satDataTex },
+    uCols: { value: TEX_COLS },
+    uTexW: { value: TEX_COLS },
+    uTexH: { value: texH },
+    uD: { value: 0 },
+    uTau: { value: 0 },
+    uTheta: { value: 0 },
+    uR0: { value: 1 + INSERT_ALT / RE },
+    uFloor: { value: 1 + 150 / RE },
+    uTrailArc: { value: TRAIL_ARC },
+    uTrailSegs: { value: TRAIL_SEGS },
+    uSize: { value: 2.4 },
+    uScale: { value: 1.0 },
+  };
+
+  const satIndex = new Float32Array(N);
+  for (let i = 0; i < N; i++) satIndex[i] = i;
   const satGeo = new THREE.BufferGeometry();
-  const satPosAttr = new THREE.BufferAttribute(satPos, 3);
-  satPosAttr.setUsage(THREE.DynamicDrawUsage);
-  const satAlphaAttr = new THREE.BufferAttribute(satAlpha, 1);
-  satAlphaAttr.setUsage(THREE.DynamicDrawUsage);
-  satGeo.setAttribute("position", satPosAttr);
-  satGeo.setAttribute("alpha", satAlphaAttr);
+  satGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(N * 3), 3));
+  satGeo.setAttribute("aSat", new THREE.BufferAttribute(satIndex, 1));
   const satMat = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    uniforms: { uSize: { value: 2.4 }, uScale: { value: 1.0 } },
-    vertexShader: `attribute float alpha; varying float vA; uniform float uSize; uniform float uScale;
+    uniforms: satUniforms,
+    vertexShader: SAT_GLSL + `
+      varying float vA; uniform float uSize; uniform float uScale;
       void main(){
-        vA = alpha;
-        vec4 mv = modelViewMatrix*vec4(position,1.0);
+        vec4 s = satState(0.0);
+        vA = s.w;
+        vec4 mv = modelViewMatrix * vec4(s.xyz, 1.0);
         gl_PointSize = clamp(uSize * uScale * (4.0 / -mv.z), 1.2, 6.0 * uScale);
-        gl_Position = projectionMatrix*mv;
-        if (alpha <= 0.0) gl_Position = vec4(2.0,2.0,2.0,1.0);
+        gl_Position = projectionMatrix * mv;
+        if (s.w <= 0.0) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
       }`,
     fragmentShader: `varying float vA;
       void main(){
@@ -321,8 +515,59 @@ async function main() {
   sats.frustumCulled = false;
   scene.add(sats);
 
+  // faint along-track trails so orbital planes read as lines
+  // Indexed LineSegments: SEGS+1 verts per sat, not duplicated segment endpoints.
+  const vertsPer = TRAIL_SEGS + 1;
+  const trailVerts = N * vertsPer;
+  const orbitSat = new Float32Array(trailVerts);
+  const orbitOff = new Float32Array(trailVerts);
+  const orbitIdx = new Uint32Array(N * TRAIL_SEGS * 2);
+  for (let i = 0; i < N; i++) {
+    const base = i * vertsPer;
+    for (let s = 0; s <= TRAIL_SEGS; s++) {
+      orbitSat[base + s] = i;
+      orbitOff[base + s] = s;
+    }
+    const ib = i * TRAIL_SEGS * 2;
+    for (let s = 0; s < TRAIL_SEGS; s++) {
+      orbitIdx[ib + s * 2] = base + s;
+      orbitIdx[ib + s * 2 + 1] = base + s + 1;
+    }
+  }
+  const orbitGeo = new THREE.BufferGeometry();
+  orbitGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(trailVerts * 3), 3));
+  orbitGeo.setAttribute("aSat", new THREE.BufferAttribute(orbitSat, 1));
+  orbitGeo.setAttribute("aOff", new THREE.BufferAttribute(orbitOff, 1));
+  orbitGeo.setIndex(new THREE.BufferAttribute(orbitIdx, 1));
+  const orbitMat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: satUniforms,
+    vertexShader: SAT_GLSL + `
+      attribute float aOff; varying float vA;
+      void main(){
+        float lagRad = uTrailArc * (aOff / uTrailSegs);
+        vec4 s = satState(lagRad);
+        float fade = 1.0 - aOff / uTrailSegs;
+        vA = s.w * 0.22 * fade * fade;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(s.xyz, 1.0);
+        if (s.w <= 0.0 || vA <= 0.001) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+      }`,
+    fragmentShader: `varying float vA;
+      void main(){
+        if (vA <= 0.001) discard;
+        gl_FragColor = vec4(0.72, 0.86, 1.0, vA);
+      }`,
+  });
+  const orbitLines = new THREE.LineSegments(orbitGeo, orbitMat);
+  orbitLines.frustumCulled = false;
+  scene.add(orbitLines);
+
   // ---- camera framing
   const theta0 = gmst(refMs);
+  const arrays = { sTL, sTD, sCi, sSi, sRf, sO0, sOd, sU0, sN, sR, sIdx, lCount, data, trailEnd, theta0 };
+
   function initialCamera() {
     const w = stage.clientWidth, h = stage.clientHeight;
     const aspect = w / h;
@@ -344,7 +589,7 @@ async function main() {
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    satMat.uniforms.uScale.value = Math.min(window.devicePixelRatio || 1, 2) * (w < 640 ? 0.9 : 1);
+    satUniforms.uScale.value = Math.min(window.devicePixelRatio || 1, 2) * (w < 640 ? 0.9 : 1);
     needsRender = true;
   }
 
@@ -354,7 +599,6 @@ async function main() {
   let playP = 0; // 0..1 playback progress
   let tau = 0;
   let needsRender = true;
-  let lastDrawnD = NaN;
 
   // playback easing: constant speed, easing to a stop over the final 18%
   const P0 = 0.82;
@@ -418,32 +662,19 @@ async function main() {
   slider.addEventListener("pointerdown", () => setPlaying(false));
 
   // ---- per-frame update
-  const tmpSite = new THREE.Vector3(), tmpEnd = new THREE.Vector3(), tmpN = new THREE.Vector3(), tmpB = new THREE.Vector3();
-  const yAxis = new THREE.Vector3(0, 1, 0);
-  const trainE = new Float64Array(NL * 3), trainB = new Float64Array(NL * 3);
-
-  function smooth(x) { return x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x); }
-
   function update() {
     const theta = theta0 + 2 * Math.PI * 1.00273781191 * tau;
     earth.rotation.y = theta;
+    satUniforms.uD.value = D;
+    satUniforms.uTau.value = tau;
+    satUniforms.uTheta.value = theta;
 
-    // launches in view: trails + train frames
+    // launches in view: trails
     const kMax = upperBound(lTsorted, D) - 1;
     trailAlpha.fill(0);
     for (let k = kMax; k >= 0; k--) {
       const age = D - lT[k];
       if (age > 200) break;
-      // train frame in inertial coordinates
-      const te = trailEnd[k];
-      tmpSite.copy(te.site).applyAxisAngle(yAxis, theta);
-      tmpEnd.copy(te.end).applyAxisAngle(yAxis, theta);
-      const r = tmpEnd.length();
-      tmpEnd.divideScalar(r);
-      tmpN.crossVectors(tmpSite, tmpEnd).normalize();
-      tmpB.crossVectors(tmpN, tmpEnd); // along-track direction
-      trainE[k * 3] = tmpEnd.x; trainE[k * 3 + 1] = tmpEnd.y; trainE[k * 3 + 2] = tmpEnd.z;
-      trainB[k * 3] = tmpB.x; trainB[k * 3 + 1] = tmpB.y; trainB[k * 3 + 2] = tmpB.z;
       if (age < TRAIL_DAYS) {
         const grow = Math.min(1, Math.max(0, age) / 2.5 + 0.08);
         const fade = Math.pow(1 - age / TRAIL_DAYS, 1.4);
@@ -460,56 +691,6 @@ async function main() {
     trailAlphaAttr.needsUpdate = true;
 
     const nLaunched = upperBound(launchSorted, D);
-    const r0 = 1 + INSERT_ALT / RE;
-    for (let i = 0; i < N; i++) {
-      const o = i * 3;
-      const tl = sTL[i];
-      if (D < tl || D >= sTD[i]) { satAlpha[i] = 0; continue; }
-      const age = D - tl;
-      // operational orbit position (inertial, three.js axes)
-      const Om = sO0[i] + sOd[i] * tau;
-      const u = sU0[i] + sN[i] * tau;
-      const cO = Math.cos(Om), sO = Math.sin(Om), cu = Math.cos(u), su = Math.sin(u);
-      let fx = cO * cu - sO * su * sCi[i];
-      let fy = su * sSi[i];
-      let fz = -(sO * cu + cO * su * sCi[i]);
-      let rr = sRf[i];
-      let alpha = 0.9;
-      const s = smooth((age - 1.5) / sR[i]);
-      if (s < 1) {
-        const k = data.L[i];
-        const cnt = lCount[k];
-        const spread = Math.min(5.2, 0.05 + age * 0.12);
-        const d = (cnt > 1 ? sIdx[i] / (cnt - 1) : 0) * spread;
-        const cd = Math.cos(d), sd = Math.sin(d);
-        const px = trainE[k * 3] * cd + trainB[k * 3] * sd;
-        const py = trainE[k * 3 + 1] * cd + trainB[k * 3 + 1] * sd;
-        const pz = trainE[k * 3 + 2] * cd + trainB[k * 3 + 2] * sd;
-        let x = px + (fx - px) * s, y = py + (fy - py) * s, z = pz + (fz - pz) * s;
-        const l = Math.hypot(x, y, z) || 1;
-        fx = x / l; fy = y / l; fz = z / l;
-        rr = r0 + (sRf[i] - r0) * s;
-        alpha = 0.55 + 0.4 * s + (age < 0.5 ? 0.3 : 0);
-      }
-      const td = sTD[i];
-      if (td !== Infinity) {
-        const life = td - tl;
-        const L = Math.min(50, life * 0.4);
-        const left = td - D;
-        if (left < L) {
-          const q = 1 - left / L;
-          const floor = 1 + 150 / RE;
-          rr = rr + (floor - rr) * q;
-          alpha *= q > 0.6 ? (1 - q) / 0.4 : 1;
-        }
-      }
-      satAlpha[i] = alpha;
-      satPos[o] = fx * rr; satPos[o + 1] = fy * rr; satPos[o + 2] = fz * rr;
-    }
-    satPosAttr.needsUpdate = true;
-    satAlphaAttr.needsUpdate = true;
-
-    // counters
     const nDecayed = upperBound(decaySorted, D);
     const nLaunches = upperBound(lTsorted, D);
     out.launched.textContent = fmt.format(nLaunched);
@@ -530,15 +711,37 @@ async function main() {
     }
     slider.value = String(Math.round(D));
     slider.style.setProperty("--fill", (((D - D_MIN) / (D_MAX - D_MIN)) * 100).toFixed(2) + "%");
-    lastDrawnD = D;
+  }
+
+  function pickInOrbit(n = 16) {
+    const ids = [];
+    const step = Math.max(1, Math.floor(N / (n * 4)));
+    for (let i = 0; i < N && ids.length < n; i += step) {
+      if (D >= sTL[i] && D < sTD[i]) ids.push(i);
+    }
+    return ids;
+  }
+
+  function samplePos(ids) {
+    const list = ids && ids.length ? ids : pickInOrbit(16);
+    return list.map((i) => {
+      const p = positionOf(i, D, tau, 0, arrays);
+      return p ? { i, x: p.x, y: p.y, z: p.z, a: p.a } : { i, x: 0, y: 0, z: 0, a: 0 };
+    });
   }
 
   // ---- loop
   let last = performance.now();
   window.__sl = {
     get D() { return D; }, set D(v) { D = v; needsRender = true; setPlaying(false); },
-    get playing() { return playing; }, D_MIN, D_MAX, N, NL, ref: refMs, frames: 0,
+    get playing() { return playing; },
+    get tau() { return tau; },
+    tauRate: TAU_RATE,
+    orbitPeriodSec: ORBIT_PERIOD_SEC,
+    typicalPeriodDays,
+    D_MIN, D_MAX, N, NL, ref: refMs, frames: 0,
     counts: () => ({ launched: out.launched.textContent, inorbit: out.inorbit.textContent, launches: out.launches.textContent, date: out.date.textContent }),
+    pickInOrbit, samplePos,
   };
   function frame(now) {
     const dt = Math.min(0.1, (now - last) / 1000);
