@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-14T06:44:57Z",
+  "updated": "2026-11-14T15:12:13Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -44,7 +44,7 @@
       "webcasts": [
         {
           "url": "https://www.youtube.com/watch?v=dl4O6RqbvOs",
-          "title": "STREAM 1 - GO! - SpaceX - Starship - Starship Flight 15 - Pad 2 - Starbase, TX - Space Affairs Live",
+          "title": "SpaceX - Starship - Starship Flight 15 - Pad 2 - Starbase, TX - November 13, 2026",
           "type": "Unofficial Re-stream"
         },
         {
@@ -58,7 +58,7 @@
           "type": "Unofficial Webcast"
         }
       ],
-      "webcast_live": true,
+      "webcast_live": false,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/starship_on_the_image_thumbnail_20260724044615.jpeg",
         "credit": "SpaceX"
@@ -73,9 +73,9 @@
       "window_start": "2026-11-14T00:50:00Z",
       "window_end": "2026-11-14T01:50:00Z",
       "status": {
-        "id": 6,
-        "name": "Launch in Flight",
-        "abbrev": "In Flight"
+        "id": 3,
+        "name": "Launch Successful",
+        "abbrev": "Success"
       },
       "net_precision": {
         "abbrev": "MIN",
@@ -103,7 +103,13 @@
         "country_code": "RU"
       },
       "vandenberg": false,
-      "webcasts": [],
+      "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=ATvKzYP7CPw",
+          "title": "Пуск ракеты-носителя «Союз-2.1б» с космодрома Восточный",
+          "type": "Recap"
+        }
+      ],
       "webcast_live": false,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193901.jpeg",
@@ -119,9 +125,9 @@
       "window_start": "2026-11-14T05:30:00Z",
       "window_end": "2026-11-14T05:30:00Z",
       "status": {
-        "id": 9,
-        "name": "Payload Deployed",
-        "abbrev": "Deployed"
+        "id": 3,
+        "name": "Launch Successful",
+        "abbrev": "Success"
       },
       "net_precision": {
         "abbrev": "MIN",
@@ -167,9 +173,9 @@
       "id": "ef9850ad-1096-425b-9d27-f7bbd186e61a",
       "name": "Vulcan VC6L | Amazon Leo (LV-01)",
       "slug": "vulcan-vc6l-amazon-leo-lv-01",
-      "net": "2026-11-14T17:32:30Z",
-      "window_start": "2026-11-14T17:32:00Z",
-      "window_end": "2026-11-14T18:01:00Z",
+      "net": "2026-11-15T17:11:30Z",
+      "window_start": "2026-11-15T17:11:30Z",
+      "window_end": "2026-11-15T17:31:00Z",
       "status": {
         "id": 1,
         "name": "Go for Launch",
@@ -215,7 +221,7 @@
       ],
       "webcast_live": false,
       "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193955.jpeg",
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/vulcan_vc6l_on__image_thumbnail_20261114102519.jpeg",
         "credit": "United Launch Alliance"
       },
       "probability": null
