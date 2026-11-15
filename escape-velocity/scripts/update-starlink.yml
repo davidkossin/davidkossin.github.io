@@ -1,4 +1,4 @@
-name: Update Starlink constellation data
+name: Update constellation data
 
 on:
   schedule:
@@ -25,20 +25,25 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Fetch Starlink catalog and elements
-        run: python3 escape-velocity/scripts/fetch_starlink.py
+      - name: Fetch constellation catalogs and elements
+        run: python3 escape-velocity/scripts/fetch_constellations.py
 
       - name: Commit if changed
         run: |
-          if git diff --quiet -- escape-velocity/data/starlink.json; then
-            echo "No Starlink data changes"
+          files=(
+            escape-velocity/data/starlink.json
+            escape-velocity/data/amazon-leo.json
+            escape-velocity/data/oneweb.json
+          )
+          if git diff --quiet -- "${files[@]}"; then
+            echo "No constellation data changes"
             exit 0
           fi
-          ASOF=$(python3 -c 'import json; print(json.load(open("escape-velocity/data/starlink.json"))["asOf"])')
+          ASOF=$(python3 -c 'import json,pathlib; print(", ".join(json.loads(pathlib.Path(p).read_text()).get("asOf","?") + " " + pathlib.Path(p).stem for p in ["escape-velocity/data/starlink.json","escape-velocity/data/amazon-leo.json","escape-velocity/data/oneweb.json"] if pathlib.Path(p).exists()))')
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add escape-velocity/data/starlink.json
-          git commit -m "Update Starlink constellation data (${ASOF})"
+          git add "${files[@]}"
+          git commit -m "Update constellation data (${ASOF})"
           for i in 1 2 3; do
             git pull --rebase origin "${GITHUB_REF_NAME}" && git push && exit 0
             sleep 10

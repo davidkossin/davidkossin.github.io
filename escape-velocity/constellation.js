@@ -1,4 +1,4 @@
-// Starlink Constellation — Escape Velocity
+// Escape Velocity constellation globe (Starlink, Amazon Leo, OneWeb)
 //
 // Model notes (code only):
 // - Time axis D is days relative to the data reference instant (newest GP epoch).
@@ -19,7 +19,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-const V = "sl3";
 const RE = 6378.137;
 const MU = 398600.4418;
 const J2 = 1.08262668e-3;
@@ -31,14 +30,10 @@ const typicalPeriodDays = 2 * Math.PI * Math.sqrt(typicalA * typicalA * typicalA
 const TAU_RATE = typicalPeriodDays / ORBIT_PERIOD_SEC; // days of orbital motion per real second
 const PLAY_SECONDS = 52;
 const TRAIL_DAYS = 26;
-const INSERT_ALT = 300;
+let INSERT_ALT = 300;
 const DEG = Math.PI / 180;
-const SITES = [
-  [28.5619, -80.5772],
-  [28.6082, -80.6041],
-  [34.6321, -120.6106],
-  [25.997, -97.157],
-];
+// sites come from the constellation JSON (lat, lon, az policy)
+let SITES = [];
 const TEX_COLS = 1024;
 const TEX_ROWS = 5;
 
@@ -73,6 +68,19 @@ function gmst(ms) {
 function ecefDir(lat, lon, out3 = new THREE.Vector3()) {
   const p = lat * DEG, l = lon * DEG;
   return out3.set(Math.cos(p) * Math.cos(l), Math.sin(p), -Math.cos(p) * Math.sin(l));
+}
+
+// az policy: "south", "northeast", or "auto" (Florida-style: SE if inc < 48°,
+// south if a polar launch from Florida latitudes, otherwise NE).
+function launchAzimuth(site, incDeg) {
+  const cl = Math.cos(site.lat * DEG);
+  const s = Math.max(-1, Math.min(1, Math.cos(incDeg * DEG) / cl));
+  let south;
+  if (site.az === "south") south = true;
+  else if (site.az === "northeast") south = false;
+  else if (incDeg >= 80 && site.lat >= 24 && site.lat <= 32) south = true;
+  else south = incDeg < 48;
+  return south ? Math.PI - Math.asin(s) : Math.asin(s);
 }
 
 function upperBound(arr, x) {
@@ -237,11 +245,27 @@ const SAT_GLSL = `
   }
 `;
 
-async function main() {
+export function startConstellation(config) {
+  return main(config).catch((err) => {
+    console.error(err);
+    const l = el("sl-loading");
+    if (l) {
+      l.hidden = false;
+      l.textContent = "Satellite data could not be loaded.";
+    }
+  });
+}
+
+async function main(config) {
   const [data, coast] = await Promise.all([
-    loadJSON("../data/starlink.json?v=" + V),
-    loadJSON("../data/coastline.json?v=" + V),
+    loadJSON(config.dataUrl),
+    loadJSON(config.coastUrl),
   ]);
+  INSERT_ALT = data.insertAlt || 300;
+  SITES = data.sites;
+  if (!SITES || SITES.length !== data.pads.length) {
+    throw new Error("constellation data is missing site coordinates");
+  }
   el("sl-loading").hidden = true;
 
   const refMs = data.ref;
@@ -392,14 +416,10 @@ async function main() {
   const trailAlpha = new Float32Array(NL * TRAIL_SEG * 2);
   {
     for (let k = 0; k < NL; k++) {
-      const [lat, lon] = SITES[lPad[k]];
+      const site = SITES[lPad[k]];
+      const lat = site.lat, lon = site.lon;
       const inc = lInc[k];
-      const cl = Math.cos(lat * DEG);
-      const s = Math.max(-1, Math.min(1, Math.cos(inc * DEG) / cl));
-      let az;
-      if (lPad[k] === 2) az = Math.PI - Math.asin(s); // Vandenberg: southbound
-      else if (lPad[k] !== 3 && inc < 48) az = Math.PI - Math.asin(s); // Florida 43 deg: southeast
-      else az = Math.asin(s); // northeast / east
+      const az = launchAzimuth(site, inc);
       const pts = [];
       const p1 = lat * DEG, l1 = lon * DEG;
       const ARC = 24 * DEG;
@@ -649,7 +669,7 @@ async function main() {
     if (nLaunches > 0) {
       const k = nLaunches - 1;
       const ld = new Date(refMs + lT[k] * 86400000);
-      const label = k === 0 ? "Tintin A/B prototypes" : fmt.format(lCount[k]) + " satellites";
+      const label = (k === 0 && data.firstLaunchLabel) ? data.firstLaunchLabel : fmt.format(lCount[k]) + " satellites";
       out.latest.innerHTML = "<strong>Latest launch</strong>" + ld.getUTCDate() + " " + MONTHS[ld.getUTCMonth()] + " " +
         ld.getUTCFullYear() + " · " + data.pads[lPad[k]] + " · " + label;
     } else {
@@ -687,6 +707,8 @@ async function main() {
     typicalPeriodDays,
     D_MIN, D_MAX, N, NL, ref: refMs, frames: 0,
     counts: () => ({ launched: out.launched.textContent, inorbit: out.inorbit.textContent, launches: out.launches.textContent, date: out.date.textContent }),
+    id: data.id || data.name || "",
+    insertAlt: INSERT_ALT,
     pickInOrbit, samplePos,
     lineObjects() {
       const list = [];
@@ -730,9 +752,3 @@ async function main() {
   requestAnimationFrame(frame);
 }
 
-main().catch((err) => {
-  console.error(err);
-  const l = el("sl-loading");
-  l.hidden = false;
-  l.textContent = "Satellite data could not be loaded.";
-});
