@@ -14,13 +14,12 @@
 // - After launch each batch sits in a short "train" along the insertion orbit
 //   above the launch trail, then blends into its operational plane and altitude
 //   over the orbit-raising period; decaying satellites lower and fade out.
-// - Faint along-track trails (TRAIL_ARC of each orbit) are drawn in the shader
-//   so the shells read as orbit lines. Positions propagate on the GPU from
-//   catalogued elements plus tau, including while autoplay is paused or held.
+// - Positions propagate on the GPU from catalogued elements plus tau, including
+//   while autoplay is paused or held.
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-const V = "sl2";
+const V = "sl3";
 const RE = 6378.137;
 const MU = 398600.4418;
 const J2 = 1.08262668e-3;
@@ -30,8 +29,6 @@ const ORBIT_PERIOD_SEC = 64; // wall-clock seconds for one typical 550 km orbit
 const typicalA = RE + TYPICAL_ALT;
 const typicalPeriodDays = 2 * Math.PI * Math.sqrt(typicalA * typicalA * typicalA / MU) / DAY;
 const TAU_RATE = typicalPeriodDays / ORBIT_PERIOD_SEC; // days of orbital motion per real second
-const TRAIL_SEGS = 12;
-const TRAIL_ARC = 0.24 * 2 * Math.PI; // radians of each satellite's own orbit
 const PLAY_SECONDS = 52;
 const TRAIL_DAYS = 26;
 const INSERT_ALT = 300;
@@ -109,17 +106,15 @@ function rotY(x, y, z, th) {
   return [c * x + s * z, y, -s * x + c * z];
 }
 
-// Shared orbital state at (Dcur, tauc) for satellite i. lagRad delays mean
-// anomaly (and RAAN) by that many radians along the satellite's own orbit.
-function positionOf(i, Dcur, tauc, lagRad, arrays) {
+// Shared orbital state at (Dcur, tauc) for satellite i.
+function positionOf(i, Dcur, tauc, arrays) {
   const { sTL, sTD, sCi, sSi, sRf, sO0, sOd, sU0, sN, sR, sIdx, lCount, data, trailEnd } = arrays;
   const tl = sTL[i];
   const td = sTD[i];
   if (Dcur < tl || Dcur >= td) return null;
   const age = Dcur - tl;
   const n = sN[i];
-  const lagDays = n > 1e-9 ? lagRad / n : 0;
-  const t = tauc - lagDays;
+  const t = tauc;
   const Om = sO0[i] + sOd[i] * t;
   const u = sU0[i] + n * t;
   const cO = Math.cos(Om), sO = Math.sin(Om), cu = Math.cos(u), su = Math.sin(u);
@@ -175,7 +170,7 @@ function positionOf(i, Dcur, tauc, lagRad, arrays) {
 const SAT_GLSL = `
   uniform sampler2D uData;
   uniform float uCols, uTexW, uTexH;
-  uniform float uD, uTau, uTheta, uR0, uFloor, uTrailArc, uTrailSegs;
+  uniform float uD, uTau, uTheta, uR0, uFloor;
   attribute float aSat;
   vec4 fetchSat(float i, float row) {
     float x = mod(i, uCols) + 0.5;
@@ -189,8 +184,7 @@ const SAT_GLSL = `
     float c = cos(th), s = sin(th);
     return vec3(c * p.x + s * p.z, p.y, -s * p.x + c * p.z);
   }
-  // lagRad is an along-track lag in radians; returns xyz + alpha
-  vec4 satState(float lagRad) {
+  vec4 satState() {
     float i = aSat;
     vec4 r0 = fetchSat(i, 0.0);
     vec4 r1 = fetchSat(i, 1.0);
@@ -204,8 +198,7 @@ const SAT_GLSL = `
     vec3 end0 = r4.xyz;
     if (uD < tl || uD >= td) return vec4(0.0);
     float age = uD - tl;
-    float lagDays = n > 1e-9 ? lagRad / n : 0.0;
-    float t = uTau - lagDays;
+    float t = uTau;
     float Om = o0 + od * t;
     float u = u0 + n * t;
     float cO = cos(Om), sO = sin(Om), cu = cos(u), su = sin(u);
@@ -372,7 +365,9 @@ async function main() {
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
-    earth.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x4f86d9, transparent: true, opacity: 0.75 })));
+    const coasts = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0x4f86d9, transparent: true, opacity: 0.75 }));
+    coasts.name = "coastlines";
+    earth.add(coasts);
   }
 
   // atmosphere halo
@@ -437,6 +432,7 @@ async function main() {
     fragmentShader: `varying float vA; void main(){ if(vA<=0.001) discard; gl_FragColor = vec4(1.0,0.72,0.28, vA); }`,
   });
   const trails = new THREE.LineSegments(trailGeo, trailMat);
+  trails.name = "launchTrails";
   trails.frustumCulled = false;
   earth.add(trails);
 
@@ -477,8 +473,6 @@ async function main() {
     uTheta: { value: 0 },
     uR0: { value: 1 + INSERT_ALT / RE },
     uFloor: { value: 1 + 150 / RE },
-    uTrailArc: { value: TRAIL_ARC },
-    uTrailSegs: { value: TRAIL_SEGS },
     uSize: { value: 2.4 },
     uScale: { value: 1.0 },
   };
@@ -496,7 +490,7 @@ async function main() {
     vertexShader: SAT_GLSL + `
       varying float vA; uniform float uSize; uniform float uScale;
       void main(){
-        vec4 s = satState(0.0);
+        vec4 s = satState();
         vA = s.w;
         vec4 mv = modelViewMatrix * vec4(s.xyz, 1.0);
         gl_PointSize = clamp(uSize * uScale * (4.0 / -mv.z), 1.2, 6.0 * uScale);
@@ -512,57 +506,9 @@ async function main() {
       }`,
   });
   const sats = new THREE.Points(satGeo, satMat);
+  sats.name = "satellites";
   sats.frustumCulled = false;
   scene.add(sats);
-
-  // faint along-track trails so orbital planes read as lines
-  // Indexed LineSegments: SEGS+1 verts per sat, not duplicated segment endpoints.
-  const vertsPer = TRAIL_SEGS + 1;
-  const trailVerts = N * vertsPer;
-  const orbitSat = new Float32Array(trailVerts);
-  const orbitOff = new Float32Array(trailVerts);
-  const orbitIdx = new Uint32Array(N * TRAIL_SEGS * 2);
-  for (let i = 0; i < N; i++) {
-    const base = i * vertsPer;
-    for (let s = 0; s <= TRAIL_SEGS; s++) {
-      orbitSat[base + s] = i;
-      orbitOff[base + s] = s;
-    }
-    const ib = i * TRAIL_SEGS * 2;
-    for (let s = 0; s < TRAIL_SEGS; s++) {
-      orbitIdx[ib + s * 2] = base + s;
-      orbitIdx[ib + s * 2 + 1] = base + s + 1;
-    }
-  }
-  const orbitGeo = new THREE.BufferGeometry();
-  orbitGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(trailVerts * 3), 3));
-  orbitGeo.setAttribute("aSat", new THREE.BufferAttribute(orbitSat, 1));
-  orbitGeo.setAttribute("aOff", new THREE.BufferAttribute(orbitOff, 1));
-  orbitGeo.setIndex(new THREE.BufferAttribute(orbitIdx, 1));
-  const orbitMat = new THREE.ShaderMaterial({
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    uniforms: satUniforms,
-    vertexShader: SAT_GLSL + `
-      attribute float aOff; varying float vA;
-      void main(){
-        float lagRad = uTrailArc * (aOff / uTrailSegs);
-        vec4 s = satState(lagRad);
-        float fade = 1.0 - aOff / uTrailSegs;
-        vA = s.w * 0.22 * fade * fade;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(s.xyz, 1.0);
-        if (s.w <= 0.0 || vA <= 0.001) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-      }`,
-    fragmentShader: `varying float vA;
-      void main(){
-        if (vA <= 0.001) discard;
-        gl_FragColor = vec4(0.72, 0.86, 1.0, vA);
-      }`,
-  });
-  const orbitLines = new THREE.LineSegments(orbitGeo, orbitMat);
-  orbitLines.frustumCulled = false;
-  scene.add(orbitLines);
 
   // ---- camera framing
   const theta0 = gmst(refMs);
@@ -725,7 +671,7 @@ async function main() {
   function samplePos(ids) {
     const list = ids && ids.length ? ids : pickInOrbit(16);
     return list.map((i) => {
-      const p = positionOf(i, D, tau, 0, arrays);
+      const p = positionOf(i, D, tau, arrays);
       return p ? { i, x: p.x, y: p.y, z: p.z, a: p.a } : { i, x: 0, y: 0, z: 0, a: 0 };
     });
   }
@@ -742,6 +688,21 @@ async function main() {
     D_MIN, D_MAX, N, NL, ref: refMs, frames: 0,
     counts: () => ({ launched: out.launched.textContent, inorbit: out.inorbit.textContent, launches: out.launches.textContent, date: out.date.textContent }),
     pickInOrbit, samplePos,
+    lineObjects() {
+      const list = [];
+      scene.traverse((obj) => {
+        if (obj.isLine || obj.isLineSegments || obj.isLineLoop) {
+          const pos = obj.geometry && obj.geometry.getAttribute("position");
+          list.push({
+            name: obj.name || obj.type,
+            type: obj.type,
+            verts: pos ? pos.count : 0,
+            visible: obj.visible,
+          });
+        }
+      });
+      return list;
+    },
   };
   function frame(now) {
     const dt = Math.min(0.1, (now - last) / 1000);
