@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-15T09:37:06Z",
+  "updated": "2026-11-15T17:16:34Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -7,17 +7,17 @@
       "id": "ef9850ad-1096-425b-9d27-f7bbd186e61a",
       "name": "Vulcan VC6L | Amazon Leo (LV-01)",
       "slug": "vulcan-vc6l-amazon-leo-lv-01",
-      "net": "2026-11-15T17:11:30Z",
+      "net": "2026-11-15T17:31:00Z",
       "window_start": "2026-11-15T17:11:30Z",
       "window_end": "2026-11-15T17:31:00Z",
       "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
+        "id": 5,
+        "name": "On Hold",
+        "abbrev": "Hold"
       },
       "net_precision": {
-        "abbrev": "SEC",
-        "name": "Second"
+        "abbrev": "HR",
+        "name": "Hour"
       },
       "provider": "United Launch Alliance",
       "provider_abbrev": "ULA",
@@ -53,7 +53,7 @@
           "type": "Unofficial Webcast"
         }
       ],
-      "webcast_live": false,
+      "webcast_live": true,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/vulcan_vc6l_on__image_thumbnail_20261114102519.jpeg",
         "credit": "United Launch Alliance"
