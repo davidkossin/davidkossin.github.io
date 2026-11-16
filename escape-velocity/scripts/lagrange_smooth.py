@@ -393,6 +393,131 @@ def drop_outliers(pts, states, moon_lookup, log=print):
     return pts, states
 
 
+def display_bad(pts, moon_lookup, sharp=30.0, unphys_deg=8.0, unphys_ratio=2.0):
+    """Audit-visible non-flyby corners: SHARP (>=30°) or unphysical (>=8° and >2x accel)."""
+    return [t for t in display_turns(catmull_dense(pts, 8), moon_lookup)
+            if (not t["flyby"]) and (t["deg"] >= sharp or (t["deg"] >= unphys_deg and t["accel_ratio"] > unphys_ratio))]
+
+
+def _clip_non_flyby(curve, t, moon_lookup, direction, t_lo, t_hi):
+    """Nudge t away from a flyby along direction (+1 forward, -1 backward)."""
+    for _ in range(80):
+        if t <= t_lo or t >= t_hi:
+            break
+        pos, _ = curve.at(t)
+        if not is_flyby((t,) + pos, moon_lookup(t) if moon_lookup else None):
+            break
+        t += 0.05 * direction
+    return max(t_lo, min(t_hi, t))
+
+
+def repair_display(pts, moon_lookup, log=print):
+    """After simplification the page draws a centripetal Catmull–Rom through the
+    kept samples. Slow Lissajous turnarounds and short burns can still show up
+    as sharp or unphysical corners at display scale. Replace each with a
+    position-continuous, slightly velocity-damped Hermite bridge, accepted only
+    if a neighbourhood of the full Catmull–Rom path then audits clean."""
+    pts = [tuple(p[:4]) for p in pts]
+    if len(pts) < 4:
+        return pts
+    t_lo, t_hi = pts[0][0], pts[-1][0]
+    for rnd in range(6):
+        bad = display_bad(pts, moon_lookup)
+        if not bad:
+            return pts
+        clusters = []
+        for b in bad:
+            if clusters and b["mjd"] - clusters[-1][1] < 2.0:
+                clusters[-1][1] = b["mjd"]
+            else:
+                clusters.append([b["mjd"], b["mjd"]])
+        log(f"    repair display corners: {len(bad)} in {len(clusters)} cluster(s) (round {rnd})")
+        vels = tangents(pts)
+        curve = Curve(pts, vels)
+        applied = []
+        for c0, c1 in clusters:
+            physical = all(t["accel_ratio"] <= 2.0 for t in bad if c0 - 0.05 <= t["mjd"] <= c1 + 0.05)
+            # Slow cusps need a wide, slightly damped bridge; impulsive burns need a short one.
+            if physical:
+                widths = (6, 8, 10, 12, 16)
+                damps = (0.3, 0.5, 0.0)
+            else:
+                widths = (0.5, 1, 1.5, 2, 3, 4, 6, 8, 12)
+                damps = (0.0, 0.3, 0.5)
+            chosen = None
+            for W in widths:
+                for back, fwd in ((W, W), (min(1.0, W), W), (W, min(1.0, W))):
+                    a = _clip_non_flyby(curve, max(t_lo, c0 - back), moon_lookup, +1, t_lo, t_hi)
+                    b = _clip_non_flyby(curve, min(t_hi, c1 + fwd), moon_lookup, -1, t_lo, t_hi)
+                    if b - a < 0.35:
+                        continue
+                    pa, va = curve.at(a)
+                    pb, vb = curve.at(b)
+                    dt = b - a
+                    chord = ((pb[0] - pa[0]) / dt, (pb[1] - pa[1]) / dt, (pb[2] - pa[2]) / dt)
+                    for damp in damps:
+                        va_d = tuple((1 - damp) * va[k] + damp * chord[k] for k in range(3))
+                        vb_d = tuple((1 - damp) * vb[k] + damp * chord[k] for k in range(3))
+                        step = 0.5 if dt >= 6 else 0.15
+                        n = max(12, int(dt / step))
+                        n = min(n, 80)
+                        br = []
+                        fly = False
+                        for j in range(n + 1):
+                            t = a + dt * j / n
+                            pos, vel = herm(pa, va_d, pb, vb_d, a, b, t)
+                            q = (t,) + pos
+                            if is_flyby(q, moon_lookup(t) if moon_lookup else None):
+                                fly = True
+                                break
+                            br.append(q)
+                        if fly or len(br) < 4:
+                            continue
+                        # Splice into a padded neighbourhood and audit as the page draws it.
+                        pad_lo, pad_hi = a - 25.0, b + 25.0
+                        neigh, i = [], 0
+                        while i < len(pts) and pts[i][0] < pad_lo:
+                            i += 1
+                        while i < len(pts) and pts[i][0] < a - 1e-9:
+                            neigh.append(pts[i]); i += 1
+                        neigh.extend(br)
+                        while i < len(pts) and pts[i][0] <= b + 1e-9:
+                            i += 1
+                        while i < len(pts) and pts[i][0] <= pad_hi:
+                            neigh.append(pts[i]); i += 1
+                        if not display_bad(neigh, moon_lookup):
+                            chosen = (a, b, br, W, damp)
+                            break
+                    if chosen:
+                        break
+                if chosen:
+                    break
+            if chosen:
+                applied.append(chosen)
+            else:
+                log(f"    repair failed at mjd {c0:.1f}")
+        if not applied:
+            return pts
+        log("    repaired " + ", ".join(f"{a:.1f}±{W}d d={damp}" for a, b, br, W, damp in applied[:6]))
+        applied.sort(key=lambda x: x[0])
+        merged = []
+        for item in applied:
+            if merged and item[0] <= merged[-1][1]:
+                continue
+            merged.append(item)
+        npts, i = [], 0
+        for a, b, br, W, damp in merged:
+            while i < len(pts) and pts[i][0] < a - 1e-9:
+                npts.append(pts[i]); i += 1
+            npts.extend(br)
+            while i < len(pts) and pts[i][0] <= b + 1e-9:
+                i += 1
+        while i < len(pts):
+            npts.append(pts[i]); i += 1
+        pts = npts
+    return pts
+
+
 def smooth_track(points, states, moon_lookup, log=print):
     pts = dedupe(points)
     if len(pts) < 4:
@@ -412,6 +537,7 @@ def smooth_track(points, states, moon_lookup, log=print):
     pts, vels = round_corners(pts, vels, moon_lookup, log=log, trusted=trusted)
     dense = Curve(pts, vels).dense()
     out = simplify(dense, moon_lookup)
+    out = repair_display(out, moon_lookup, log=log)
     return out
 
 
