@@ -21,9 +21,13 @@ import urllib.request
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lagrange_smooth import smooth_track  # noqa: E402
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
-CACHE = Path("/tmp/horizons")
+CACHE = Path("/workspace/horizons-cache")
 CACHE.mkdir(parents=True, exist_ok=True)
 
 ASOF = date(2026, 11, 16)
@@ -106,6 +110,11 @@ def d2mjd(d: date) -> float:
     return d.toordinal() - date(1858, 11, 17).toordinal()
 
 
+def mjd2date(mjd: float) -> date:
+    whole = int(math.floor(mjd))
+    return date(1858, 11, 17) + timedelta(days=whole)
+
+
 def mjd2iso(mjd: float) -> str:
     whole = int(math.floor(mjd))
     frac = mjd - whole
@@ -154,10 +163,16 @@ def parse_horizons(text: str):
     return rows
 
 
+LAST_CACHED = False
+
+
 def horizons_request(command, start, stop, step, retries=4):
     key = f"{command}_{start}_{stop}_{step}".replace(" ", "_").replace("/", "-").replace(":", "")
     cache = CACHE / f"{key}.txt"
+    global LAST_CACHED
+    LAST_CACHED = False
     if cache.exists() and cache.stat().st_size > 200:
+        LAST_CACHED = True
         return cache.read_text(errors="replace")
     params = {
         "format": "text",
@@ -182,15 +197,16 @@ def horizons_request(command, start, stop, step, retries=4):
     for i in range(retries):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": UA})
-            with urllib.request.urlopen(req, timeout=180) as resp:
+            with urllib.request.urlopen(req, timeout=45) as resp:
                 text = resp.read().decode("utf-8", "replace")
-            if "$$SOE" in text:
+            if "$$SOE" in text or "No ephemeris for target" in text:
+                # Coverage errors are cached too, so reruns do not re-ask.
                 cache.write_text(text)
                 return text
             last = RuntimeError("Horizons error for %s: %s" % (command, text[0:400].replace("\n", " ")))
         except Exception as e:
             last = e
-        time.sleep(2.0 * (i + 1))
+        time.sleep(1.0 * (i + 1))
     raise last
 
 
@@ -274,7 +290,8 @@ def fetch_series(command, start: date, stop: date, step="1 d", start_clock="12:0
                 print(f"    coverage ends {ad.isoformat()} {clock}, clipping stop", flush=True)
                 return fetch_series(command, start, ad, step, start_clock=start_clock, stop_clock=clock, _depth=_depth + 1)
             raise
-        time.sleep(0.35)
+        if not LAST_CACHED:
+            time.sleep(0.35)
     rows.sort(key=lambda r: r[0])
     return rows
 
@@ -301,6 +318,17 @@ def interp(series, mjd):
     if b[0] == a[0]:
         return a[1:]
     t = (mjd - a[0]) / (b[0] - a[0])
+    if len(a) >= 7 and len(b) >= 7 and (any(a[4:7]) or any(b[4:7])):
+        # Cubic Hermite with Horizons velocities (km/s). Linear interpolation of
+        # Earth/Sun at 12 h cadence is off by up to ~1,400 km mid-interval, which
+        # puts a 12-hour zigzag into every densely sampled Earth-centred path.
+        h = (b[0] - a[0]) * 86400.0
+        t2, t3 = t * t, t * t * t
+        h00, h10, h01, h11 = 2 * t3 - 3 * t2 + 1, t3 - 2 * t2 + t, -2 * t3 + 3 * t2, t3 - t2
+        d00, d10, d01, d11 = 6 * t2 - 6 * t, 3 * t2 - 4 * t + 1, -6 * t2 + 6 * t, 3 * t2 - 2 * t
+        pos = tuple(h00 * a[i] + h10 * h * a[i + 3] + h01 * b[i] + h11 * h * b[i + 3] for i in (1, 2, 3))
+        vel = tuple((d00 * a[i] + d10 * h * a[i + 3] + d01 * b[i] + d11 * h * b[i + 3]) / h for i in (1, 2, 3))
+        return pos + vel + tuple(a[i] + t * (b[i] - a[i]) for i in range(7, len(a)))
     return tuple(a[i] + t * (b[i] - a[i]) for i in range(1, len(a)))
 
 
@@ -855,42 +883,176 @@ def se_l345(r_se):
     return (l3x, 0.0, 0.0), l4, l5
 
 
-def halo_offset(tmpl, mjd, mjd0, phase0=0.0):
+def em_basis(moon):
+    """Orthonormal Earth–Moon frame: +X toward the Moon, +Z near the ecliptic pole."""
+    mx, my, mz = moon
+    n = math.sqrt(mx * mx + my * my + mz * mz) or 1.0
+    xh = (mx / n, my / n, mz / n)
+    yh = (-xh[1], xh[0], 0.0)  # z-hat_SE × xh, then normalize
+    yn = math.sqrt(yh[0] * yh[0] + yh[1] * yh[1] + yh[2] * yh[2]) or 1.0
+    yh = (yh[0] / yn, yh[1] / yn, yh[2] / yn)
+    zh = (xh[1] * yh[2] - xh[2] * yh[1], xh[2] * yh[0] - xh[0] * yh[2], xh[0] * yh[1] - xh[1] * yh[0])
+    return xh, yh, zh
+
+
+def halo_local(tmpl, mjd, mjd0, phase0=0.0):
+    """Halo/Lissajous offset and velocity (km, km/day) in the L-point's local frame."""
     w = 2 * math.pi / tmpl["period"]
-    t = (mjd - mjd0) + phase0
-    ang = w * t
-    # Northern/southern halo: z in phase with y (southern: negative z when y>0? south means Az sign)
+    ang = w * ((mjd - mjd0) + phase0)
     s = -1.0 if tmpl.get("south") else 1.0
     ax, ay, az = tmpl["Ax"], tmpl["Ay"], tmpl["Az"]
+    # Classic halo: z is a quarter-period out of phase with y, so the path is a
+    # 3-D loop rather than a flat tilted ellipse.
     x = -ax * math.cos(ang)
     y = ay * math.sin(ang)
-    z = s * az * math.sin(ang)
-    return x, y, z
+    z = s * az * math.cos(ang)
+    vx = ax * w * math.sin(ang)
+    vy = ay * w * math.cos(ang)
+    vz = -s * az * w * math.sin(ang)
+    return (x, y, z), (vx, vy, vz)
 
 
-def transfer_curve(p0, p1, mjd, m0, m1, bend=1.0):
-    """Smooth out-of-plane coast from p0 to p1 over [m0,m1]."""
+def halo_offset(tmpl, mjd, mjd0, phase0=0.0):
+    loc, _ = halo_local(tmpl, mjd + phase0, mjd0)
+    return loc
+
+
+def rotate_em(vec, moon):
+    xh, yh, zh = em_basis(moon)
+    return (
+        vec[0] * xh[0] + vec[1] * yh[0] + vec[2] * zh[0],
+        vec[0] * xh[1] + vec[1] * yh[1] + vec[2] * zh[1],
+        vec[0] * xh[2] + vec[1] * yh[2] + vec[2] * zh[2],
+    )
+
+
+def halo_world(point, moon, rse, tmpl, mjd, mjd0, phase0=0.0):
+    """Position of a modeled halo/Lissajous about `point` in the SE rotating frame."""
+    c = point_pos(point, moon, rse)
+    loc, _ = halo_local(tmpl, mjd, mjd0, phase0)
+    if point.startswith("EM"):
+        d = rotate_em(loc, moon)
+        return (c[0] + d[0], c[1] + d[1], c[2] + d[2])
+    return (c[0] + loc[0], c[1] + loc[1], c[2] + loc[2])
+
+
+def halo_world_vel(point, moon, rse, tmpl, mjd, mjd0, moon_next=None, phase0=0.0):
+    """Approximate SE-frame velocity (km/day) of a modeled halo spacecraft."""
+    loc, vloc = halo_local(tmpl, mjd, mjd0, phase0)
+    if point.startswith("EM"):
+        # include motion of the L-point by differencing the world position
+        p0 = halo_world(point, moon, rse, tmpl, mjd, mjd0, phase0)
+        mo1 = moon_next if moon_next is not None else moon
+        p1 = halo_world(point, mo1, rse, tmpl, mjd + 0.25, mjd0, phase0)
+        return ((p1[0] - p0[0]) / 0.25, (p1[1] - p0[1]) / 0.25, (p1[2] - p0[2]) / 0.25)
+    return vloc
+
+
+def vclamp(v, dist, T, max_scale=1.05):
+    speed = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
+    if T <= 0 or speed <= 0:
+        return v
+    if speed * T > max_scale * max(dist, 1.0):
+        s = max_scale * dist / (speed * T)
+        return (v[0] * s, v[1] * s, v[2] * s)
+    return v
+
+
+def hermite(p0, v0, p1, v1, u, T):
+    """Cubic Hermite: velocities in km/day, T in days, u in [0,1]."""
+    u = max(0.0, min(1.0, u))
+    u2, u3 = u * u, u * u * u
+    h00 = 2 * u3 - 3 * u2 + 1
+    h10 = u3 - 2 * u2 + u
+    h01 = -2 * u3 + 3 * u2
+    h11 = u3 - u2
+    return (
+        h00 * p0[0] + h10 * T * v0[0] + h01 * p1[0] + h11 * T * v1[0],
+        h00 * p0[1] + h10 * T * v0[1] + h01 * p1[1] + h11 * T * v1[1],
+        h00 * p0[2] + h10 * T * v0[2] + h01 * p1[2] + h11 * T * v1[2],
+    )
+
+
+def transfer_curve(p0, p1, mjd, m0, m1, bend=1.0, v0=None, v1=None):
+    """C1 coast from p0 to p1. Optional endpoint velocities in km/day."""
     if m1 <= m0:
         return p1
-    u = (mjd - m0) / (m1 - m0)
-    u = max(0.0, min(1.0, u))
-    # Ease in/out
-    s = u * u * (3 - 2 * u)
-    # Outward bulge in the direction of the cross product with Z, plus a little +Z then back
-    mx = (p0[0] + p1[0]) * 0.5
-    my = (p0[1] + p1[1]) * 0.5
-    mz = (p0[2] + p1[2]) * 0.5
+    T = m1 - m0
+    u = (mjd - m0) / T
     dx, dy, dz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
-    # perpendicular in-plane
-    px, py = -dy, dx
-    pn = math.sqrt(px * px + py * py) or 1.0
-    bulge = 0.22 * math.sqrt(dx * dx + dy * dy + dz * dz) * bend * math.sin(math.pi * u)
-    lift = 0.08 * math.sqrt(dx * dx + dy * dy + dz * dz) * math.sin(math.pi * u)
-    return (
-        lerp(p0[0], p1[0], s) + bulge * px / pn,
-        lerp(p0[1], p1[1], s) + bulge * py / pn,
-        lerp(p0[2], p1[2], s) + lift,
-    )
+    dist = math.sqrt(dx * dx + dy * dy + dz * dz) or 1.0
+    if v0 is None:
+        v0 = (dx / T, dy / T, dz / T)
+    if v1 is None:
+        v1 = (dx / T, dy / T, dz / T)
+    v0 = vclamp(v0, dist, T)
+    v1 = vclamp(v1, dist, T)
+    return hermite(p0, v0, p1, v1, u, T)
+
+
+def finite_vel(pts, i):
+    """km/day from neighbors."""
+    if i <= 0:
+        a, b = pts[0], pts[1]
+    elif i >= len(pts) - 1:
+        a, b = pts[-2], pts[-1]
+    else:
+        a, b = pts[i - 1], pts[i + 1]
+    dt = b[0] - a[0]
+    if abs(dt) < 1e-6:
+        return (0.0, 0.0, 0.0)
+    return ((b[1] - a[1]) / dt, (b[2] - a[2]) / dt, (b[3] - a[3]) / dt)
+
+
+def blend_segments(prefix, suffix, window_days=8.0, step_days=0.5):
+    """Join prefix → suffix with a cubic Hermite so position and velocity match."""
+    if not prefix:
+        return list(suffix)
+    if not suffix:
+        return list(prefix)
+    t_join = suffix[0][0]
+    t0 = t_join - window_days
+    pre = [p for p in prefix if p[0] < t0 - 1e-6]
+    # state at the start of the blend, from the prefix
+    if not any(p[0] <= t0 for p in prefix):
+        # prefix ends well before suffix; just connect last prefix to first suffix
+        t0 = prefix[-1][0]
+        pre = prefix[:-1]
+    # interpolate prefix at t0
+    def at(pts, t):
+        if t <= pts[0][0]:
+            return pts[0]
+        if t >= pts[-1][0]:
+            return pts[-1]
+        lo, hi = 0, len(pts) - 1
+        while hi - lo > 1:
+            mid = (lo + hi) // 2
+            if pts[mid][0] <= t:
+                lo = mid
+            else:
+                hi = mid
+        a, b = pts[lo], pts[hi]
+        s = (t - a[0]) / (b[0] - a[0] or 1)
+        return (t, a[1] + s * (b[1] - a[1]), a[2] + s * (b[2] - a[2]), a[3] + s * (b[3] - a[3]))
+
+    p0 = at(prefix, t0)
+    p1 = suffix[0]
+    # velocities
+    # use prefix points around t0
+    i0 = min(range(len(prefix)), key=lambda i: abs(prefix[i][0] - t0))
+    i1 = 0
+    v0 = finite_vel(prefix, i0)
+    v1 = finite_vel(suffix, i1)
+    T = p1[0] - p0[0]
+    if T <= 0.05:
+        return pre + list(suffix)
+    mid = []
+    t = t0
+    while t < p1[0] - 1e-4:
+        pos = hermite((p0[1], p0[2], p0[3]), v0, (p1[1], p1[2], p1[3]), v1, (t - t0) / T, T)
+        mid.append((t, pos[0], pos[1], pos[2]))
+        t += step_days
+    return pre + mid + list(suffix)
 
 
 def pack_traj(points):
@@ -899,13 +1061,21 @@ def pack_traj(points):
         return None
     points = sorted(points, key=lambda p: p[0])
     t0 = points[0][0]
-    hours, xs, ys, zs = [], [], [], []
+    buckets = {}
     for mjd, x, y, z in points:
-        hours.append(int(round((mjd - t0) * 24)))
-        xs.append(int(round(x)))
-        ys.append(int(round(y)))
-        zs.append(int(round(z)))
-    return {"t0_mjd": round(t0, 6), "hours": hours, "x": xs, "y": ys, "z": zs, "n": len(points)}
+        h = round((mjd - t0) * 24, 2)
+        if h == int(h):
+            h = int(h)
+        buckets.setdefault(h, []).append((x, y, z))
+    hours, xs, ys, zs = [], [], [], []
+    for h in sorted(buckets):
+        grp = buckets[h]
+        n = len(grp)
+        hours.append(h)
+        xs.append(int(round(sum(p[0] for p in grp) / n)))
+        ys.append(int(round(sum(p[1] for p in grp) / n)))
+        zs.append(int(round(sum(p[2] for p in grp) / n)))
+    return {"t0_mjd": round(t0, 6), "hours": hours, "x": xs, "y": ys, "z": zs, "n": len(hours)}
 
 
 def measure_halo(points, point_name, moon_lookup, rse_lookup):
@@ -917,7 +1087,17 @@ def measure_halo(points, point_name, moon_lookup, rse_lookup):
         moon = moon_lookup(mjd) if moon_lookup else None
         rse = rse_lookup(mjd) if rse_lookup else AU
         px, py, pz = point_pos(point_name, moon, rse)
-        offs.append((mjd, x - px, y - py, z - pz))
+        dx, dy, dz = x - px, y - py, z - pz
+        # For EM points, measure in the Earth–Moon frame so the Moon's 27-day
+        # motion does not leak into the halo period estimate.
+        if point_name.startswith("EM") and moon:
+            xh, yh, zh = em_basis(moon)
+            locx = dx * xh[0] + dy * xh[1] + dz * xh[2]
+            locy = dx * yh[0] + dy * yh[1] + dz * yh[2]
+            locz = dx * zh[0] + dy * zh[1] + dz * zh[2]
+            offs.append((mjd, locx, locy, locz))
+        else:
+            offs.append((mjd, dx, dy, dz))
     # Period from y zero-crossings or autocorrelation on y
     ys = [o[2] for o in offs]
     dt = (offs[-1][0] - offs[0][0]) / (len(offs) - 1)
@@ -940,17 +1120,57 @@ def measure_halo(points, point_name, moon_lookup, rse_lookup):
     return {"Ax": ax, "Ay": ay, "Az": az, "period": period, "south": (sum(1 for o in offs if o[3] < 0) > len(offs) / 2)}
 
 
-def model_mission(m, moon_series, earth_series, sun_series, step_days=0.5):
+
+def dist3p(a, b):
+    return math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2)
+
+
+def tmpl_from_meas(meas, point):
+    base = dict(HALO_TEMPLATES[point])
+    if not meas:
+        return base
+    base["Ax"] = meas.get("Ax", base["Ax"])
+    base["Ay"] = meas.get("Ay", base["Ay"])
+    base["Az"] = meas.get("Az", base["Az"])
+    if meas.get("period") and 5 < meas["period"] < 400:
+        base["period"] = meas["period"]
+    if "south" in meas:
+        base["south"] = meas["south"]
+    return base
+
+
+def best_phase(point, moon_at, tmpl, t_join, target, mjd0, n=96):
+    """Phase (days) that puts the modeled halo nearest target at t_join."""
+    best_ph, best_d = 0.0, 1e99
+    period = tmpl.get("period") or 178.0
+    for i in range(n):
+        ph = period * i / n
+        moon, rse = moon_at(t_join)
+        pos = halo_world(point, moon, rse, tmpl, t_join, mjd0, phase0=ph)
+        d = dist3p(pos, target)
+        if d < best_d:
+            best_d, best_ph = d, ph
+    return best_ph, best_d
+
+
+def adaptive_blend(prefix, suffix, min_days=8.0, max_days=90.0, step_days=0.5):
+    if not prefix or not suffix:
+        return blend_segments(prefix, suffix, window_days=min_days, step_days=step_days)
+    gap = dist3p(prefix[-1][1:], suffix[0][1:])
+    # Slow the splice so a residual position mismatch is a gentle curve.
+    window = min(max_days, max(min_days, gap / 8000.0))
+    return blend_segments(prefix, suffix, window_days=window, step_days=step_days), window, gap
+
+
+def model_mission(m, moon_series, earth_series, sun_series, step_days=0.5, tmpl_override=None, phase0=0.0):
     start = iso2date(m["appear_start"])
     end = iso2date(m["appear_end"])
     stays = m["stays"]
     first_arr = iso2date(stays[0]["arrival"])
-    last_dep = iso2date(stays[-1]["departure"]) if stays[-1]["departure"] else end
-    tmpl = dict(HALO_OVERRIDE.get(m["id"], HALO_TEMPLATES[stays[0]["point"]]))
+    tmpl0 = dict(tmpl_override or HALO_OVERRIDE.get(m["id"], HALO_TEMPLATES[stays[0]["point"]]))
     points = []
     mjd = d2mjd(start)
     mjd_end = d2mjd(end) + 0.99
-    # Phase so that at first arrival the spacecraft is at a consistent place on the halo
     mjd0 = d2mjd(first_arr)
 
     def moon_at(mjd):
@@ -962,23 +1182,37 @@ def model_mission(m, moon_series, earth_series, sun_series, step_days=0.5):
         mx, my, mz, rse = to_rot(mo, e, s)
         return (mx, my, mz), rse
 
+    def tmpl_for(point):
+        if tmpl_override:
+            return dict(tmpl_override)
+        return dict(HALO_OVERRIDE.get(m["id"], HALO_TEMPLATES[point]))
+
+    def world(point, moon, rse, mjd, tmpl=None):
+        return halo_world(point, moon, rse, tmpl or tmpl_for(point), mjd, mjd0, phase0=phase0)
+
+    def vel_at(point, moon, rse, mjd, tmpl=None):
+        mo2, _ = moon_at(mjd + 0.25)
+        return halo_world_vel(point, moon, rse, tmpl or tmpl_for(point), mjd, mjd0, moon_next=mo2, phase0=phase0)
+
     while mjd <= mjd_end:
         moon, rse = moon_at(mjd)
-        # Determine state
-        d = date(1858, 11, 17) + timedelta(days=int(mjd))
         pos = None
-        # Before first arrival: transfer from start position to first L-point + halo at arrival
         if mjd < d2mjd(first_arr):
-            dest = point_pos(stays[0]["point"], moon, rse)
-            dest = tuple(dest[i] + halo_offset(tmpl if stays[0]["point"] in ("SE-L1","SE-L2","EM-L1","EM-L2") else HALO_TEMPLATES.get(stays[0]["point"], tmpl), d2mjd(first_arr), mjd0)[i] for i in range(3))
-            # Start: Earth surface-ish or lunar vicinity
+            t_arr = d2mjd(first_arr)
+            moon_arr, rse_arr = moon_at(t_arr)
+            dest = world(stays[0]["point"], moon_arr, rse_arr, t_arr)
+            v1 = vel_at(stays[0]["point"], moon_arr, rse_arr, t_arr)
             if m["id"] in ("change2", "change5", "change6", "ce5t1"):
-                p0 = moon  # leave from the Moon
+                p0 = moon
+                # leave the Moon toward the destination
+                T = d2mjd(first_arr) - d2mjd(start) or 1
+                v0 = ((dest[0] - p0[0]) / T, (dest[1] - p0[1]) / T, (dest[2] - p0[2]) / T)
             else:
-                p0 = (6378.0, 0.0, 0.0)
-            pos = transfer_curve(p0, dest, mjd, d2mjd(start), d2mjd(first_arr))
+                p0 = (42264.0, 0.0, 0.0)  # high Earth orbit, not the surface
+                T = d2mjd(first_arr) - d2mjd(start) or 1
+                v0 = ((dest[0] - p0[0]) / T, (dest[1] - p0[1]) / T, (dest[2] - p0[2]) / T)
+            pos = transfer_curve(p0, dest, mjd, d2mjd(start), d2mjd(first_arr), v0=v0, v1=v1)
         else:
-            # During / between stays
             active = None
             for i, st in enumerate(stays):
                 a = d2mjd(iso2date(st["arrival"]))
@@ -986,54 +1220,234 @@ def model_mission(m, moon_series, earth_series, sun_series, step_days=0.5):
                 if a <= mjd <= b:
                     active = st
                     break
-                # transfer to next stay
                 if st["departure"] and i + 1 < len(stays):
                     nxt = stays[i + 1]
-                    if d2mjd(iso2date(st["departure"])) < mjd < d2mjd(iso2date(nxt["arrival"])):
-                        p0 = point_pos(st["point"], moon, rse)
-                        p1 = point_pos(nxt["point"], moon, rse)
-                        h0 = halo_offset(tmpl, d2mjd(iso2date(st["departure"])), mjd0)
-                        h1 = halo_offset(HALO_OVERRIDE.get(m["id"], HALO_TEMPLATES[nxt["point"]]), d2mjd(iso2date(nxt["arrival"])), mjd0)
-                        p0 = (p0[0] + h0[0], p0[1] + h0[1], p0[2] + h0[2])
-                        p1 = (p1[0] + h1[0], p1[1] + h1[1], p1[2] + h1[2])
-                        pos = transfer_curve(p0, p1, mjd, d2mjd(iso2date(st["departure"])), d2mjd(iso2date(nxt["arrival"])))
+                    t0 = d2mjd(iso2date(st["departure"]))
+                    t1 = d2mjd(iso2date(nxt["arrival"]))
+                    if t0 < mjd < t1:
+                        mo0, r0 = moon_at(t0)
+                        mo1, r1 = moon_at(t1)
+                        p0 = world(st["point"], mo0, r0, t0)
+                        p1 = world(nxt["point"], mo1, r1, t1)
+                        v0 = vel_at(st["point"], mo0, r0, t0)
+                        v1 = vel_at(nxt["point"], mo1, r1, t1)
+                        pos = transfer_curve(p0, p1, mjd, t0, t1, v0=v0, v1=v1)
                         break
             if pos is None and active:
-                c = point_pos(active["point"], moon, rse)
-                tuse = HALO_OVERRIDE.get(m["id"], HALO_TEMPLATES[active["point"]])
-                h = halo_offset(tuse, mjd, mjd0)
-                pos = (c[0] + h[0], c[1] + h[1], c[2] + h[2])
+                pos = world(active["point"], moon, rse, mjd)
             elif pos is None:
-                # after last departure: drift outward
                 dep = stays[-1]["departure"]
                 if dep:
-                    p0c = point_pos(stays[-1]["point"], moon, rse)
-                    tuse = HALO_OVERRIDE.get(m["id"], HALO_TEMPLATES[stays[-1]["point"]])
-                    h = halo_offset(tuse, d2mjd(iso2date(dep)), mjd0)
-                    p0 = (p0c[0] + h[0], p0c[1] + h[1], p0c[2] + h[2])
-                    # Drift: move away from Earth along a shallow heliocentric-like path
+                    t0 = d2mjd(iso2date(dep))
+                    t1 = t0 + 60
+                    mo0, r0 = moon_at(t0)
+                    p0 = world(stays[-1]["point"], mo0, r0, t0)
+                    v0 = vel_at(stays[-1]["point"], mo0, r0, t0)
+                    if stays[-1]["point"].startswith("EM"):
+                        # Leaving an Earth–Moon point means going back to the
+                        # Moon (Chang'e 5-T1 entered lunar orbit). Model the
+                        # leg relative to the Moon so it keeps moving with it
+                        # instead of stopping dead in the rotating frame.
+                        T = 7.0
+                        mo_n, _ = moon_at(t0 + 0.25)
+                        vm = ((mo_n[0] - mo0[0]) / 0.25, (mo_n[1] - mo0[1]) / 0.25, (mo_n[2] - mo0[2]) / 0.25)
+                        off0 = (p0[0] - mo0[0], p0[1] - mo0[1], p0[2] - mo0[2])
+                        voff0 = (v0[0] - vm[0], v0[1] - vm[1], v0[2] - vm[2])
+                        off1 = (0.0, 0.0, -2500.0)
+                        u = min(1.0, (mjd - t0) / T)
+                        u2, u3 = u * u, u * u * u
+                        h00, h10, h01 = 2 * u3 - 3 * u2 + 1, u3 - 2 * u2 + u, -2 * u3 + 3 * u2
+                        off = tuple(h00 * off0[k] + h10 * T * voff0[k] + h01 * off1[k] for k in range(3))
+                        pos = (moon[0] + off[0], moon[1] + off[1], moon[2] + off[2])
+                        points.append((mjd, pos[0], pos[1], pos[2]))
+                        mjd += step_days
+                        continue
                     sign = 1.0 if stays[-1]["point"].endswith("L2") else -1.0
-                    days = mjd - d2mjd(iso2date(dep))
-                    p1 = (p0[0] + sign * 400000 * (1 if stays[-1]["point"].startswith("SE") else 0.15),
-                          p0[1] + 250000 * (1 if stays[-1]["point"].startswith("SE") else 0.1),
-                          p0[2] + 80000)
-                    # stretch over 60 days then hold disappearing
-                    pos = transfer_curve(p0, p1, mjd, d2mjd(iso2date(dep)), d2mjd(iso2date(dep)) + 60, bend=0.4)
+                    scale = 1.0 if stays[-1]["point"].startswith("SE") else 0.12
+                    p1 = (p0[0] + sign * 500000 * scale, p0[1] + 300000 * scale, p0[2] + 80000 * scale)
+                    v1 = ((p1[0] - p0[0]) / 60, (p1[1] - p0[1]) / 60, (p1[2] - p0[2]) / 60)
+                    pos = transfer_curve(p0, p1, mjd, t0, t1, v0=v0, v1=v1, bend=0.4)
         if pos:
             points.append((mjd, pos[0], pos[1], pos[2]))
         mjd += step_days
     return points
 
 
-def downsample(points, max_pts=4500):
-    if len(points) <= max_pts:
+
+
+def close_approach_windows(pts, r_km=150000, moon_pad=40000, pad_days=2.0, merge_days=3, max_days=16, moon_lookup=None):
+    """Return padded [mjd0, mjd1] windows where the craft is near Earth or the Moon."""
+    wins = []
+    cur = None
+    for mjd, x, y, z in pts:
+        r = math.sqrt(x * x + y * y + z * z)
+        near = r < r_km
+        if not near and moon_lookup is not None:
+            mo = moon_lookup(mjd)
+            if mo:
+                md = math.sqrt((x - mo[0]) ** 2 + (y - mo[1]) ** 2 + (z - mo[2]) ** 2)
+                near = md < moon_pad
+        if near:
+            if cur is None:
+                cur = [mjd, mjd]
+            else:
+                cur[1] = mjd
+        elif cur is not None:
+            wins.append(cur)
+            cur = None
+    if cur:
+        wins.append(cur)
+    out = []
+    for a, b in wins:
+        a -= pad_days
+        b += pad_days
+        # Split very long windows so we don't request months of 1-hour data.
+        if b - a > max_days:
+            t = a
+            while t < b:
+                out.append([t, min(t + max_days, b)])
+                t += max_days
+            continue
+        if out and a - out[-1][1] <= merge_days:
+            out[-1][1] = b
+        else:
+            out.append([a, b])
+    return out
+
+
+def merge_raw(raw, extra):
+    if not extra:
+        return raw
+    seen = {round(r[0], 6) for r in raw}
+    out = list(raw)
+    for r in extra:
+        k = round(r[0], 6)
+        if k not in seen:
+            seen.add(k)
+            out.append(r)
+    out.sort(key=lambda r: r[0])
+    return out
+
+
+# Rotating-frame velocities (km/day) of Horizons samples, keyed by mjd, for the
+# mission currently being processed. Used for Hermite resampling at the end.
+ROT_STATES = {}
+
+
+def transform_raw(raw, earth, sun):
+    pts = []
+    for r in raw:
+        e = interp(earth, r[0])
+        s = interp(sun, r[0])
+        if not e or not s:
+            continue
+        x, y, z, _rse = to_rot(r[1:4], e, s)
+        pts.append((r[0], x, y, z))
+        if len(r) >= 7 and any(r[4:7]) and len(e) >= 6:
+            xh, yh, zh, rn = rot_frame(e, s)
+            rv = (r[4] - e[3], r[5] - e[4], r[6] - e[5])
+            rex, rey, rez = e[0] - s[0], e[1] - s[1], e[2] - s[2]
+            vex, vey, vez = e[3] - s[3], e[4] - s[4], e[5] - s[5]
+            hx, hy, hz = rey * vez - rez * vey, rez * vex - rex * vez, rex * vey - rey * vex
+            w = math.sqrt(hx * hx + hy * hy + hz * hz) / (rn * rn)
+            vx = rv[0] * xh[0] + rv[1] * xh[1] + rv[2] * xh[2] + w * y
+            vy = rv[0] * yh[0] + rv[1] * yh[1] + rv[2] * yh[2] - w * x
+            vz = rv[0] * zh[0] + rv[1] * zh[1] + rv[2] * zh[2]
+            ROT_STATES[round(r[0], 6)] = (x, y, z, vx * 86400.0, vy * 86400.0, vz * 86400.0)
+    return pts
+
+
+def downsample(points, max_pts=25000, cruise_hours=24, near_km=150000, moon_lookup=None):
+    """Keep every sample near Earth/Moon; never thin cruise samples coarser than ~1 day."""
+    if not points:
         return points
-    # Keep ends and uniform stride
-    stride = int(math.ceil(len(points) / max_pts))
-    out = points[::stride]
+    if len(points) <= 3:
+        return points
+    out = [points[0]]
+    for i in range(1, len(points) - 1):
+        r = math.sqrt(points[i][1] ** 2 + points[i][2] ** 2 + points[i][3] ** 2)
+        dt_h = (points[i][0] - out[-1][0]) * 24
+        near = r < near_km
+        if not near and moon_lookup is not None:
+            mo = moon_lookup(points[i][0])
+            if mo:
+                md = math.sqrt((points[i][1] - mo[0]) ** 2 + (points[i][2] - mo[1]) ** 2 + (points[i][3] - mo[2]) ** 2)
+                near = md < 40000
+        if near or dt_h >= cruise_hours - 1e-6:
+            out.append(points[i])
     if out[-1] is not points[-1]:
         out.append(points[-1])
+    if len(out) > max_pts:
+        # Thin only samples denser than 18 h; never go coarser than one day.
+        keep = [out[0]]
+        for i in range(1, len(out) - 1):
+            dt_h = (out[i][0] - keep[-1][0]) * 24
+            r = math.sqrt(out[i][1] ** 2 + out[i][2] ** 2 + out[i][3] ** 2)
+            near = r < near_km
+            if near or dt_h >= 18.0 or len(keep) + (len(out) - i) <= max_pts:
+                keep.append(out[i])
+        keep.append(out[-1])
+        out = keep
     return out
+
+
+def despike(points, max_deg=28.0, moon_lookup=None, min_seg_km=200):
+    """Remove isolated non-flyby detours that make a sharp corner."""
+    if len(points) < 5:
+        return points
+    pts = list(points)
+
+    def r_of(p):
+        return math.sqrt(p[1] ** 2 + p[2] ** 2 + p[3] ** 2)
+
+    def is_flyby(p):
+        if r_of(p) < 50000:
+            return True
+        if moon_lookup is not None:
+            mo = moon_lookup(p[0])
+            if mo:
+                md = math.sqrt((p[1] - mo[0]) ** 2 + (p[2] - mo[1]) ** 2 + (p[3] - mo[2]) ** 2)
+                if md < 50000:
+                    return True
+        return False
+
+    def ang(a, b, c):
+        u = (b[1] - a[1], b[2] - a[2], b[3] - a[3])
+        v = (c[1] - b[1], c[2] - b[2], c[3] - b[3])
+        nu = math.sqrt(u[0] ** 2 + u[1] ** 2 + u[2] ** 2)
+        nv = math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2)
+        if nu < min_seg_km or nv < min_seg_km:
+            return 0.0, nu + nv, math.sqrt((c[1] - a[1]) ** 2 + (c[2] - a[2]) ** 2 + (c[3] - a[3]) ** 2)
+        dot = max(-1.0, min(1.0, (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (nu * nv)))
+        chord = math.sqrt((c[1] - a[1]) ** 2 + (c[2] - a[2]) ** 2 + (c[3] - a[3]) ** 2)
+        return math.degrees(math.acos(dot)), nu + nv, chord
+
+    changed = True
+    rounds = 0
+    removed = 0
+    while changed and rounds < 4:
+        changed = False
+        rounds += 1
+        keep = [pts[0]]
+        i = 1
+        while i < len(pts) - 1:
+            a, b, c = keep[-1], pts[i], pts[i + 1]
+            deg, path, chord = ang(a, b, c)
+            detour = path > 1e-6 and chord < 0.85 * path
+            short = (c[0] - a[0]) < 5.0
+            if deg >= max_deg and not is_flyby(b) and detour and short:
+                # drop b
+                changed = True
+                removed += 1
+                i += 1
+                continue
+            keep.append(b)
+            i += 1
+        keep.append(pts[-1])
+        pts = keep
+    if removed:
+        print(f"    despike removed {removed} outlier sample(s)", flush=True)
+    return pts
 
 
 def main():
@@ -1100,12 +1514,17 @@ def main():
         t = (mjd - a[0]) / (b[0] - a[0] or 1)
         return a[1] + t * (b[1] - a[1])
 
+    def moon_at_join(mjd):
+        return moon_lookup(mjd), rse_lookup(mjd)
+
     traj = {}
     sources = {}
     measured = {}
 
+
     for m in MISSIONS:
         hid = m.get("horizons")
+        ROT_STATES.clear()
         start = iso2date(m["appear_start"])
         end = iso2date(m["appear_end"])
         points = None
@@ -1115,36 +1534,134 @@ def main():
                 # 1-day steps; 12 h for shorter / EM missions
                 span = (end - start).days
                 step = "12 h" if (span < 800 or m["id"].startswith("artemis")) else "1 d"
-                print(f"Fetching {m['name']} ({hid}) {start}–{end} {step}", flush=True)
-                raw = fetch_series(str(hid), start, end, step)
+                print(f"Fetching {m['name']} ({hid}) {start}–{end}", flush=True)
+                raw = []
+                # Cruise (or 12 h) over the full span; clips to Horizons coverage.
+                # If the first 90 mission days have no coverage (e.g. ACE), this
+                # still returns later years instead of aborting the whole fetch.
+                try:
+                    raw = fetch_series(str(hid), start, end, step)
+                except RuntimeError as e:
+                    if "no overlap" not in str(e):
+                        raise
+                    raw = []
+                if raw:
+                    cov_start = mjd2date(raw[0][0])
+                    fine_end = min(end, cov_start + timedelta(days=90))
+                    if (fine_end - cov_start).days >= 2:
+                        try:
+                            fine = fetch_series(str(hid), cov_start, fine_end, "6 h")
+                            if fine:
+                                t0, t1 = fine[0][0] - 1e-6, fine[-1][0] + 1e-6
+                                raw = [r for r in raw if r[0] < t0 or r[0] > t1] + fine
+                                raw.sort(key=lambda r: r[0])
+                        except RuntimeError as e:
+                            print(f"  fine-window skip: {e}", flush=True)
+                    # Densify close Earth/Moon approaches (petal flybys, lunar swings).
                 print(f"  {len(raw)} raw states", flush=True)
-                pts = []
-                for r in raw:
-                    e = interp(earth, r[0])
-                    s = interp(sun, r[0])
-                    if not e or not s:
-                        continue
-                    x, y, z, _rse = to_rot(r[1:4], e, s)
-                    pts.append((r[0], x, y, z))
+                pts = transform_raw(raw, earth, sun)
                 if len(pts) < 8:
                     raise RuntimeError(f"too few transformed points ({len(pts)})")
+                windows = close_approach_windows(pts, moon_lookup=moon_lookup)
+                if windows:
+                    print(f"  densifying {len(windows)} close-approach window(s) at 1 h", flush=True)
+                    extra = []
+                    for a, b in windows:
+                        da, db = mjd2date(a), mjd2date(b)
+                        if db <= da:
+                            db = da + timedelta(days=1)
+                        try:
+                            extra.extend(fetch_series(str(hid), da, db, "1 h"))
+                        except Exception as e:
+                            print(f"    close-approach skip {da}–{db}: {e}", flush=True)
+                    if extra:
+                        raw = merge_raw(raw, extra)
+                        pts = transform_raw(raw, earth, sun)
+                # Even denser sampling around close Earth perigees (phasing orbits).
+                tight = close_approach_windows(pts, r_km=25000, moon_pad=0, pad_days=0.6, merge_days=1, max_days=4, moon_lookup=None)
+                if tight:
+                    print(f"  densifying {len(tight)} perigee window(s) at 15 min", flush=True)
+                    extra = []
+                    for a, b in tight:
+                        da, db = mjd2date(a), mjd2date(b)
+                        if db <= da:
+                            db = da + timedelta(days=1)
+                        try:
+                            extra.extend(fetch_series(str(hid), da, db, "15 m"))
+                        except Exception as e:
+                            print(f"    perigee skip {da}–{db}: {e}", flush=True)
+                    if extra:
+                        raw = merge_raw(raw, extra)
+                        pts = transform_raw(raw, earth, sun)
                 first = pts[0][0]
                 want = d2mjd(start)
                 step_d = 0.5 if any(st["point"].startswith("EM") for st in m["stays"]) else 1.0
                 stitched = False
+                # Prefer amplitudes measured from the real Horizons stay, and a
+                # halo phase that meets the first/last Horizons sample, so the
+                # blend is a small C1 splice instead of a hook across a gap.
+                def meas_for_point(point_name, lo, hi):
+                    occ = [p for p in pts if lo <= p[0] <= hi]
+                    return measure_halo(occ, point_name, moon_lookup, rse_lookup)
+
                 if first > want + 3:
                     print(f"  stitching modeled prefix {start.isoformat()} → {mjd2iso(first)}", flush=True)
-                    prefix = model_mission(m, moon_ssb, earth, sun, step_days=step_d)
-                    prefix = [pr for pr in prefix if pr[0] < first - 0.1]
-                    pts = prefix + pts
+                    t_arr0 = d2mjd(iso2date(m["stays"][0]["arrival"]))
+                    if first <= t_arr0 + 2:
+                        # Horizons starts during the outbound transfer. Connect
+                        # launch to the first measured state; do not aim at a halo.
+                        def moon_pos(t):
+                            mo, _r = moon_at_join(t)
+                            return mo
+                        if m["id"] in ("change2", "change5", "change6", "ce5t1"):
+                            p0 = moon_pos(want)
+                        else:
+                            p0 = (42264.0, 0.0, 0.0)
+                        p1 = pts[0][1:]
+                        v1 = finite_vel(pts, 0)
+                        T = first - want or 1.0
+                        v0 = ((p1[0] - p0[0]) / T, (p1[1] - p0[1]) / T, (p1[2] - p0[2]) / T)
+                        prefix = []
+                        t = want
+                        while t < first - 0.05:
+                            pos = transfer_curve(p0, p1, t, want, first, v0=v0, v1=v1)
+                            prefix.append((t, pos[0], pos[1], pos[2]))
+                            t += min(0.5, step_d)
+                        print(f"    transfer prefix to first Horizons sample, {len(prefix)} pts", flush=True)
+                    else:
+                        point0 = m["stays"][0]["point"]
+                        meas = meas_for_point(point0, first, first + 400)
+                        tmpl = tmpl_from_meas(meas, point0)
+                        if m["id"] in HALO_OVERRIDE and not meas:
+                            tmpl = dict(HALO_OVERRIDE[m["id"]])
+                        target = pts[0][1:]
+                        ph, dmatch = best_phase(point0, moon_at_join, tmpl, first, target, t_arr0)
+                        print(f"    prefix phase {ph:.1f}d, join mismatch {dmatch:.0f} km", flush=True)
+                        prefix = model_mission(m, moon_ssb, earth, sun, step_days=min(0.5, step_d), tmpl_override=tmpl, phase0=ph)
+                        prefix = [pr for pr in prefix if pr[0] < first - 0.05]
+                    pts, win, gap = adaptive_blend(prefix, pts)
+                    print(f"    prefix blend window {win:.1f}d, raw gap {gap:.0f} km", flush=True)
                     stitched = True
                 last = pts[-1][0]
                 need = d2mjd(end)
                 if last < need - 3:
                     print(f"  stitching modeled suffix {mjd2iso(last)} → {end.isoformat()}", flush=True)
-                    suffix = model_mission(m, moon_ssb, earth, sun, step_days=step_d)
-                    suffix = [su for su in suffix if su[0] > last + 0.1]
-                    pts = pts + suffix
+                    # last stay whose arrival is at or before the join
+                    point1 = m["stays"][0]["point"]
+                    for st in m["stays"]:
+                        if d2mjd(iso2date(st["arrival"])) <= last:
+                            point1 = st["point"]
+                    meas = meas_for_point(point1, last - 400, last)
+                    tmpl = tmpl_from_meas(meas, point1)
+                    if m["id"] in HALO_OVERRIDE and not meas:
+                        tmpl = dict(HALO_OVERRIDE[m["id"]])
+                    target = pts[-1][1:]
+                    ph, dmatch = best_phase(point1, moon_at_join, tmpl, last, target, d2mjd(iso2date(m["stays"][0]["arrival"])))
+                    print(f"    suffix phase {ph:.1f}d, join mismatch {dmatch:.0f} km", flush=True)
+                    suffix = model_mission(m, moon_ssb, earth, sun, step_days=min(0.5, step_d), tmpl_override=tmpl, phase0=ph)
+                    suffix = [su for su in suffix if su[0] > last + 0.05]
+                    pts, win, gap = adaptive_blend(pts, suffix)
+                    print(f"    suffix blend window {win:.1f}d, raw gap {gap:.0f} km", flush=True)
                     stitched = True
                 src = "horizons+modeled" if stitched else "horizons"
                 points = pts
@@ -1156,7 +1673,16 @@ def main():
             step = 0.5 if any(st["point"].startswith("EM") for st in m["stays"]) else 1.0
             points = model_mission(m, moon_ssb, earth, sun, step_days=step)
             src = "modeled"
-        points = downsample(points, 5000)
+        n_in = len(points)
+        if os.environ.get("LAGRANGE_DUMP"):
+            import pickle
+            Path(os.environ["LAGRANGE_DUMP"]).mkdir(parents=True, exist_ok=True)
+            with open(Path(os.environ["LAGRANGE_DUMP"]) / f"{m['id']}.pkl", "wb") as fh:
+                pickle.dump({"points": points, "states": dict(ROT_STATES), "moon": moon_rot}, fh)
+        if os.environ.get("LAGRANGE_DUMP_ONLY"):
+            continue
+        points = smooth_track(points, ROT_STATES, moon_lookup, log=lambda msg: print(msg, flush=True))
+        print(f"  smooth resample {n_in} → {len(points)} pts", flush=True)
         traj[m["id"]] = pack_traj(points)
         sources[m["id"]] = src
         # Measure halo from occupation samples of the first long stay
@@ -1186,6 +1712,22 @@ def main():
             rse_vals.append(int(round(rse)))
             last_h = h
 
+    def delta_pack(pk):
+        """Delta-encode a pack (lossless): hours become centi-hour steps and
+        each coordinate array becomes successive differences. Decoded by
+        decodePack() in lagrange.js."""
+        if not pk:
+            return pk
+        out = {k: v for k, v in pk.items()}
+        ch = [int(round(h * 100)) for h in pk["hours"]]
+        out["hours"] = [ch[0]] + [ch[i] - ch[i - 1] for i in range(1, len(ch))]
+        for key in ("x", "y", "z", "km"):
+            if key in pk:
+                a = pk[key]
+                out[key] = [a[0]] + [a[i] - a[i - 1] for i in range(1, len(a))]
+        out["d"] = 1
+        return out
+
     out_traj = {
         "as_of": ASOF.isoformat(),
         "frame": "Earth-centered Sun–Earth rotating frame. +X points from the Sun through Earth; +Z follows Earth’s orbital angular momentum. Units are kilometres.",
@@ -1198,9 +1740,9 @@ def main():
             "earth_radius_km": 6378.137,
             "moon_radius_km": 1737.4,
         },
-        "moon": moon_pack,
-        "r_se": {"t0_mjd": round(t0, 6), "hours": hours, "km": rse_vals},
-        "spacecraft": traj,
+        "moon": delta_pack(moon_pack),
+        "r_se": delta_pack({"t0_mjd": round(t0, 6), "hours": hours, "km": rse_vals}),
+        "spacecraft": {k: delta_pack(v) for k, v in traj.items()},
         "sources": sources,
         "measured_halos": measured,
     }

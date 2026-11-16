@@ -35,7 +35,22 @@ function fmtFull(mjd) {
   return d.getUTCDate() + " " + MONTHS[d.getUTCMonth()] + " " + d.getUTCFullYear();
 }
 
+// Delta-encoded packs: hours as centi-hour steps, coordinates as differences.
+function decodePack(pack) {
+  if (!pack || !pack.d) return pack;
+  const out = Object.assign({}, pack, { d: 0 });
+  let acc = 0;
+  out.hours = pack.hours.map((v) => { acc += v; return acc / 100; });
+  for (const k of ["x", "y", "z", "km"]) {
+    if (!pack[k]) continue;
+    let a = 0;
+    out[k] = pack[k].map((v) => { a += v; return a; });
+  }
+  return out;
+}
+
 function unpack(pack) {
+  pack = decodePack(pack);
   if (!pack) return [];
   const t0 = pack.t0_mjd;
   const n = pack.n || pack.hours.length;
@@ -46,18 +61,101 @@ function unpack(pack) {
   return pts;
 }
 
-function atSeries(pts, mjd) {
-  if (!pts || !pts.length) return null;
-  if (mjd <= pts[0].mjd) return pts[0];
-  if (mjd >= pts[pts.length - 1].mjd) return pts[pts.length - 1];
+// Centripetal Catmull-Rom (no overshoot or cusps on uneven spacing).
+function crc(p0, p1, p2, p3, u) {
+  const d = (a, b) => Math.max(1e-6, Math.sqrt(Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z)));
+  const d01 = d(p0, p1), d12 = d(p1, p2), d23 = d(p2, p3);
+  const out = {};
+  for (const k of ["x", "y", "z"]) {
+    let m1 = (p1[k] - p0[k]) / d01 - (p2[k] - p0[k]) / (d01 + d12) + (p2[k] - p1[k]) / d12;
+    let m2 = (p2[k] - p1[k]) / d12 - (p3[k] - p1[k]) / (d12 + d23) + (p3[k] - p2[k]) / d23;
+    m1 *= d12; m2 *= d12;
+    const a = 2 * p1[k] - 2 * p2[k] + m1 + m2;
+    const b = -3 * p1[k] + 3 * p2[k] - 2 * m1 - m2;
+    out[k] = ((a * u + b) * u + m1) * u + p1[k];
+  }
+  return out;
+}
+
+// Position on the drawn curve: the same centripetal Catmull-Rom segment the
+// lines use, parameterised by time within the segment, so a moving dot always
+// sits exactly on the head of its own trail.
+function seriesCR(pts, i, u) {
+  const n = pts.length;
+  return crc(pts[Math.max(0, i - 1)], pts[i], pts[Math.min(n - 1, i + 1)], pts[Math.min(n - 1, i + 2)], u);
+}
+
+function seriesIndex(pts, mjd) {
   let lo = 0, hi = pts.length - 1;
   while (hi - lo > 1) {
     const mid = (lo + hi) >> 1;
     if (pts[mid].mjd <= mjd) lo = mid; else hi = mid;
   }
-  const a = pts[lo], b = pts[hi];
-  const t = (mjd - a.mjd) / (b.mjd - a.mjd || 1);
-  return { mjd, x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y), z: a.z + t * (b.z - a.z) };
+  return lo;
+}
+
+function atSeries(pts, mjd) {
+  if (!pts || !pts.length) return null;
+  if (mjd <= pts[0].mjd) return pts[0];
+  if (mjd >= pts[pts.length - 1].mjd) return pts[pts.length - 1];
+  const lo = seriesIndex(pts, mjd);
+  const a = pts[lo], b = pts[lo + 1];
+  const u = Math.max(0, Math.min(1, (mjd - a.mjd) / ((b.mjd - a.mjd) || 1e-6)));
+  const q = seriesCR(pts, lo, u);
+  q.mjd = mjd;
+  return q;
+}
+
+// Trail along the full-series curve from t0 to t1 (exact same geometry).
+function seriesSpan(pts, t0, t1, sub) {
+  const out = [];
+  if (!pts || pts.length < 2 || t1 <= t0) return out;
+  const n = pts.length;
+  const i0 = t0 <= pts[0].mjd ? 0 : seriesIndex(pts, t0);
+  const iEnd = t1 >= pts[n - 1].mjd ? n - 1 : seriesIndex(pts, t1);
+  const first = atSeries(pts, Math.max(t0, pts[0].mjd));
+  out.push(first);
+  for (let i = i0; i <= iEnd && i < n - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const span = (b.mjd - a.mjd) || 1e-6;
+    for (let j = 1; j <= sub; j++) {
+      const u = j / sub;
+      const t = a.mjd + u * span;
+      if (t <= first.mjd + 1e-9) continue;
+      if (t >= t1) break;
+      const q = seriesCR(pts, i, u);
+      q.mjd = t;
+      out.push(q);
+    }
+  }
+  const last = atSeries(pts, Math.min(t1, pts[n - 1].mjd));
+  if (last.mjd > out[out.length - 1].mjd + 1e-9) out.push(last);
+  return out;
+}
+
+function densifyPoints(pts, n, closed) {
+  if (!pts || pts.length < 3) return pts || [];
+  const src = pts.slice();
+  if (closed && dist3(src[0], src[src.length - 1]) < 2) src.pop();
+  const m = src.length;
+  const nSeg = closed ? m : m - 1;
+  const sub = Math.max(1, Math.min(16, Math.ceil(n / nSeg)));
+  const out = [];
+  for (let i = 0; i < nSeg; i++) {
+    const a = src[closed ? (i - 1 + m) % m : Math.max(0, i - 1)];
+    const b = src[i];
+    const c = src[closed ? (i + 1) % m : Math.min(m - 1, i + 1)];
+    const d = src[closed ? (i + 2) % m : Math.min(m - 1, i + 2)];
+    out.push(b);
+    for (let j = 1; j < sub; j++) {
+      const u = j / sub;
+      const q = crc(a, b, c, d, u);
+      q.mjd = (b.mjd || 0) + u * ((c.mjd || 0) - (b.mjd || 0));
+      out.push(q);
+    }
+  }
+  out.push(closed ? src[0] : src[m - 1]);
+  return out;
 }
 
 function lerp3(a, b, t) {
@@ -151,6 +249,7 @@ export async function startLagrange(opts) {
     traj = tj;
     C = tj.constants;
     moonPts = unpack(tj.moon);
+    tj.r_se = decodePack(tj.r_se);
     rseT0 = tj.r_se.t0_mjd;
     rseHours = tj.r_se.hours;
     rseKm = tj.r_se.km;
@@ -385,7 +484,7 @@ export async function startLagrange(opts) {
     const orbitMat = new THREE.LineBasicMaterial({
       color: COLORS.transfer, transparent: true, opacity: 0.32, depthWrite: false,
     });
-    const orbit = new THREE.LineLoop(new THREE.BufferGeometry(), orbitMat);
+    const orbit = new THREE.Line(new THREE.BufferGeometry(), orbitMat);
     orbit.visible = false;
     const pathMat = new THREE.LineBasicMaterial({
       color: 0xc5d0e8, transparent: true, opacity: 0.28, depthWrite: false,
@@ -503,23 +602,81 @@ export async function startLagrange(opts) {
     return { moon, rse, pts, occupying, transferring, launched, vis };
   }
 
+  function lPointAt(point, at) {
+    const moon = atSeries(moonPts, at) || { x: 384400, y: 0, z: 0 };
+    return pointPos(point, moon, rSe(at), C);
+  }
+
+  function periodFor(m, point) {
+    const mh = (traj.measured_halos || {})[m.id];
+    if (mh && mh[point] && mh[point].period > 5 && mh[point].period < 400) return mh[point].period;
+    return point.startsWith("EM") ? 14.5 : 178;
+  }
+
   function loopFor(m, at, point, P) {
     const pts = scPts[m.id];
     if (!pts || !pts.length) return null;
-    const period = point.startsWith("EM") ? 14.5 : 180;
-    const lo = at - period * 0.55, hi = at + period * 0.55;
-    const slice = [];
+    const Lnow = P.pts[point];
+    const pos = atSeries(pts, at);
+    if (!pos || !Lnow) return null;
+    const maxR = point.startsWith("EM") ? 100000 : 1100000;
+    // Current position must actually be in the halo, not on a petal or transfer.
+    if (dist3(pos, Lnow) > maxR) return null;
+
+    const expected = periodFor(m, point);
+    const rel = [];
+    const lo = at - expected * 1.3, hi = at + expected * 0.08;
+    let inWin = 0, nearWin = 0;
     for (let i = 0; i < pts.length; i++) {
-      if (pts[i].mjd >= lo && pts[i].mjd <= hi) slice.push(pts[i]);
+      const p = pts[i];
+      if (p.mjd < lo || p.mjd > hi) continue;
+      inWin++;
+      const Lt = lPointAt(point, p.mjd);
+      if (dist3(p, Lt) > maxR) continue;
+      nearWin++;
+      rel.push({ mjd: p.mjd, x: p.x - Lt.x, y: p.y - Lt.y, z: p.z - Lt.z });
     }
-    if (slice.length < 8) return null;
-    const c = P.pts[point];
-    if (!c) return null;
-    // only keep points near the L-point (within a generous halo)
-    const maxR = point.startsWith("EM") ? 120000 : 1600000;
-    const near = slice.filter((p) => dist3(p, c) < maxR);
-    if (near.length < 8) return null;
-    return near;
+    // Petal orbits and transfers skim the L-point; only draw a halo when the
+    // craft has actually been in the neighborhood for most of a period.
+    if (rel.length < 8 || nearWin < 0.7 * inWin) return null;
+
+    let bestGap = 1e99, bestSlice = null;
+    const steps = 24;
+    for (let k = 0; k <= steps; k++) {
+      const per = expected * (0.72 + 0.48 * (k / steps));
+      const slice = [];
+      for (let i = 0; i < rel.length; i++) {
+        if (rel[i].mjd >= at - per && rel[i].mjd <= at + 0.02 * per) slice.push(rel[i]);
+      }
+      if (slice.length < 8) continue;
+      const gap = dist3(slice[0], slice[slice.length - 1]);
+      if (gap < bestGap) { bestGap = gap; bestSlice = slice; }
+    }
+    if (!bestSlice) bestSlice = rel;
+    const amp = Math.max(1, ...bestSlice.map((p) => Math.hypot(p.x, p.y, p.z)));
+    let closed = bestGap < Math.max(30000, 0.16 * amp);
+    if (closed && bestSlice.length > 4) {
+      // Only close the loop when the path is heading the same way at both
+      // ends; otherwise the seam would draw a corner.
+      const n = bestSlice.length;
+      const a0 = bestSlice[0], a1 = bestSlice[1], b0 = bestSlice[n - 2], b1 = bestSlice[n - 1];
+      const u = [a1.x - a0.x, a1.y - a0.y, a1.z - a0.z], v = [b1.x - b0.x, b1.y - b0.y, b1.z - b0.z];
+      const c = (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / ((Math.hypot(...u) * Math.hypot(...v)) || 1);
+      if (c < Math.cos(Math.PI / 6)) closed = false;
+    }
+    let curve = bestSlice.slice();
+    if (closed && curve.length > 2) {
+      // Spread the small closure gap along the loop instead of jumping across it.
+      const f = curve[0], l = curve[curve.length - 1];
+      const t0 = f.mjd, span = (l.mjd - f.mjd) || 1;
+      const gx = l.x - f.x, gy = l.y - f.y, gz = l.z - f.z;
+      curve = curve.slice(0, -1).map((p) => {
+        const w = (p.mjd - t0) / span;
+        return { mjd: p.mjd, x: p.x - w * gx, y: p.y - w * gy, z: p.z - w * gz };
+      });
+    }
+    const dense = densifyPoints(curve, closed ? 160 : 140, closed);
+    return dense.map((r) => ({ x: Lnow.x + r.x, y: Lnow.y + r.y, z: Lnow.z + r.z, mjd: r.mjd }));
   }
 
   function phasePos(loop, at, clock, periodSec, pointKind) {
@@ -541,19 +698,12 @@ export async function startLagrange(opts) {
     const pts = scPts[m.id];
     if (!pts) return null;
     const start = isoToMjd(m.appear_start);
-    const lo = Math.max(start, at - 80);
-    const out = [];
-    for (let i = 0; i < pts.length; i++) {
-      if (pts[i].mjd >= lo && pts[i].mjd <= at + 0.01) out.push(pts[i]);
-    }
-    if (out.length && out[out.length - 1].mjd < at - 0.2) {
-      const cur = atSeries(pts, at);
-      if (cur) out.push(cur);
-    }
+    const lo = Math.max(start, at - 60);
+    const out = seriesSpan(pts, lo, at, 8);
     return out.length >= 2 ? out : null;
   }
 
-  function setLine(line, pts, closed) {
+  function setLine(line, pts) {
     if (!pts || pts.length < 2) { line.visible = false; return; }
     const arr = new Float32Array(pts.length * 3);
     for (let i = 0; i < pts.length; i++) {
@@ -565,6 +715,7 @@ export async function startLagrange(opts) {
     line.geometry = new THREE.BufferGeometry();
     line.geometry.setAttribute("position", new THREE.BufferAttribute(arr, 3));
     line.visible = true;
+    line.userData.pts = pts;
   }
 
   function bodyVisualRadius(trueR, camDist, minFrac) {
@@ -1005,5 +1156,23 @@ export async function startLagrange(opts) {
     },
     missions: missions.map((m) => m.id),
     get view() { return activeView; },
+    moonAt(t) { const q = atSeries(moonPts, t); return q ? [q.x, q.y, q.z] : null; },
+    polylines() {
+      const out = {};
+      for (const [id, o] of Object.entries(scObj)) {
+        const read = (line) => {
+          if (!line || !line.visible || !line.geometry) return null;
+          const attr = line.geometry.getAttribute("position");
+          if (!attr || attr.count < 2) return null;
+          const pts = [];
+          for (let i = 0; i < attr.count; i++) {
+            pts.push([attr.getX(i) / UNIT, attr.getY(i) / UNIT, attr.getZ(i) / UNIT]);
+          }
+          return pts;
+        };
+        out[id] = { orbit: read(o.orbit), path: (o.path && o.path.visible && o.path.userData.pts) ? o.path.userData.pts.map((q) => [q.x, q.y, q.z, q.mjd]) : null, pos: o.group && o.group.visible ? [o.group.position.x / UNIT, o.group.position.y / UNIT, o.group.position.z / UNIT] : null };
+      }
+      return out;
+    },
   };
 }
