@@ -1,0 +1,673 @@
+{
+  "as_of": "2026-11-16",
+  "gcat_update": "2026-11-15",
+  "count": 26,
+  "missions": [
+    {
+      "id": "isee3",
+      "name": "ISEE-3 (ICE)",
+      "agency": "NASA",
+      "cospar": "1978-079A",
+      "launch": "1978-08-12",
+      "launch_time": "15:12 UTC",
+      "appear_start": "1978-08-12",
+      "appear_end": "1983-04-01",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "1978-11-20",
+          "departure": "1982-06-10"
+        }
+      ],
+      "status": "heliocentric disposal",
+      "url": "https://science.nasa.gov/mission/isee-3/",
+      "summary": "Launched in 1978, ISEE-3 was the first spacecraft to orbit a Lagrange point, circling Sun\u2013Earth L1 in a halo orbit. In 1982 it left L1 and was later retargeted, as ICE, to fly past comets Giacobini\u2013Zinner and Halley. It remains in a heliocentric orbit.",
+      "horizons_id": -111,
+      "source": "modeled",
+      "approximate": true,
+      "source_note": "This path is modeled from published dates and typical halo amplitudes; no public Horizons ephemeris covered the flight."
+    },
+    {
+      "id": "wind",
+      "name": "WIND",
+      "agency": "NASA",
+      "cospar": "1994-071A",
+      "launch": "1994-11-01",
+      "launch_time": "09:31 UTC",
+      "appear_start": "1994-11-01",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "1995-02-03",
+          "departure": "2003-11-07"
+        },
+        {
+          "point": "SE-L2",
+          "arrival": "2003-11-07",
+          "departure": "2004-02-03"
+        },
+        {
+          "point": "SE-L1",
+          "arrival": "2004-06-02",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://wind.nasa.gov/",
+      "summary": "NASA\u2019s WIND observatory studies the solar wind. After a long series of petal orbits and a stay at Sun\u2013Earth L2 in 2003\u20132004, it has operated at Sun\u2013Earth L1 since June 2004.",
+      "horizons_id": -8,
+      "source": "horizons"
+    },
+    {
+      "id": "soho",
+      "name": "SOHO",
+      "agency": "ESA / NASA",
+      "cospar": "1995-065A",
+      "launch": "1995-12-02",
+      "launch_time": "08:08 UTC",
+      "appear_start": "1995-12-02",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "1995-12-23",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://soho.nascom.nasa.gov/",
+      "summary": "The Solar and Heliospheric Observatory has watched the Sun from a halo orbit about Sun\u2013Earth L1 since December 1995, a joint mission of ESA and NASA.",
+      "horizons_id": -21,
+      "source": "horizons"
+    },
+    {
+      "id": "ace",
+      "name": "ACE",
+      "agency": "NASA",
+      "cospar": "1997-045A",
+      "launch": "1997-08-25",
+      "launch_time": "14:39 UTC",
+      "appear_start": "1997-08-25",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "1997-09-16",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://izw1.caltech.edu/ACE/",
+      "summary": "The Advanced Composition Explorer measures the solar wind and energetic particles from a Lissajous orbit about Sun\u2013Earth L1, where it has remained since 1997.",
+      "horizons_id": -92,
+      "source": "horizons+modeled",
+      "approximate": true,
+      "source_note": "Part of this path is modeled; the rest follows JPL Horizons."
+    },
+    {
+      "id": "wmap",
+      "name": "WMAP",
+      "agency": "NASA",
+      "cospar": "2001-027A",
+      "launch": "2001-06-30",
+      "launch_time": "19:46 UTC",
+      "appear_start": "2001-06-30",
+      "appear_end": "2010-12-15",
+      "stays": [
+        {
+          "point": "SE-L2",
+          "arrival": "2001-08-26",
+          "departure": "2010-10-20"
+        }
+      ],
+      "status": "heliocentric disposal",
+      "url": "https://map.gsfc.nasa.gov/",
+      "summary": "The Wilkinson Microwave Anisotropy Probe mapped the cosmic microwave background from Sun\u2013Earth L2 between 2001 and 2010, then was placed in a heliocentric orbit away from the Earth\u2013Moon system.",
+      "horizons_id": -165,
+      "source": "horizons+modeled",
+      "approximate": true,
+      "source_note": "Part of this path is modeled; the rest follows JPL Horizons."
+    },
+    {
+      "id": "genesis",
+      "name": "Genesis",
+      "agency": "NASA",
+      "cospar": "2001-034A",
+      "launch": "2001-08-08",
+      "launch_time": "16:13 UTC",
+      "appear_start": "2001-08-08",
+      "appear_end": "2005-04-01",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "2001-08-29",
+          "departure": "2004-03-26"
+        },
+        {
+          "point": "SE-L2",
+          "arrival": "2004-06-14",
+          "departure": "2004-08-15"
+        },
+        {
+          "point": "SE-L1",
+          "arrival": "2004-12-05",
+          "departure": "2005-02-27"
+        }
+      ],
+      "status": "heliocentric disposal",
+      "url": "https://science.nasa.gov/mission/genesis/",
+      "summary": "Genesis collected samples of the solar wind at Sun\u2013Earth L1. After a brief visit to L2 and a return to L1, its sample capsule landed on Earth in September 2004; the spacecraft itself was left in a heliocentric orbit.",
+      "horizons_id": -47,
+      "source": "horizons+modeled",
+      "approximate": true,
+      "source_note": "Part of this path is modeled; the rest follows JPL Horizons."
+    },
+    {
+      "id": "artemis-p1",
+      "name": "ARTEMIS P1",
+      "agency": "NASA",
+      "cospar": "2007-004B",
+      "launch": "2007-02-17",
+      "launch_time": "23:01 UTC",
+      "appear_start": "2010-01-15",
+      "appear_end": "2011-07-15",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "2010-02-14",
+          "departure": "2010-05-04"
+        },
+        {
+          "point": "EM-L2",
+          "arrival": "2010-08-30",
+          "departure": "2010-12-30"
+        },
+        {
+          "point": "EM-L1",
+          "arrival": "2011-01-11",
+          "departure": "2011-06-24"
+        }
+      ],
+      "status": "retired-departed",
+      "url": "https://science.nasa.gov/mission/themis/",
+      "summary": "Launched in 2007 as THEMIS B, ARTEMIS P1 was the first spacecraft to occupy Earth\u2013Moon L2, after a staging orbit at Sun\u2013Earth L1. It later moved to Earth\u2013Moon L1 and then into lunar orbit, where it remains a lunar orbiter.",
+      "horizons_id": -192,
+      "source": "horizons"
+    },
+    {
+      "id": "artemis-p2",
+      "name": "ARTEMIS P2",
+      "agency": "NASA",
+      "cospar": "2007-004C",
+      "launch": "2007-02-17",
+      "launch_time": "23:01 UTC",
+      "appear_start": "2010-02-01",
+      "appear_end": "2011-08-01",
+      "stays": [
+        {
+          "point": "SE-L2",
+          "arrival": "2010-03-29",
+          "departure": "2010-06-17"
+        },
+        {
+          "point": "EM-L1",
+          "arrival": "2010-10-10",
+          "departure": "2011-07-15"
+        }
+      ],
+      "status": "retired-departed",
+      "url": "https://science.nasa.gov/mission/themis/",
+      "summary": "Launched in 2007 as THEMIS C, ARTEMIS P2 staged at Sun\u2013Earth L2 in 2010, then occupied Earth\u2013Moon L1 with its companion P1 \u2014 the first pair of spacecraft at the Earth\u2013Moon Lagrange points. It is now a lunar orbiter.",
+      "horizons_id": -193,
+      "source": "horizons"
+    },
+    {
+      "id": "herschel",
+      "name": "Herschel",
+      "agency": "ESA",
+      "cospar": "2009-026A",
+      "launch": "2009-05-14",
+      "launch_time": "13:12 UTC",
+      "appear_start": "2009-05-14",
+      "appear_end": "2013-05-15",
+      "stays": [
+        {
+          "point": "SE-L2",
+          "arrival": "2009-06-05",
+          "departure": "2013-03-19"
+        }
+      ],
+      "status": "heliocentric disposal",
+      "url": "https://www.esa.int/Science_Exploration/Space_Science/Herschel",
+      "summary": "ESA\u2019s Herschel Space Observatory observed the infrared universe from a halo orbit about Sun\u2013Earth L2. After its helium coolant was exhausted in 2013, it was placed in a heliocentric parking orbit.",
+      "horizons_id": -486,
+      "source": "horizons"
+    },
+    {
+      "id": "planck",
+      "name": "Planck",
+      "agency": "ESA",
+      "cospar": "2009-026B",
+      "launch": "2009-05-14",
+      "launch_time": "13:12 UTC",
+      "appear_start": "2009-05-14",
+      "appear_end": "2013-10-31",
+      "stays": [
+        {
+          "point": "SE-L2",
+          "arrival": "2009-06-09",
+          "departure": "2013-08-24"
+        }
+      ],
+      "status": "heliocentric disposal",
+      "url": "https://www.esa.int/Science_Exploration/Space_Science/Planck",
+      "summary": "Planck, launched with Herschel, mapped the cosmic microwave background from Sun\u2013Earth L2. The spacecraft was commanded into a heliocentric orbit in 2013 at the end of the mission.",
+      "horizons_id": -489,
+      "source": "horizons"
+    },
+    {
+      "id": "change2",
+      "name": "Chang'e 2",
+      "agency": "CNSA",
+      "cospar": "2010-050A",
+      "launch": "2010-10-01",
+      "launch_time": "10:59 UTC",
+      "appear_start": "2011-06-08",
+      "appear_end": "2012-07-15",
+      "stays": [
+        {
+          "point": "SE-L2",
+          "arrival": "2011-08-25",
+          "departure": "2012-05-30"
+        }
+      ],
+      "status": "heliocentric disposal",
+      "url": "https://www.cnsa.gov.cn/english/",
+      "summary": "After completing its lunar survey, Chang'e 2 traveled to a halo orbit about Sun\u2013Earth L2, arriving in August 2011. It left L2 on 30 May 2012 for a flyby of asteroid 4179 Toutatis and remains in a heliocentric orbit. Its path here is modeled; no public Horizons ephemeris was available.",
+      "approximate": true,
+      "horizons_id": null,
+      "source": "modeled",
+      "source_note": "This path is modeled from published dates and typical halo amplitudes; no public Horizons ephemeris covered the flight."
+    },
+    {
+      "id": "gaia",
+      "name": "Gaia",
+      "agency": "ESA",
+      "cospar": "2013-074A",
+      "launch": "2013-12-19",
+      "launch_time": "09:12 UTC",
+      "appear_start": "2013-12-19",
+      "appear_end": "2025-05-15",
+      "stays": [
+        {
+          "point": "SE-L2",
+          "arrival": "2014-01-13",
+          "departure": "2025-02-08"
+        }
+      ],
+      "status": "heliocentric disposal",
+      "url": "https://www.esa.int/Science_Exploration/Space_Science/Gaia",
+      "summary": "Gaia charted nearly two billion stars from a Lissajous orbit about Sun\u2013Earth L2 from 2014 until early 2025, when it was moved into a stable heliocentric retirement orbit away from Earth.",
+      "horizons_id": -139479,
+      "source": "horizons"
+    },
+    {
+      "id": "ce5t1",
+      "name": "Chang'e 5-T1",
+      "agency": "CNSA",
+      "cospar": "2014-065A",
+      "launch": "2014-10-23",
+      "launch_time": "18:00 UTC",
+      "appear_start": "2014-11-01",
+      "appear_end": "2015-02-15",
+      "stays": [
+        {
+          "point": "EM-L2",
+          "arrival": "2014-11-27",
+          "departure": "2015-01-05"
+        }
+      ],
+      "status": "retired-departed",
+      "url": "https://www.cnsa.gov.cn/english/",
+      "summary": "The Chang'e 5-T1 service module, after a lunar flyby test of the sample-return capsule, entered an orbit about Earth\u2013Moon L2 in late 2014 and left the point in January 2015. Its path here is modeled; no public Horizons ephemeris was available.",
+      "approximate": true,
+      "horizons_id": null,
+      "source": "modeled",
+      "source_note": "This path is modeled from published dates and typical halo amplitudes; no public Horizons ephemeris covered the flight."
+    },
+    {
+      "id": "dscovr",
+      "name": "DSCOVR",
+      "agency": "NOAA / NASA",
+      "cospar": "2015-007A",
+      "launch": "2015-02-11",
+      "launch_time": "23:03 UTC",
+      "appear_start": "2015-02-11",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "2015-06-08",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://www.nesdis.noaa.gov/current-satellite-missions/currently-flying/dscovr-deep-space-climate-observatory",
+      "summary": "The Deep Space Climate Observatory, a NOAA and NASA mission, monitors the solar wind and images the sunlit Earth from a Lissajous orbit about Sun\u2013Earth L1, which it entered in June 2015.",
+      "horizons_id": -78,
+      "source": "horizons"
+    },
+    {
+      "id": "lpf",
+      "name": "LISA Pathfinder",
+      "agency": "ESA / NASA",
+      "cospar": "2015-070A",
+      "launch": "2015-12-03",
+      "launch_time": "04:04 UTC",
+      "appear_start": "2015-12-03",
+      "appear_end": "2017-08-15",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "2016-01-22",
+          "departure": "2017-06-30"
+        }
+      ],
+      "status": "heliocentric disposal",
+      "url": "https://www.esa.int/Science_Exploration/Space_Science/LISA_Pathfinder",
+      "summary": "LISA Pathfinder demonstrated the free-fall and measurement technology needed for a future gravitational-wave observatory, from a halo orbit about Sun\u2013Earth L1, before being sent into a heliocentric orbit in 2017.",
+      "horizons_id": -141043,
+      "source": "horizons+modeled",
+      "approximate": true,
+      "source_note": "Part of this path is modeled; the rest follows JPL Horizons."
+    },
+    {
+      "id": "queqiao",
+      "name": "Queqiao",
+      "agency": "CNSA",
+      "cospar": "2018-045A",
+      "launch": "2018-05-20",
+      "launch_time": "21:28 UTC",
+      "appear_start": "2018-05-20",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "EM-L2",
+          "arrival": "2018-06-14",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://www.cnsa.gov.cn/english/",
+      "summary": "Queqiao is a communications relay in a halo orbit about Earth\u2013Moon L2, supporting the Chang'e 4 lander and rover on the lunar far side. It has remained at that point since June 2018. Its path here is modeled; no public Horizons ephemeris was available.",
+      "approximate": true,
+      "horizons_id": null,
+      "source": "modeled",
+      "source_note": "This path is modeled from published dates and typical halo amplitudes; no public Horizons ephemeris covered the flight."
+    },
+    {
+      "id": "spektrrg",
+      "name": "Spektr-RG",
+      "agency": "Roscosmos / DLR",
+      "cospar": "2019-040A",
+      "launch": "2019-07-13",
+      "launch_time": "12:30 UTC",
+      "appear_start": "2019-07-13",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L2",
+          "arrival": "2019-10-21",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://www.dlr.de/en/research-and-transfer/projects-and-missions/erosita",
+      "summary": "Spektr-RG is a Russian\u2013German X-ray observatory in a halo orbit about Sun\u2013Earth L2, which it reached in October 2019. The eROSITA instrument was switched off in 2022; the spacecraft and the ART-XC instrument remain at L2. Its path here is modeled; no public Horizons ephemeris was available.",
+      "approximate": true,
+      "horizons_id": null,
+      "source": "modeled",
+      "source_note": "This path is modeled from published dates and typical halo amplitudes; no public Horizons ephemeris covered the flight."
+    },
+    {
+      "id": "change5",
+      "name": "Chang'e 5 orbiter",
+      "agency": "CNSA",
+      "cospar": "2020-087A",
+      "launch": "2020-11-23",
+      "launch_time": "20:30 UTC",
+      "appear_start": "2021-02-01",
+      "appear_end": "2021-10-01",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "2021-03-15",
+          "departure": "2021-08-17"
+        }
+      ],
+      "status": "retired-departed",
+      "url": "https://www.cnsa.gov.cn/english/",
+      "summary": "After sending its sample capsule back to Earth, the Chang'e 5 orbiter entered a halo orbit about Sun\u2013Earth L1 in March 2021 and later left that point for further cislunar operations. Its path here is modeled; no public Horizons ephemeris was available.",
+      "approximate": true,
+      "horizons_id": null,
+      "source": "modeled",
+      "source_note": "This path is modeled from published dates and typical halo amplitudes; no public Horizons ephemeris covered the flight."
+    },
+    {
+      "id": "jwst",
+      "name": "James Webb Space Telescope",
+      "agency": "NASA / ESA / CSA",
+      "cospar": "2021-130A",
+      "launch": "2021-12-25",
+      "launch_time": "12:20 UTC",
+      "appear_start": "2021-12-25",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L2",
+          "arrival": "2022-01-24",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://webb.nasa.gov/",
+      "summary": "The James Webb Space Telescope observes the infrared universe from a halo orbit about Sun\u2013Earth L2, which it entered on 24 January 2022. The halo\u2019s amplitude is about 800,000 kilometres.",
+      "horizons_id": -170,
+      "source": "horizons"
+    },
+    {
+      "id": "euclid",
+      "name": "Euclid",
+      "agency": "ESA / NASA",
+      "cospar": "2023-092A",
+      "launch": "2023-07-01",
+      "launch_time": "15:12 UTC",
+      "appear_start": "2023-07-01",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L2",
+          "arrival": "2023-07-28",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://www.esa.int/Science_Exploration/Space_Science/Euclid",
+      "summary": "Euclid is mapping the large-scale structure of the Universe from a halo orbit about Sun\u2013Earth L2, which it reached in July 2023, in order to study dark matter and dark energy.",
+      "horizons_id": -680,
+      "source": "horizons"
+    },
+    {
+      "id": "aditya",
+      "name": "Aditya-L1",
+      "agency": "ISRO",
+      "cospar": "2023-132A",
+      "launch": "2023-09-02",
+      "launch_time": "06:20 UTC",
+      "appear_start": "2023-09-02",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "2024-01-06",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://www.isro.gov.in/Aditya_L1.html",
+      "summary": "Aditya-L1 is India\u2019s first dedicated solar observatory. It entered a halo orbit about Sun\u2013Earth L1 on 6 January 2024 and studies the Sun\u2019s atmosphere and the solar wind.",
+      "horizons_id": -156,
+      "source": "horizons"
+    },
+    {
+      "id": "change6",
+      "name": "Chang'e 6 orbiter",
+      "agency": "CNSA",
+      "cospar": "2024-083A",
+      "launch": "2024-05-03",
+      "launch_time": "09:27 UTC",
+      "appear_start": "2024-07-01",
+      "appear_end": "2025-08-15",
+      "stays": [
+        {
+          "point": "SE-L2",
+          "arrival": "2024-09-09",
+          "departure": "2025-06-30"
+        }
+      ],
+      "status": "retired-departed",
+      "url": "https://www.cnsa.gov.cn/english/",
+      "summary": "After the Chang'e 6 sample-return from the lunar far side, the orbiter was sent to a halo orbit about Sun\u2013Earth L2, arriving in September 2024, and later left that point. The departure date is approximate, and the path is modeled; no public Horizons ephemeris was available.",
+      "approximate": true,
+      "horizons_id": null,
+      "source": "modeled",
+      "source_note": "This path is modeled from published dates and typical halo amplitudes; no public Horizons ephemeris covered the flight."
+    },
+    {
+      "id": "imap",
+      "name": "IMAP",
+      "agency": "NASA",
+      "cospar": "2025-215A",
+      "launch": "2025-09-24",
+      "launch_time": "11:30 UTC",
+      "appear_start": "2025-09-24",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "2026-01-10",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://science.nasa.gov/mission/imap/",
+      "summary": "The Interstellar Mapping and Acceleration Probe studies the boundary of the heliosphere from a halo orbit about Sun\u2013Earth L1, which it reached in January 2026 after launch on 24 September 2025.",
+      "horizons_id": -43,
+      "source": "horizons"
+    },
+    {
+      "id": "swfo",
+      "name": "SOLAR-1 (SWFO-L1)",
+      "agency": "NOAA / NASA",
+      "cospar": "2025-215B",
+      "launch": "2025-09-24",
+      "launch_time": "11:30 UTC",
+      "appear_start": "2025-09-24",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "2026-01-23",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://www.nesdis.noaa.gov/swfo",
+      "summary": "NOAA\u2019s Space Weather Follow On spacecraft, launched with IMAP and later renamed SOLAR-1, monitors the solar wind from Sun\u2013Earth L1 to support space-weather forecasts. It arrived at L1 on 23 January 2026.",
+      "horizons_id": -231,
+      "source": "horizons"
+    },
+    {
+      "id": "carruthers",
+      "name": "Carruthers Geocorona Observatory",
+      "agency": "NASA",
+      "cospar": "2025-215C",
+      "launch": "2025-09-24",
+      "launch_time": "11:30 UTC",
+      "appear_start": "2025-09-24",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L1",
+          "arrival": "2026-01-08",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://science.nasa.gov/mission/carruthers-geocorona-observatory/",
+      "summary": "The Carruthers Geocorona Observatory, named for physicist Dr. George Carruthers, images Earth\u2019s extended ultraviolet atmosphere from Sun\u2013Earth L1. It launched with IMAP on 24 September 2025 and arrived in January 2026.",
+      "horizons_id": -171,
+      "source": "horizons"
+    },
+    {
+      "id": "roman",
+      "name": "Nancy Grace Roman Space Telescope",
+      "agency": "NASA",
+      "cospar": "2026-199A",
+      "launch": "2026-08-30",
+      "launch_time": "11:25 UTC",
+      "appear_start": "2026-08-30",
+      "appear_end": "2026-11-16",
+      "stays": [
+        {
+          "point": "SE-L2",
+          "arrival": "2026-09-18",
+          "departure": null
+        }
+      ],
+      "status": "active",
+      "url": "https://roman.gsfc.nasa.gov/",
+      "summary": "The Nancy Grace Roman Space Telescope launched on 30 August 2026 and entered a halo orbit about Sun\u2013Earth L2 around 18 September 2026. It is designed for wide-field infrared surveys of dark energy, exoplanets, and the nearby universe.",
+      "horizons_id": -211,
+      "source": "horizons"
+    }
+  ],
+  "points": {
+    "SE-L1": {
+      "name": "Sun\u2013Earth L1",
+      "short": "SE-L1",
+      "summary": "Sun\u2013Earth L1 lies about 1.5 million kilometres sunward of Earth, where the gravitational pull of the Sun and Earth, together with the orbital motion, allow a spacecraft to remain in a halo or Lissajous orbit and watch the Sun and the solar wind continuously."
+    },
+    "SE-L2": {
+      "name": "Sun\u2013Earth L2",
+      "short": "SE-L2",
+      "summary": "Sun\u2013Earth L2 lies about 1.5 million kilometres beyond Earth, opposite the Sun. A spacecraft there stays lined up with Earth as both travel around the Sun, which suits cold, stable observatories such as Webb, Euclid, Gaia, and Roman."
+    },
+    "EM-L1": {
+      "name": "Earth\u2013Moon L1",
+      "short": "EM-L1",
+      "summary": "Earth\u2013Moon L1 lies between the Earth and the Moon, roughly 58,000 to 61,000 kilometres from the Moon. ARTEMIS P1 and P2 were the first spacecraft to occupy this point, in 2010\u20132011, before entering lunar orbit."
+    },
+    "EM-L2": {
+      "name": "Earth\u2013Moon L2",
+      "short": "EM-L2",
+      "summary": "Earth\u2013Moon L2 lies beyond the Moon, about 64,500 kilometres farther from Earth. It is a natural place for a far-side communications relay. Queqiao has occupied a halo orbit there since 2018; ARTEMIS P1 and Chang'e 5-T1 visited earlier."
+    },
+    "SE-L3": {
+      "name": "Sun\u2013Earth L3",
+      "short": "SE-L3",
+      "summary": "Sun\u2013Earth L3 lies on the far side of the Sun, opposite Earth. No artificial spacecraft has been stationed there."
+    },
+    "SE-L4": {
+      "name": "Sun\u2013Earth L4",
+      "short": "SE-L4",
+      "summary": "Sun\u2013Earth L4 leads Earth in its orbit by 60 degrees, about 150 million kilometres away. No spacecraft has been stationed there; STEREO-A and OSIRIS-REx passed through the region on other missions."
+    },
+    "SE-L5": {
+      "name": "Sun\u2013Earth L5",
+      "short": "SE-L5",
+      "summary": "Sun\u2013Earth L5 trails Earth in its orbit by 60 degrees, about 150 million kilometres away. No spacecraft has been stationed there; STEREO-B and Hayabusa2 passed through the region on other missions."
+    }
+  }
+}

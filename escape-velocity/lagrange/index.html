@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="description" content="Lagrange — every spacecraft that has occupied a Sun–Earth or Earth–Moon Lagrange point, from ISEE-3 in 1978 to the present." />
+  <title>Lagrange · Escape Velocity · Objects In Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://dkossin.com/styles.css" />
+  <link rel="stylesheet" href="../escape-velocity.css?v=lg1" />
+  <link rel="stylesheet" href="../constellation.css?v=lg1" />
+  <link rel="stylesheet" href="lagrange.css?v=lg1" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="main.js?v=lg1"></script>
+  <!-- Cloudflare Web Analytics --><script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "ed4660d74de24898991981cdb05e73b9"}'></script><!-- End Cloudflare Web Analytics -->
+</head>
+<body class="ev-page sl-page lg-page">
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="nebula" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="https://dkossin.com/">Objects In Space</a>
+    <nav>
+      <a href="https://dkossin.com/">Home</a>
+      <a href="https://dkossin.com/quantum-realm/">Quantum Realm</a>
+      <a class="active" href="../">Escape Velocity</a>
+      <a href="https://dkossin.com/stellar-events/">Stellar Events</a>
+      <a href="https://dkossin.com/orrery/">Orrery</a>
+    </nav>
+  </header>
+
+  <main class="ev-main sl-main lg-main">
+    <nav class="ev-tabs" aria-label="Escape Velocity sections">
+      <a href="../">Launches</a>
+      <a href="../starlink/">Starlink</a>
+      <a href="../amazon-leo/">Amazon Leo</a>
+      <a href="../oneweb/">OneWeb</a>
+      <a href="./" aria-current="page">Lagrange</a>
+    </nav>
+
+    <section class="sl-stage lg-stage" id="lg-stage" aria-label="Spacecraft at Lagrange points over time">
+      <canvas id="lg-canvas" role="img" aria-label="Sun–Earth view of spacecraft traveling to and orbiting Lagrange points at the selected date"></canvas>
+      <div id="lg-labels" class="lg-labels" aria-hidden="true"></div>
+
+      <div class="sl-title">
+        <h1>Lagrange</h1>
+        <p id="lg-span">Sun–Earth and Earth–Moon points, 1978 to today</p>
+      </div>
+
+      <div class="sl-clock" aria-live="off">
+        <p class="sl-year" id="lg-year">—</p>
+        <p class="sl-date" id="lg-date">—</p>
+      </div>
+
+      <div class="lg-fly" id="lg-fly" role="group" aria-label="Camera views">
+        <button type="button" data-view="overview" aria-pressed="true">Overview</button>
+        <button type="button" data-view="earth">Earth</button>
+        <button type="button" data-view="SE-L1">SE-L1</button>
+        <button type="button" data-view="SE-L2">SE-L2</button>
+        <button type="button" data-view="EM-L1">EM-L1</button>
+        <button type="button" data-view="EM-L2">EM-L2</button>
+      </div>
+
+      <dl class="sl-stats lg-stats" id="lg-stats">
+        <div><dt>At L-points</dt><dd id="lg-atpoints">0</dd></div>
+        <div><dt>In transfer</dt><dd id="lg-transfer">0</dd></div>
+        <div><dt>Launched</dt><dd id="lg-launched">0</dd></div>
+      </dl>
+
+      <p class="sl-latest" id="lg-latest"></p>
+      <p class="sl-loading" id="lg-loading">Loading trajectory data…</p>
+    </section>
+
+    <div class="sl-controls">
+      <button type="button" class="sl-play" id="lg-play" aria-label="Pause">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="i-pause" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/><path class="i-play" d="M8 5.5v13l11-6.5z"/></svg>
+      </button>
+      <div class="sl-track">
+        <input type="range" id="lg-slider" min="0" max="10000" step="1" value="0" aria-label="Date" />
+        <div class="sl-ticks" id="lg-ticks" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <footer class="ev-credits sl-credits">
+      <p>Each dot is a spacecraft that has occupied a halo or Lissajous orbit about a Lagrange point. The view is a rotating Sun–Earth frame, with the Sun held off to the left, so Sun–Earth L1 and L2 stay in place. Distances are to scale. Earth and the Moon are drawn larger than scale in wide views so they remain visible, and they approach their true size as you zoom in. Earth–Moon L1 and L2 travel with the Moon. Times of little activity are shortened in the animation; the date shown is the real date.</p>
+      <p>Paths for most missions are JPL Horizons state vectors transformed into this rotating frame. Where Horizons does not cover a flight, or covers only part of it, the missing portion is modeled from published dates and typical halo amplitudes and is marked on that spacecraft’s information card. Occupation dates follow Jonathan McDowell’s General Catalog of Artificial Space Objects and agency mission reports.</p>
+      <p id="lg-asof"></p>
+    </footer>
+  </main>
+
+  <aside class="panel lg-panel" id="lg-panel" aria-label="Information" hidden></aside>
+  <div class="tip" id="lg-tip" hidden></div>
+
+  <script src="https://dkossin.com/stars.js"></script>
+</body>
+</html>

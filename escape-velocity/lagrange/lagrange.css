@@ -1,0 +1,262 @@
+/* Lagrange tab — Escape Velocity */
+
+.lg-main { position: relative; }
+
+.lg-stage { overflow: hidden; }
+
+#lg-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+#lg-canvas:active { cursor: grabbing; }
+#lg-canvas.over { cursor: pointer; }
+
+.lg-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  overflow: hidden;
+}
+.lg-labels span {
+  position: absolute;
+  transform: translate(-50%, -130%);
+  font-family: "Outfit", sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(5, 6, 15, 0.9);
+  pointer-events: none;
+}
+.lg-labels span.on { color: var(--text); }
+
+.lg-fly {
+  position: absolute;
+  z-index: 3;
+  left: 1.5rem;
+  top: 5.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  max-width: min(22rem, calc(100% - 10rem));
+  pointer-events: auto;
+}
+.lg-fly button {
+  font: 400 0.72rem "Outfit", sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  background: rgba(8, 10, 24, 0.62);
+  border: 1px solid rgba(232, 236, 255, 0.26);
+  border-radius: 999px;
+  padding: 0.42rem 0.72rem;
+  min-height: 2rem;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+.lg-fly button:hover { border-color: var(--accent); background: rgba(125, 211, 252, 0.12); }
+.lg-fly button[aria-pressed="true"] {
+  color: #05060f;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.lg-fly button[data-view="SE-L1"] { box-shadow: inset 0 0 0 0 #56B4E9; }
+.lg-fly button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.lg-stats dd.lg-split { font-size: 0.95em; }
+
+/* Point color chips in latest/legend */
+.lg-latest strong i,
+.lg-key i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 0.3rem;
+  vertical-align: 0.05rem;
+}
+
+.tip {
+  position: fixed;
+  z-index: 8;
+  pointer-events: none;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  background: rgba(8, 10, 24, 0.88);
+  border: 1px solid rgba(232, 236, 255, 0.2);
+  border-radius: 8px;
+  color: var(--text);
+  white-space: nowrap;
+  transform: translate(12px, -34px);
+}
+
+.lg-panel {
+  position: fixed;
+  z-index: 12;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  padding: 4.2rem 1.5rem 1.5rem;
+  overflow-y: auto;
+  background: rgba(6, 8, 20, 0.86);
+  backdrop-filter: blur(16px);
+  border-left: 1px solid rgba(232, 236, 255, 0.12);
+  animation: lgSlideIn 0.35s ease;
+}
+.lg-panel[hidden] { display: none; }
+@keyframes lgSlideIn { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.lg-panel .sheet-handle,
+.lg-panel .sheet-grip { display: none; }
+
+.lg-panel .panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1.1rem;
+}
+.lg-panel .panel-head .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 14px currentColor;
+}
+.lg-panel .panel-head h2 {
+  font: 700 1.25rem "Orbitron", sans-serif;
+  letter-spacing: 0.08em;
+  flex: 1;
+  margin: 0;
+}
+.lg-panel .close {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 1.7rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.25rem 0.45rem;
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+}
+.lg-panel .close:hover { color: var(--text); }
+
+.lg-panel .row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(232, 236, 255, 0.08);
+  font-size: 0.88rem;
+}
+.lg-panel dt { color: var(--muted); font-weight: 300; }
+.lg-panel dd { text-align: right; color: var(--text); font-variant-numeric: tabular-nums; margin: 0; }
+.lg-panel .facts {
+  margin: 1.1rem 0 1.2rem;
+  font-weight: 300;
+  font-size: 0.92rem;
+  line-height: 1.65;
+  color: var(--muted);
+}
+.lg-panel .approx {
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: #f5b942;
+  margin: 0 0 0.8rem;
+}
+.lg-panel .mission-link,
+.lg-panel .zoom-btn {
+  font: 400 0.88rem "Outfit", sans-serif;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(232, 236, 255, 0.26);
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
+  margin-bottom: 0.7rem;
+}
+.lg-panel .zoom-btn {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.22), rgba(129, 140, 248, 0.22));
+  border-color: rgba(125, 211, 252, 0.5);
+}
+.lg-panel .mission-link:hover,
+.lg-panel .zoom-btn:hover { border-color: var(--accent); }
+.lg-panel a:focus-visible,
+.lg-panel button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+body.lg-panel-open .lg-fly { /* keep visible */ }
+
+@media (max-width: 720px) {
+  .lg-fly {
+    left: 0.85rem;
+    top: 4.4rem;
+    max-width: calc(100% - 7.5rem);
+    gap: 0.28rem;
+  }
+  .lg-fly button {
+    padding: 0.4rem 0.58rem;
+    font-size: 0.68rem;
+    min-height: 2.05rem;
+  }
+  .lg-panel {
+    top: auto;
+    width: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 46vh;
+    height: 46dvh;
+    padding: 1.5rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom));
+    border-left: 0;
+    border-top: 1px solid rgba(232, 236, 255, 0.18);
+    border-radius: 18px 18px 0 0;
+    animation: lgSlideUp 0.35s ease;
+  }
+  @keyframes lgSlideUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .lg-panel .sheet-handle {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1.6rem;
+  }
+  .lg-panel .sheet-grip {
+    display: block;
+    position: absolute;
+    top: 0.55rem;
+    left: 50%;
+    width: 38px;
+    height: 4px;
+    margin-left: -19px;
+    border-radius: 2px;
+    background: rgba(232, 236, 255, 0.3);
+  }
+  .lg-panel .panel-head h2 { font-size: 1.1rem; }
+  .lg-labels span { font-size: 0.6rem; }
+}
+
+@media (max-width: 420px) {
+  .lg-fly { max-width: calc(100% - 6.6rem); }
+}
