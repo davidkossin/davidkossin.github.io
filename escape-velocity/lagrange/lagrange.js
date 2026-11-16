@@ -764,11 +764,7 @@ export async function startLagrange(opts) {
     moon.scale.setScalar(mScale);
 
     // moon orbit ring (current month of samples)
-    const ring = [];
-    const m0 = mjd - 14, m1 = mjd + 14;
-    for (let i = 0; i < moonPts.length; i++) {
-      if (moonPts[i].mjd >= m0 && moonPts[i].mjd <= m1) ring.push(moonPts[i]);
-    }
+    const ring = seriesSpan(moonPts, mjd - 14, mjd + 14, 6);
     setLine(moonOrbit, ring, true);
     moonOrbit.visible = camDist < 8000;
 
