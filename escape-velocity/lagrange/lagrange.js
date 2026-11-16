@@ -607,6 +607,19 @@ export async function startLagrange(opts) {
     return pointPos(point, moon, rSe(at), C);
   }
 
+  // Earth–Moon rotating basis at time t (x: Earth→Moon, z: lunar orbit normal).
+  function emBasis(t) {
+    const a = atSeries(moonPts, t), b = atSeries(moonPts, t + 0.1);
+    if (!a || !b) return null;
+    const ex = norm3([a.x, a.y, a.z]);
+    const v = [b.x - a.x, b.y - a.y, b.z - a.z];
+    const ez = norm3(cross3([a.x, a.y, a.z], v));
+    const ey = cross3(ez, ex);
+    return [ex, ey, ez];
+  }
+  function norm3(v) { const n = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / n, v[1] / n, v[2] / n]; }
+  function cross3(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+
   function periodFor(m, point) {
     const mh = (traj.measured_halos || {})[m.id];
     if (mh && mh[point] && mh[point].period > 5 && mh[point].period < 400) return mh[point].period;
@@ -624,6 +637,8 @@ export async function startLagrange(opts) {
     if (dist3(pos, Lnow) > maxR) return null;
 
     const expected = periodFor(m, point);
+    const isEM = point.startsWith("EM");
+    const Bnow = isEM ? emBasis(at) : null;
     const rel = [];
     const lo = at - expected * 1.3, hi = at + expected * 0.08;
     let inWin = 0, nearWin = 0;
@@ -634,7 +649,19 @@ export async function startLagrange(opts) {
       const Lt = lPointAt(point, p.mjd);
       if (dist3(p, Lt) > maxR) continue;
       nearWin++;
-      rel.push({ mjd: p.mjd, x: p.x - Lt.x, y: p.y - Lt.y, z: p.z - Lt.z });
+      let rx = p.x - Lt.x, ry = p.y - Lt.y, rz = p.z - Lt.z;
+      if (isEM && Bnow) {
+        // An Earth–Moon halo repeats in the Earth–Moon frame, which turns
+        // ~13°/day; carry each offset into today's orientation of that frame.
+        const B = emBasis(p.mjd);
+        if (B) {
+          const e = [rx * B[0][0] + ry * B[0][1] + rz * B[0][2], rx * B[1][0] + ry * B[1][1] + rz * B[1][2], rx * B[2][0] + ry * B[2][1] + rz * B[2][2]];
+          rx = e[0] * Bnow[0][0] + e[1] * Bnow[1][0] + e[2] * Bnow[2][0];
+          ry = e[0] * Bnow[0][1] + e[1] * Bnow[1][1] + e[2] * Bnow[2][1];
+          rz = e[0] * Bnow[0][2] + e[1] * Bnow[1][2] + e[2] * Bnow[2][2];
+        }
+      }
+      rel.push({ mjd: p.mjd, x: rx, y: ry, z: rz });
     }
     // Petal orbits and transfers skim the L-point; only draw a halo when the
     // craft has actually been in the neighborhood for most of a period.
