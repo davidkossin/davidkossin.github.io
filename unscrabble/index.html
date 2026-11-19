@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="Unscramble the letters." />
+  <title>Unscramble · Objects In Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="stylesheet" href="unscrabble.css" />
+  <!-- Cloudflare Web Analytics --><script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "ed4660d74de24898991981cdb05e73b9"}'></script><!-- End Cloudflare Web Analytics -->
+</head>
+<body class="unscrabble-page">
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div class="nebula" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="../">Objects In Space</a>
+  </header>
+
+  <main class="unscrabble-main">
+    <h1>Unscramble</h1>
+    <p class="prompt">Enter the letters, then unscramble.</p>
+
+    <form id="unscramble-form" autocomplete="off" novalidate>
+      <div class="letters" role="group" aria-label="Letters">
+        <input class="letter" type="text" maxlength="1" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Letter 1" />
+        <input class="letter" type="text" maxlength="1" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Letter 2" />
+        <input class="letter" type="text" maxlength="1" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Letter 3" />
+        <input class="letter" type="text" maxlength="1" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Letter 4" />
+        <input class="letter" type="text" maxlength="1" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Letter 5" />
+        <input class="letter" type="text" maxlength="1" inputmode="text" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Letter 6" />
+      </div>
+      <button type="submit" class="btn primary" id="unscramble-btn">Unscramble</button>
+    </form>
+
+    <p class="result" id="result" role="status" aria-live="polite"></p>
+  </main>
+
+  <script src="../stars.js"></script>
+  <script src="unscrabble.js"></script>
+</body>
+</html>

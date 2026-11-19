@@ -1,0 +1,195 @@
+/* Unscramble — unlisted */
+
+body.unscrabble-page {
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.unscrabble-page #stars {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.unscrabble-page .nebula {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 20%, rgba(99, 102, 241, 0.16), transparent 55%),
+    radial-gradient(ellipse 55% 45% at 85% 15%, rgba(56, 189, 248, 0.1), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 90%, rgba(167, 139, 250, 0.08), transparent 55%);
+  animation: drift 48s ease-in-out infinite alternate;
+}
+
+.unscrabble-page .topbar {
+  position: relative;
+  z-index: 10;
+  flex: 0 0 auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
+  padding: 1.1rem 1.75rem;
+  background: rgba(5, 6, 15, 0.96);
+  border-bottom: 1px solid rgba(232, 236, 255, 0.08);
+}
+
+.unscrabble-page .topbar .brand {
+  position: static;
+  font-family: "Orbitron", sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  color: var(--text);
+  writing-mode: horizontal-tb;
+  transform: none;
+}
+
+.unscrabble-page .topbar .brand:hover,
+.unscrabble-page .topbar .brand:focus-visible {
+  color: var(--accent);
+}
+
+.unscrabble-main {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  width: 100%;
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 3rem 1.25rem 4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.unscrabble-main h1 {
+  font-size: clamp(2rem, 8vw, 3.2rem);
+  opacity: 1;
+  animation: none;
+  text-shadow: 0 0 32px var(--glow);
+}
+
+.prompt {
+  margin-top: 0.9rem;
+  font-weight: 300;
+  font-size: clamp(1rem, 2.6vw, 1.15rem);
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+#unscramble-form {
+  width: 100%;
+  margin-top: 2.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.letters {
+  display: flex;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.letter {
+  flex: 0 0 auto;
+  width: 3.15rem;
+  height: 3.6rem;
+  font-family: "Orbitron", sans-serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(232, 236, 255, 0.28);
+  border-radius: 0.75rem;
+  outline: none;
+  caret-color: var(--accent);
+}
+
+.letter:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.28);
+}
+
+#unscramble-btn {
+  border: 0;
+  cursor: pointer;
+  font-family: "Outfit", system-ui, sans-serif;
+}
+
+#unscramble-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.result {
+  min-height: 4.5rem;
+  margin-top: 2rem;
+  font-weight: 300;
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.result.is-phrase {
+  font-family: "Orbitron", sans-serif;
+  font-weight: 700;
+  font-size: clamp(2rem, 9vw, 3.4rem);
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  color: var(--text);
+  text-shadow: 0 0 36px var(--glow);
+}
+
+.result.fade-in {
+  animation: phrase-fade 1.6s ease forwards;
+}
+
+@keyframes phrase-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 412px) {
+  .unscrabble-main {
+    padding: 2.25rem 1rem 3.5rem;
+  }
+
+  .letters {
+    gap: 0.4rem;
+  }
+
+  .letter {
+    width: 2.85rem;
+    height: 3.35rem;
+    font-size: 1.3rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unscrabble-page .nebula,
+  .result.fade-in {
+    animation: none;
+  }
+
+  .result.fade-in {
+    opacity: 1;
+  }
+}
