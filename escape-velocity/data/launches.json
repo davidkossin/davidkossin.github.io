@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-19T10:29:53Z",
+  "updated": "2026-11-19T20:49:00Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -53,7 +53,7 @@
       "id": "76617033-4dc0-4448-b50c-e5b0d5a18539",
       "name": "Falcon 9 Block 5 | USSF-317",
       "slug": "falcon-9-block-5-ussf-317",
-      "net": "2026-11-20T04:28:55Z",
+      "net": "2026-11-20T04:32:55Z",
       "window_start": "2026-11-20T02:46:00Z",
       "window_end": "2026-11-20T06:46:00Z",
       "status": {
@@ -643,7 +643,13 @@
         "country_code": "US"
       },
       "vandenberg": false,
-      "webcasts": [],
+      "webcasts": [
+        {
+          "url": "https://plus.nasa.gov/scheduled-video/nasas-northrop-grumman-commercial-resupply-services-25-launch/",
+          "title": "NASA’s Northrop Grumman Commercial Resupply Services 25 Launch",
+          "type": "Official Webcast"
+        }
+      ],
       "webcast_live": false,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
@@ -1034,17 +1040,17 @@
       "id": "22e117bf-041c-49d5-9d09-7b180036e143",
       "name": "Ariane 62 | Metop-SG B1",
       "slug": "ariane-62-metop-sg-b1",
-      "net": "2026-12-31T00:00:00Z",
-      "window_start": "2026-12-31T00:00:00Z",
-      "window_end": "2026-12-31T00:00:00Z",
+      "net": "2026-12-17T00:00:00Z",
+      "window_start": "2026-12-17T00:00:00Z",
+      "window_end": "2026-12-17T00:00:00Z",
       "status": {
         "id": 2,
         "name": "To Be Determined",
         "abbrev": "TBD"
       },
       "net_precision": {
-        "abbrev": "M",
-        "name": "Month"
+        "abbrev": "DAY",
+        "name": "Day"
       },
       "provider": "Arianespace",
       "provider_abbrev": "ASA",
