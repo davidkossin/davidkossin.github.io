@@ -1,6 +1,6 @@
 /* Unscramble — unlisted */
 
-body.unscrabble-page {
+body.unscramble-page {
   overflow-x: hidden;
   overflow-y: auto;
   min-height: 100vh;
@@ -10,14 +10,14 @@ body.unscrabble-page {
   align-items: stretch;
 }
 
-.unscrabble-page #stars {
+.unscramble-page #stars {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
 }
 
-.unscrabble-page .nebula {
+.unscramble-page .nebula {
   position: fixed;
   inset: 0;
   z-index: 0;
@@ -29,7 +29,7 @@ body.unscrabble-page {
   animation: drift 48s ease-in-out infinite alternate;
 }
 
-.unscrabble-page .topbar {
+.unscramble-page .topbar {
   position: relative;
   z-index: 10;
   flex: 0 0 auto;
@@ -43,7 +43,7 @@ body.unscrabble-page {
   border-bottom: 1px solid rgba(232, 236, 255, 0.08);
 }
 
-.unscrabble-page .topbar .brand {
+.unscramble-page .topbar .brand {
   position: static;
   font-family: "Orbitron", sans-serif;
   font-size: 0.95rem;
@@ -54,12 +54,12 @@ body.unscrabble-page {
   transform: none;
 }
 
-.unscrabble-page .topbar .brand:hover,
-.unscrabble-page .topbar .brand:focus-visible {
+.unscramble-page .topbar .brand:hover,
+.unscramble-page .topbar .brand:focus-visible {
   color: var(--accent);
 }
 
-.unscrabble-main {
+.unscramble-main {
   position: relative;
   z-index: 2;
   flex: 1;
@@ -73,7 +73,7 @@ body.unscrabble-page {
   text-align: center;
 }
 
-.unscrabble-main h1 {
+.unscramble-main h1 {
   font-size: clamp(2rem, 8vw, 3.2rem);
   opacity: 1;
   animation: none;
@@ -168,7 +168,7 @@ body.unscrabble-page {
 }
 
 @media (max-width: 412px) {
-  .unscrabble-main {
+  .unscramble-main {
     padding: 2.25rem 1rem 3.5rem;
   }
 
@@ -184,7 +184,7 @@ body.unscrabble-page {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .unscrabble-page .nebula,
+  .unscramble-page .nebula,
   .result.fade-in {
     animation: none;
   }
