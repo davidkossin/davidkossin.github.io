@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-20T03:32:33Z",
+  "updated": "2026-11-20T13:12:45Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -11,9 +11,9 @@
       "window_start": "2026-11-20T11:51:00Z",
       "window_end": "2026-11-20T12:17:00Z",
       "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
+        "id": 6,
+        "name": "Launch in Flight",
+        "abbrev": "In Flight"
       },
       "net_precision": {
         "abbrev": "HR",
@@ -41,7 +41,13 @@
         "country_code": "CN"
       },
       "vandenberg": false,
-      "webcasts": [],
+      "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=dUxmQvNnQEI",
+          "title": "Live: Long March 8A Launches SatNet LEO Group 30 (No Commentary)",
+          "type": "Unofficial Webcast"
+        }
+      ],
       "webcast_live": false,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/cz-8a_launch_2_image_thumbnail_20251206093108.jpeg",
@@ -373,17 +379,17 @@
       "id": "c9605b67-8a53-4239-a8ae-577fe3b79799",
       "name": "Long March 2F/G | Shenzhou 24",
       "slug": "long-march-2fg-shenzhou-24",
-      "net": "2026-11-25T00:00:00Z",
-      "window_start": "2026-11-25T00:00:00Z",
-      "window_end": "2026-11-25T00:00:00Z",
+      "net": "2026-11-25T00:18:00Z",
+      "window_start": "2026-11-25T00:08:00Z",
+      "window_end": "2026-11-25T00:48:00Z",
       "status": {
-        "id": 2,
-        "name": "To Be Determined",
-        "abbrev": "TBD"
+        "id": 1,
+        "name": "Go for Launch",
+        "abbrev": "Go"
       },
       "net_precision": {
-        "abbrev": "DAY",
-        "name": "Day"
+        "abbrev": "MIN",
+        "name": "Minute"
       },
       "provider": "China Aerospace Science and Technology Corporation",
       "provider_abbrev": "CASC",
@@ -412,6 +418,52 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/shenzhou_22_lau_image_thumbnail_20251129175823.jpeg",
         "credit": "Xinhua"
+      },
+      "probability": null
+    },
+    {
+      "id": "b00f0e9a-48d6-4f26-9cb5-7d19169ff7c4",
+      "name": "Long March 2D | Unknown Payload",
+      "slug": "long-march-2d-unknown-payload",
+      "net": "2026-11-26T09:35:00Z",
+      "window_start": "2026-11-26T09:30:00Z",
+      "window_end": "2026-11-26T09:52:00Z",
+      "status": {
+        "id": 1,
+        "name": "Go for Launch",
+        "abbrev": "Go"
+      },
+      "net_precision": {
+        "abbrev": "HR",
+        "name": "Hour"
+      },
+      "provider": "China Aerospace Science and Technology Corporation",
+      "provider_abbrev": "CASC",
+      "vehicle": {
+        "name": "Long March 2D",
+        "family": "long-march",
+        "description": "The Long March 2D, also known as the Chang Zheng 2D, CZ-2D and LM-2D, is a Chinese orbital carrier rocket. It is a 2-stage carrier rocket mainly used for launching LEO and SSO satellites.",
+        "length_m": 38.3,
+        "diameter_m": 3.35
+      },
+      "mission": {
+        "name": "Unknown Payload",
+        "type": "Unknown",
+        "description": "Details TBD.",
+        "orbit": "Unknown",
+        "orbit_abbrev": "N/A"
+      },
+      "pad": {
+        "name": "Launch Complex 3 (LC-3/LA-1)",
+        "location": "Xichang Satellite Launch Center, People's Republic of China",
+        "country_code": "CN"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193719.jpeg",
+        "credit": null
       },
       "probability": null
     },
@@ -465,9 +517,9 @@
       "id": "2093e4fc-ac8c-4296-a1b5-deececee6a72",
       "name": "Electron | Night Owls Never Sleep (StriX Launch 14)",
       "slug": "electron-night-owls-never-sleep-strix-launch-14",
-      "net": "2026-11-27T00:00:00Z",
+      "net": "2026-11-27T00:05:00Z",
       "window_start": "2026-11-27T00:00:00Z",
-      "window_end": "2026-11-27T00:00:00Z",
+      "window_end": "2026-11-27T00:05:00Z",
       "status": {
         "id": 1,
         "name": "Go for Launch",
@@ -1400,52 +1452,6 @@
       "webcast_live": false,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/f9_on_slc-40_2_image_thumbnail_20240919072420.jpeg",
-        "credit": "SpaceX"
-      },
-      "probability": null
-    },
-    {
-      "id": "2d0472b9-463d-49c8-afb1-7925e49a3368",
-      "name": "Falcon 9 Block 5 | SDA Tranche 1 Tracking Layer A",
-      "slug": "falcon-9-block-5-sda-tranche-1-tracking-layer-a",
-      "net": "2026-12-31T00:00:00Z",
-      "window_start": "2026-12-31T00:00:00Z",
-      "window_end": "2026-12-31T00:00:00Z",
-      "status": {
-        "id": 2,
-        "name": "To Be Determined",
-        "abbrev": "TBD"
-      },
-      "net_precision": {
-        "abbrev": "Q4",
-        "name": "Quarter 4"
-      },
-      "provider": "SpaceX",
-      "provider_abbrev": "SpX",
-      "vehicle": {
-        "name": "Falcon 9 Block 5",
-        "family": "falcon9",
-        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
-        "length_m": 70.0,
-        "diameter_m": 3.65
-      },
-      "mission": {
-        "name": "SDA Tranche 1 Tracking Layer A",
-        "type": "Government/Top Secret",
-        "description": "Tranche 1 Tracking Layer A is one of five missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Tracking Layer constellation, which will provide global indications, warning, tracking, and targeting of advanced missile threats, including hypersonic missile systems.",
-        "orbit": "Polar Orbit",
-        "orbit_abbrev": "PO"
-      },
-      "pad": {
-        "name": "Space Launch Complex 4E",
-        "location": "Vandenberg SFB, CA, USA",
-        "country_code": "US"
-      },
-      "vandenberg": true,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
         "credit": "SpaceX"
       },
       "probability": null
