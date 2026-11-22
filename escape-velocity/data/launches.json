@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-22T12:42:32Z",
+  "updated": "2026-11-22T20:46:27Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -11,9 +11,9 @@
       "window_start": "2026-11-22T12:16:00Z",
       "window_end": "2026-11-22T12:46:00Z",
       "status": {
-        "id": 6,
-        "name": "Launch in Flight",
-        "abbrev": "In Flight"
+        "id": 3,
+        "name": "Launch Successful",
+        "abbrev": "Success"
       },
       "net_precision": {
         "abbrev": "SEC",
@@ -43,8 +43,8 @@
       "vandenberg": true,
       "webcasts": [
         {
-          "url": "https://www.youtube.com/watch?v=CjN4lPx7mD8",
-          "title": "SpaceX - Falcon 9 - NROL-136 - SLC-4E - Vandenberg Space Force Base, CA - November 22, 2026",
+          "url": "https://www.youtube.com/watch?v=NFIjyRFTPao",
+          "title": "SpaceX NROL-136",
           "type": "Unofficial Re-stream"
         },
         {
@@ -131,9 +131,9 @@
       "id": "8dd5de11-831b-445f-86f0-bffefe0550d9",
       "name": "Soyuz 2.1b | Progress MS-36 (97P)",
       "slug": "soyuz-21b-progress-ms-36-97p",
-      "net": "2026-11-24T05:03:00Z",
-      "window_start": "2026-11-24T05:03:00Z",
-      "window_end": "2026-11-24T05:03:00Z",
+      "net": "2026-11-24T10:13:00Z",
+      "window_start": "2026-11-24T10:13:00Z",
+      "window_end": "2026-11-24T10:13:00Z",
       "status": {
         "id": 8,
         "name": "To Be Confirmed",
@@ -314,52 +314,6 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193719.jpeg",
         "credit": null
-      },
-      "probability": null
-    },
-    {
-      "id": "dff42a2e-f047-48d7-b260-3888d3a4fe33",
-      "name": "Spectrum | AT-Astra and Others (Spectrum Flight 3)",
-      "slug": "spectrum-at-astra-and-others-spectrum-flight-3",
-      "net": "2026-11-26T20:00:00Z",
-      "window_start": "2026-11-26T20:00:00Z",
-      "window_end": "2026-11-26T21:30:00Z",
-      "status": {
-        "id": 8,
-        "name": "To Be Confirmed",
-        "abbrev": "TBC"
-      },
-      "net_precision": {
-        "abbrev": "HR",
-        "name": "Hour"
-      },
-      "provider": "Isar Aerospace",
-      "provider_abbrev": "ISAR",
-      "vehicle": {
-        "name": "Spectrum",
-        "family": "generic",
-        "description": "Spectrum is a small launch vehicle developed by German company Isar Aerospace.",
-        "length_m": 28.0,
-        "diameter_m": 2.0
-      },
-      "mission": {
-        "name": "AT-Astra and Others (Spectrum Flight 3)",
-        "type": "Technology",
-        "description": "Third test flight of the Isar Spectrum launch vehicle. This launch will carry various satellites including R-Space’s AT-Astra/IOD-01, which will perform in-orbit demonstrations for ENPULSION, SUNBOOSTER GmbH, and Synopsis Planet.",
-        "orbit": "Sun-Synchronous Orbit",
-        "orbit_abbrev": "SSO"
-      },
-      "pad": {
-        "name": "Orbital Launch Pad",
-        "location": "Andøya Spaceport",
-        "country_code": "NO"
-      },
-      "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/spectrum_on_the_image_thumbnail_20250321072643.jpeg",
-        "credit": "Isar Aerospace | Robin Brillert, Wingmen Media"
       },
       "probability": null
     },
@@ -1432,6 +1386,52 @@
         "name": "SDA Tranche 1 Tracking Layer A",
         "type": "Government/Top Secret",
         "description": "Tranche 1 Tracking Layer A is one of five missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Tracking Layer constellation, which will provide global indications, warning, tracking, and targeting of advanced missile threats, including hypersonic missile systems.",
+        "orbit": "Polar Orbit",
+        "orbit_abbrev": "PO"
+      },
+      "pad": {
+        "name": "Space Launch Complex 4E",
+        "location": "Vandenberg SFB, CA, USA",
+        "country_code": "US"
+      },
+      "vandenberg": true,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
+        "credit": "SpaceX"
+      },
+      "probability": null
+    },
+    {
+      "id": "dca8749f-1552-485a-8061-f1ad79055b8d",
+      "name": "Falcon 9 Block 5 | SDA Tranche 1 Tracking Layer C",
+      "slug": "falcon-9-block-5-sda-tranche-1-tracking-layer-c",
+      "net": "2026-12-31T00:00:00Z",
+      "window_start": "2026-12-31T00:00:00Z",
+      "window_end": "2026-12-31T00:00:00Z",
+      "status": {
+        "id": 2,
+        "name": "To Be Determined",
+        "abbrev": "TBD"
+      },
+      "net_precision": {
+        "abbrev": "Q4",
+        "name": "Quarter 4"
+      },
+      "provider": "SpaceX",
+      "provider_abbrev": "SpX",
+      "vehicle": {
+        "name": "Falcon 9 Block 5",
+        "family": "falcon9",
+        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
+        "length_m": 70.0,
+        "diameter_m": 3.65
+      },
+      "mission": {
+        "name": "SDA Tranche 1 Tracking Layer C",
+        "type": "Government/Top Secret",
+        "description": "Tranche 1 Tracking Layer C is one of five missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Tracking Layer constellation, which will provide global indications, warning, tracking, and targeting of advanced missile threats, including hypersonic missile systems.",
         "orbit": "Polar Orbit",
         "orbit_abbrev": "PO"
       },
