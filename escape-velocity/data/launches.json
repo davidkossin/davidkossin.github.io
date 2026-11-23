@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-22T20:46:27Z",
+  "updated": "2026-11-23T02:54:45Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -212,6 +212,16 @@
       },
       "vandenberg": true,
       "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=oELkxR9uY8Q",
+          "title": "GO! - SpaceX - Falcon 9 - USSF-266 - SLC-4E - Vandenberg SFB, CA - Space Affairs Live",
+          "type": "Unofficial Re-stream"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=0HG7obl5IAo",
+          "title": "SpaceX Launches Falcon 9 with USSF-266",
+          "type": "Unofficial Webcast"
+        },
         {
           "url": "https://x.com/i/broadcasts/2JQXBjLyYOQrpX",
           "title": "USSF-266 Mission",
