@@ -1,70 +1,8 @@
 {
-  "updated": "2026-11-25T11:28:23Z",
+  "updated": "2026-11-25T21:50:47Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
-    {
-      "id": "460d9db7-eaf6-4cd9-b095-cff433534c09",
-      "name": "Falcon 9 Block 5 | USSF-266",
-      "slug": "falcon-9-block-5-ussf-266",
-      "net": "2026-11-24T16:08:59Z",
-      "window_start": "2026-11-24T15:55:00Z",
-      "window_end": "2026-11-24T19:55:00Z",
-      "status": {
-        "id": 3,
-        "name": "Launch Successful",
-        "abbrev": "Success"
-      },
-      "net_precision": {
-        "abbrev": "SEC",
-        "name": "Second"
-      },
-      "provider": "SpaceX",
-      "provider_abbrev": "SpX",
-      "vehicle": {
-        "name": "Falcon 9 Block 5",
-        "family": "falcon9",
-        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
-        "length_m": 70.0,
-        "diameter_m": 3.65
-      },
-      "mission": {
-        "name": "USSF-266",
-        "type": "Government/Top Secret",
-        "description": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Layer launches.",
-        "orbit": "Polar Orbit",
-        "orbit_abbrev": "PO"
-      },
-      "pad": {
-        "name": "Space Launch Complex 4E",
-        "location": "Vandenberg SFB, CA, USA",
-        "country_code": "US"
-      },
-      "vandenberg": true,
-      "webcasts": [
-        {
-          "url": "https://www.youtube.com/watch?v=Fb7P2xSoF28",
-          "title": "SpaceX USSF-266",
-          "type": "Unofficial Re-stream"
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=Mx26fq3CcnQ",
-          "title": "SpaceX Falcon 9 rocket launches from Vandenberg on secretive U.S. Space Force mission",
-          "type": "Unofficial Webcast"
-        },
-        {
-          "url": "https://www.youtube.com/watch?v=0HG7obl5IAo",
-          "title": "SpaceX Launches Falcon 9 with USSF-266",
-          "type": "Unofficial Webcast"
-        }
-      ],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_thumbnail_20260816171423.jpeg",
-        "credit": "SpaceX"
-      },
-      "probability": null
-    },
     {
       "id": "c9605b67-8a53-4239-a8ae-577fe3b79799",
       "name": "Long March 2F/G | Shenzhou 24",
@@ -398,6 +336,11 @@
       "vandenberg": false,
       "webcasts": [
         {
+          "url": "https://www.youtube.com/watch?v=YLrybIli73I",
+          "title": "NASA's Northrop Grumman Commercial Resupply Services 25 Launch",
+          "type": "Official Webcast"
+        },
+        {
           "url": "https://plus.nasa.gov/scheduled-video/nasas-northrop-grumman-commercial-resupply-services-25-launch/",
           "title": "NASA’s Northrop Grumman Commercial Resupply Services 25 Launch",
           "type": "Official Webcast"
@@ -600,6 +543,58 @@
       "probability": null
     },
     {
+      "id": "8bf5f61e-a7e1-41e6-aede-7b87e4beebab",
+      "name": "Falcon 9 Block 5 | CHORUS",
+      "slug": "falcon-9-block-5-chorus",
+      "net": "2026-12-04T12:55:00Z",
+      "window_start": "2026-12-04T12:55:00Z",
+      "window_end": "2026-12-04T13:24:00Z",
+      "status": {
+        "id": 1,
+        "name": "Go for Launch",
+        "abbrev": "Go"
+      },
+      "net_precision": {
+        "abbrev": "MIN",
+        "name": "Minute"
+      },
+      "provider": "SpaceX",
+      "provider_abbrev": "SpX",
+      "vehicle": {
+        "name": "Falcon 9 Block 5",
+        "family": "falcon9",
+        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
+        "length_m": 70.0,
+        "diameter_m": 3.65
+      },
+      "mission": {
+        "name": "CHORUS",
+        "type": "Earth Science",
+        "description": "CHORUS is MDA's next generation Earth observation constellation, consisting of 2 radar satellites (C-band SAR and X-band SAR), in a 53.5 degree 600 km altitude LEO, with the X-band trailing the C-band by 60 minutes. A collaborative multi-sensor constellation, CHORUS will bring together diverse and unique imagery and data sources and provide a new level of near real-time insight and innovative Earth observation services. Operating in a unique mid-inclination orbit, CHORUS will be able to image day or night, regardless of weather conditions, with daily access of up to 95% of the coverage area. From an industry-leading 700km-wide imaging swath down to sub-metre high resolution, CHORUS will provide the most extensive and unrivalled Earth observation radar imaging capacity available on the market in a single mission.\r\n\r\nAlso on board this mission are 2 satellites from ICEYE and PECCY.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "Space Launch Complex 40",
+        "location": "Cape Canaveral SFS, FL, USA",
+        "country_code": "US"
+      },
+      "vandenberg": false,
+      "webcasts": [
+        {
+          "url": "https://x.com/i/broadcasts/2VNlrbYvYNmMgM",
+          "title": "MDA Space – MDA CHORUS Mission",
+          "type": "Official Webcast"
+        }
+      ],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
+        "credit": "SpaceX"
+      },
+      "probability": null
+    },
+    {
       "id": "5ce59e3a-c343-430f-ae4e-e608ba536754",
       "name": "Long March 12 | SatNet LEO Group TBD?",
       "slug": "long-march-12-satnet-leo-group-tbd",
@@ -720,52 +715,6 @@
         "name": "Amazon Leo (LF-04)",
         "type": "Communications",
         "description": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit designed to offer broadband internet access managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to be composed of 3,276 satellites. The satellites are projected to be placed in 98 orbital planes in three orbital layers, one at 590 km, 610 km and 630 km altitude.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "Unknown Pad",
-        "location": "Cape Canaveral SFS, FL, USA",
-        "country_code": "US"
-      },
-      "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
-        "credit": "SpaceX"
-      },
-      "probability": null
-    },
-    {
-      "id": "8bf5f61e-a7e1-41e6-aede-7b87e4beebab",
-      "name": "Falcon 9 Block 5 | CHORUS",
-      "slug": "falcon-9-block-5-chorus",
-      "net": "2026-12-31T00:00:00Z",
-      "window_start": "2026-12-31T00:00:00Z",
-      "window_end": "2026-12-31T00:00:00Z",
-      "status": {
-        "id": 2,
-        "name": "To Be Determined",
-        "abbrev": "TBD"
-      },
-      "net_precision": {
-        "abbrev": "M",
-        "name": "Month"
-      },
-      "provider": "SpaceX",
-      "provider_abbrev": "SpX",
-      "vehicle": {
-        "name": "Falcon 9 Block 5",
-        "family": "falcon9",
-        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
-        "length_m": 70.0,
-        "diameter_m": 3.65
-      },
-      "mission": {
-        "name": "CHORUS",
-        "type": "Earth Science",
-        "description": "CHORUS is MDA's next generation Earth observation constellation, consisting of 2 radar satellites (C-band SAR and X-band SAR), in a 53.5 degree 600 km altitude LEO, with the X-band trailing the C-band by 60 minutes. A collaborative multi-sensor constellation, CHORUS will bring together diverse and unique imagery and data sources and provide a new level of near real-time insight and innovative Earth observation services. Operating in a unique mid-inclination orbit, CHORUS will be able to image day or night, regardless of weather conditions, with daily access of up to 95% of the coverage area. From an industry-leading 700km-wide imaging swath down to sub-metre high resolution, CHORUS will provide the most extensive and unrivalled Earth observation radar imaging capacity available on the market in a single mission.",
         "orbit": "Low Earth Orbit",
         "orbit_abbrev": "LEO"
       },
@@ -1421,6 +1370,52 @@
         "name": "SDA Tranche 1 Transport Layer D",
         "type": "Government/Top Secret",
         "description": "Tranche 1 Transport Layer D is one of six missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Transport Layer constellation, which will provide assured, resilient, low-latency military data and connectivity worldwide to the full range of warfighter platforms from Low Earth Orbit satellites.\r\n\r\nThe constellation will be interconnected with Optical Inter-Satellite Links (OISLs) which have significantly increased performance over existing radio frequency crosslinks. It is expected to operate over Ka band, have stereo coverage and be dynamically networked for simpler hand-offs, greater bandwidth and fault tolerance.",
+        "orbit": "Polar Orbit",
+        "orbit_abbrev": "PO"
+      },
+      "pad": {
+        "name": "Space Launch Complex 4E",
+        "location": "Vandenberg SFB, CA, USA",
+        "country_code": "US"
+      },
+      "vandenberg": true,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
+        "credit": "SpaceX"
+      },
+      "probability": null
+    },
+    {
+      "id": "c5783e2b-d458-4b99-9936-4043c236190b",
+      "name": "Falcon 9 Block 5 | SDA Tranche 1 Transport Layer F",
+      "slug": "falcon-9-block-5-sda-tranche-1-transport-layer-f",
+      "net": "2026-12-31T00:00:00Z",
+      "window_start": "2026-12-31T00:00:00Z",
+      "window_end": "2026-12-31T00:00:00Z",
+      "status": {
+        "id": 2,
+        "name": "To Be Determined",
+        "abbrev": "TBD"
+      },
+      "net_precision": {
+        "abbrev": "Q4",
+        "name": "Quarter 4"
+      },
+      "provider": "SpaceX",
+      "provider_abbrev": "SpX",
+      "vehicle": {
+        "name": "Falcon 9 Block 5",
+        "family": "falcon9",
+        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
+        "length_m": 70.0,
+        "diameter_m": 3.65
+      },
+      "mission": {
+        "name": "SDA Tranche 1 Transport Layer F",
+        "type": "Government/Top Secret",
+        "description": "Tranche 1 Transport Layer F is one of six missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Transport Layer constellation, which will provide assured, resilient, low-latency military data and connectivity worldwide to the full range of warfighter platforms from Low Earth Orbit satellites.\r\n\r\nThe constellation will be interconnected with Optical Inter-Satellite Links (OISLs) which have significantly increased performance over existing radio frequency crosslinks. It is expected to operate over Ka band, have stereo coverage and be dynamically networked for simpler hand-offs, greater bandwidth and fault tolerance.",
         "orbit": "Polar Orbit",
         "orbit_abbrev": "PO"
       },
