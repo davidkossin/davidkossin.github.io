@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-24T15:00:11Z",
+  "updated": "2026-11-25T00:53:41Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -135,9 +135,9 @@
       "window_start": "2026-11-24T15:55:00Z",
       "window_end": "2026-11-24T19:55:00Z",
       "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
+        "id": 3,
+        "name": "Launch Successful",
+        "abbrev": "Success"
       },
       "net_precision": {
         "abbrev": "SEC",
@@ -167,8 +167,8 @@
       "vandenberg": true,
       "webcasts": [
         {
-          "url": "https://www.youtube.com/watch?v=oELkxR9uY8Q",
-          "title": "GO! - SpaceX - Falcon 9 - USSF-266 - SLC-4E - Vandenberg SFB, CA - Space Affairs Live",
+          "url": "https://www.youtube.com/watch?v=Fb7P2xSoF28",
+          "title": "SpaceX USSF-266",
           "type": "Unofficial Re-stream"
         },
         {
@@ -193,17 +193,17 @@
       "id": "c9605b67-8a53-4239-a8ae-577fe3b79799",
       "name": "Long March 2F/G | Shenzhou 24",
       "slug": "long-march-2fg-shenzhou-24",
-      "net": "2026-11-25T00:18:00Z",
+      "net": "2026-11-25T00:18:52Z",
       "window_start": "2026-11-25T00:08:00Z",
       "window_end": "2026-11-25T00:48:00Z",
       "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
+        "id": 3,
+        "name": "Launch Successful",
+        "abbrev": "Success"
       },
       "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
+        "abbrev": "SEC",
+        "name": "Second"
       },
       "provider": "China Aerospace Science and Technology Corporation",
       "provider_abbrev": "CASC",
@@ -217,7 +217,7 @@
       "mission": {
         "name": "Shenzhou 24",
         "type": "Human Exploration",
-        "description": "Shenzhou 24 will be the 24th flight of the Shenzhou program.\r\n\r\nThe first astronaut from Pakistan is expected to fly on this on a short duration mission, with another Chinese astronaut to undergo a year long expedition.",
+        "description": "Shenzhou 24 will be the 24th flight of the Shenzhou program.\r\n\r\nThe first astronaut from Pakistan, Muhammad Zeeshan Ali, will fly on this on a short duration mission, with Chinese astronaut Zhu Yangzhu of Shenzhou 23 to undergo a year long expedition and stay on the CSS in exchange.",
         "orbit": "Low Earth Orbit",
         "orbit_abbrev": "LEO"
       },
@@ -227,8 +227,19 @@
         "country_code": "CN"
       },
       "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
+      "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=SeWm3kfVx20",
+          "title": "Live: Special coverage of China's Shenzhou-24 crewed spacecraft launch",
+          "type": "Official Webcast"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=Jd_rM2JlOi4",
+          "title": "神舟二十四号出征太空 “天宫”将迎首位外籍航天员",
+          "type": "Official Webcast"
+        }
+      ],
+      "webcast_live": true,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/shenzhou_22_lau_image_thumbnail_20251129175823.jpeg",
         "credit": "Xinhua"
@@ -475,9 +486,9 @@
       "id": "d74afbc7-0de5-491c-be05-4e9c31f736ac",
       "name": "Falcon 9 Block 5 | Cygnus CRS-2 NG-25",
       "slug": "falcon-9-block-5-cygnus-crs-2-ng-25",
-      "net": "2026-11-29T15:50:00Z",
-      "window_start": "2026-11-29T15:50:00Z",
-      "window_end": "2026-11-29T15:50:00Z",
+      "net": "2026-11-29T15:47:00Z",
+      "window_start": "2026-11-29T15:47:00Z",
+      "window_end": "2026-11-29T15:47:00Z",
       "status": {
         "id": 1,
         "name": "Go for Launch",
@@ -801,6 +812,52 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/ariane_62_lifto_image_thumbnail_20240711132056.jpeg",
         "credit": "ESA/CNES/Arianespace/ArianeGroup/Optique vidéo du CSG–S. Martin"
+      },
+      "probability": null
+    },
+    {
+      "id": "9b9db235-8ffb-4569-b09b-0e852ad231a0",
+      "name": "Falcon 9 Block 5 | Amazon Leo (LF-04)",
+      "slug": "falcon-9-block-5-amazon-leo-lf-04",
+      "net": "2026-12-31T00:00:00Z",
+      "window_start": "2026-12-31T00:00:00Z",
+      "window_end": "2026-12-31T00:00:00Z",
+      "status": {
+        "id": 2,
+        "name": "To Be Determined",
+        "abbrev": "TBD"
+      },
+      "net_precision": {
+        "abbrev": "M",
+        "name": "Month"
+      },
+      "provider": "SpaceX",
+      "provider_abbrev": "SpX",
+      "vehicle": {
+        "name": "Falcon 9 Block 5",
+        "family": "falcon9",
+        "description": "Falcon 9 is a two-stage rocket designed and manufactured by SpaceX for the reliable and safe transport of satellites and the Dragon spacecraft into orbit. The Block 5 variant is the fifth major interval aimed at improving upon the ability for rapid reusability.",
+        "length_m": 70.0,
+        "diameter_m": 3.65
+      },
+      "mission": {
+        "name": "Amazon Leo (LF-04)",
+        "type": "Communications",
+        "description": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit designed to offer broadband internet access managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to be composed of 3,276 satellites. The satellites are projected to be placed in 98 orbital planes in three orbital layers, one at 590 km, 610 km and 630 km altitude.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "Unknown Pad",
+        "location": "Cape Canaveral SFS, FL, USA",
+        "country_code": "US"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
+        "credit": "SpaceX"
       },
       "probability": null
     },
@@ -1134,52 +1191,6 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192320.png",
         "credit": "SpaceX"
-      },
-      "probability": null
-    },
-    {
-      "id": "dfac5ab7-7017-454f-b6cf-eeed277a97b5",
-      "name": "LVM-3 | Gaganyaan-1",
-      "slug": "lvm-3-gaganyaan-1",
-      "net": "2026-12-31T00:00:00Z",
-      "window_start": "2026-12-31T00:00:00Z",
-      "window_end": "2026-12-31T00:00:00Z",
-      "status": {
-        "id": 2,
-        "name": "To Be Determined",
-        "abbrev": "TBD"
-      },
-      "net_precision": {
-        "abbrev": "M",
-        "name": "Month"
-      },
-      "provider": "Indian Space Research Organization",
-      "provider_abbrev": "ISRO",
-      "vehicle": {
-        "name": "Launch Vehicle Mark-3 (GSLV Mk III)",
-        "family": "lvm3",
-        "description": "The Launch Vehicle Mark-3 (LVM-3), previously called Geosynchronous Satellite Launch Vehicle Mark III (GSLV Mk III), is a three-stage medium-lift launch vehicle developed by the Indian Space Research Organisation (ISRO). It is designed to launch satellites into geostationary orbit, and is intended as a launch vehicle for crewed missions under the Indian Human Spaceflight Programme.",
-        "length_m": 43.4,
-        "diameter_m": 4.0
-      },
-      "mission": {
-        "name": "Gaganyaan-1",
-        "type": "Test Flight",
-        "description": "First uncrewed orbital test flight of the Gaganyaan capsule.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "Satish Dhawan Space Centre Second Launch Pad",
-        "location": "Satish Dhawan Space Centre, India",
-        "country_code": "IN"
-      },
-      "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193746.jpeg",
-        "credit": null
       },
       "probability": null
     },
