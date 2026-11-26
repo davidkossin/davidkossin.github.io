@@ -1,23 +1,23 @@
 {
-  "updated": "2026-11-26T04:12:28Z",
+  "updated": "2026-11-26T14:02:05Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
     {
       "id": "b00f0e9a-48d6-4f26-9cb5-7d19169ff7c4",
-      "name": "Long March 2D | Unknown Payload",
-      "slug": "long-march-2d-unknown-payload",
-      "net": "2026-11-26T09:35:00Z",
+      "name": "Long March 2D | Yaogan 49 Group 01",
+      "slug": "long-march-2d-yaogan-49-group-01",
+      "net": "2026-11-26T09:38:00Z",
       "window_start": "2026-11-26T09:30:00Z",
       "window_end": "2026-11-26T09:52:00Z",
       "status": {
-        "id": 1,
-        "name": "Go for Launch",
-        "abbrev": "Go"
+        "id": 3,
+        "name": "Launch Successful",
+        "abbrev": "Success"
       },
       "net_precision": {
-        "abbrev": "HR",
-        "name": "Hour"
+        "abbrev": "MIN",
+        "name": "Minute"
       },
       "provider": "China Aerospace Science and Technology Corporation",
       "provider_abbrev": "CASC",
@@ -29,11 +29,11 @@
         "diameter_m": 3.35
       },
       "mission": {
-        "name": "Unknown Payload",
-        "type": "Unknown",
-        "description": "Details TBD.",
-        "orbit": "Unknown",
-        "orbit_abbrev": "N/A"
+        "name": "Yaogan 49 Group 01",
+        "type": "Government/Top Secret",
+        "description": "Chinese reconnaissance satellites of unknown functions.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
       },
       "pad": {
         "name": "Launch Complex 3 (LC-3/LA-1)",
@@ -226,6 +226,16 @@
       },
       "vandenberg": true,
       "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=xpfmP-4EGIw",
+          "title": "GO! - SpaceX - Falcon 9 - USSF-380 - SLC-4E - Vandenberg SFB, CA - Space Affairs Live",
+          "type": "Unofficial Re-stream"
+        },
+        {
+          "url": "https://www.youtube.com/watch?v=CLULlErcxF4",
+          "title": "SpaceX Launches Falcon 9 with USSF-380",
+          "type": "Unofficial Webcast"
+        },
         {
           "url": "https://x.com/i/broadcasts/2ybQqgpAAEJmBB",
           "title": "USSF-380 Mission",
