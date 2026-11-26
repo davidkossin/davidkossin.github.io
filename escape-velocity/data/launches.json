@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-26T14:02:05Z",
+  "updated": "2026-11-26T23:05:52Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
@@ -87,13 +87,19 @@
         "country_code": "NZ"
       },
       "vandenberg": false,
-      "webcasts": [],
+      "webcasts": [
+        {
+          "url": "https://www.youtube.com/watch?v=p75NOkFoyXs",
+          "title": "Rocket Lab Launch - Night Owls Never Sleep",
+          "type": "Official Webcast"
+        }
+      ],
       "webcast_live": false,
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193613.jpeg",
         "credit": null
       },
-      "probability": null
+      "probability": 75
     },
     {
       "id": "a6421db3-7c8a-4cf7-a659-cec195140f7f",
