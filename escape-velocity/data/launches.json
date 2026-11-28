@@ -1,54 +1,8 @@
 {
-  "updated": "2026-11-28T02:48:25Z",
+  "updated": "2026-11-28T13:16:15Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
-    {
-      "id": "a6421db3-7c8a-4cf7-a659-cec195140f7f",
-      "name": "Long March 6A | Yaogan 50-04",
-      "slug": "long-march-6a-yaogan-50-04",
-      "net": "2026-11-27T13:05:00Z",
-      "window_start": "2026-11-27T12:53:00Z",
-      "window_end": "2026-11-27T13:15:00Z",
-      "status": {
-        "id": 3,
-        "name": "Launch Successful",
-        "abbrev": "Success"
-      },
-      "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
-      },
-      "provider": "China Aerospace Science and Technology Corporation",
-      "provider_abbrev": "CASC",
-      "vehicle": {
-        "name": "Long March 6A",
-        "family": "long-march",
-        "description": "The Long March 6A is a Chinese launch vehicle of the Long March family, which was developed by the China Aerospace Science and Technology Corporation (CASC) and the Shanghai Academy of Spaceflight Technology (SAST). The vehicle is a further development of the Long March 6, with 2 YF-100 engines on the first stage as opposed to 1 on the Long March 6, augmented by 4 solid rocket boosters. The Long March 6A is China's first rocket with solid rocket boosters. The maiden launch of the Long March 6A took place 29 March 2022, successfully reaching orbit. It was also the first launch from the newly built launch complex 9A in Taiyuan.",
-        "length_m": 50.0,
-        "diameter_m": 3.35
-      },
-      "mission": {
-        "name": "Yaogan 50-04",
-        "type": "Government/Top Secret",
-        "description": "The Yaogan 50-04 is a Chinese military “remote sensing” satellite of unknown purposes.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "Launch Complex 9A",
-        "location": "Taiyuan Satellite Launch Center, People's Republic of China",
-        "country_code": "CN"
-      },
-      "vandenberg": false,
-      "webcasts": [],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/long_march_6a__image_thumbnail_20251209050224.jpeg",
-        "credit": "CCTV"
-      },
-      "probability": null
-    },
     {
       "id": "13270554-4bdb-42ae-916f-1bb54492204f",
       "name": "Long March 6C | Unknown Payload",
@@ -99,7 +53,7 @@
       "id": "b0d27def-0a88-44c3-a947-1fd5b8503e2c",
       "name": "Falcon 9 Block 5 | USSF-380",
       "slug": "falcon-9-block-5-ussf-380",
-      "net": "2026-11-29T04:39:00Z",
+      "net": "2026-11-29T04:39:03Z",
       "window_start": "2026-11-29T04:39:00Z",
       "window_end": "2026-11-29T08:39:00Z",
       "status": {
@@ -108,8 +62,8 @@
         "abbrev": "Go"
       },
       "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
+        "abbrev": "SEC",
+        "name": "Second"
       },
       "provider": "SpaceX",
       "provider_abbrev": "SpX",
@@ -1429,6 +1383,52 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/themis_t1h_on_t_image_thumbnail_20250919095336.jpeg",
         "credit": "ArianeGroup"
+      },
+      "probability": null
+    },
+    {
+      "id": "f9a8c9f6-5dc4-4e83-9876-2a51140ec806",
+      "name": "Electron | iQPS Launch 11",
+      "slug": "electron-iqps-launch-11",
+      "net": "2026-12-31T00:00:00Z",
+      "window_start": "2026-12-31T00:00:00Z",
+      "window_end": "2026-12-31T00:00:00Z",
+      "status": {
+        "id": 2,
+        "name": "To Be Determined",
+        "abbrev": "TBD"
+      },
+      "net_precision": {
+        "abbrev": "Y",
+        "name": "Year"
+      },
+      "provider": "Rocket Lab",
+      "provider_abbrev": "RL",
+      "vehicle": {
+        "name": "Electron",
+        "family": "electron",
+        "description": "Electron is a two-stage orbital expendable launch vehicle (with an optional third stage) developed by the American aerospace company Rocket Lab. Electron is a small-lift launch vehicle designed to launch small satellites and cubesats to sun-synchronous orbit and low earth orbit. The Electron is the first orbital class rocket to use electric-pump-fed engines, powered by the 9 Rutherford engines on the first stage. It is also used as a suborbital testbed (called HASTE) for hypersonics research.",
+        "length_m": 18.0,
+        "diameter_m": 1.2
+      },
+      "mission": {
+        "name": "iQPS Launch 11",
+        "type": "Earth Science",
+        "description": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
+        "orbit": "Low Earth Orbit",
+        "orbit_abbrev": "LEO"
+      },
+      "pad": {
+        "name": "Unknown Pad",
+        "location": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand",
+        "country_code": "NZ"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193613.jpeg",
+        "credit": null
       },
       "probability": null
     }
