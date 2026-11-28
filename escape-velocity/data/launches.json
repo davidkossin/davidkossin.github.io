@@ -1,60 +1,8 @@
 {
-  "updated": "2026-11-27T19:31:41Z",
+  "updated": "2026-11-28T02:48:25Z",
   "source": "https://ll.thespacedevs.com/2.3.0/",
   "count": 30,
   "launches": [
-    {
-      "id": "2093e4fc-ac8c-4296-a1b5-deececee6a72",
-      "name": "Electron | Night Owls Never Sleep (StriX Launch 14)",
-      "slug": "electron-night-owls-never-sleep-strix-launch-14",
-      "net": "2026-11-27T00:15:00Z",
-      "window_start": "2026-11-27T00:00:00Z",
-      "window_end": "2026-11-27T01:00:00Z",
-      "status": {
-        "id": 3,
-        "name": "Launch Successful",
-        "abbrev": "Success"
-      },
-      "net_precision": {
-        "abbrev": "MIN",
-        "name": "Minute"
-      },
-      "provider": "Rocket Lab",
-      "provider_abbrev": "RL",
-      "vehicle": {
-        "name": "Electron",
-        "family": "electron",
-        "description": "Electron is a two-stage orbital expendable launch vehicle (with an optional third stage) developed by the American aerospace company Rocket Lab. Electron is a small-lift launch vehicle designed to launch small satellites and cubesats to sun-synchronous orbit and low earth orbit. The Electron is the first orbital class rocket to use electric-pump-fed engines, powered by the 9 Rutherford engines on the first stage. It is also used as a suborbital testbed (called HASTE) for hypersonics research.",
-        "length_m": 18.0,
-        "diameter_m": 1.2
-      },
-      "mission": {
-        "name": "Night Owls Never Sleep (StriX Launch 14)",
-        "type": "Earth Science",
-        "description": "Synthetic aperture radar satellite for Japanese Earth imaging company Synspective.",
-        "orbit": "Low Earth Orbit",
-        "orbit_abbrev": "LEO"
-      },
-      "pad": {
-        "name": "Rocket Lab Launch Complex 1B",
-        "location": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand",
-        "country_code": "NZ"
-      },
-      "vandenberg": false,
-      "webcasts": [
-        {
-          "url": "https://www.youtube.com/watch?v=p75NOkFoyXs",
-          "title": "Rocket Lab Launch - Night Owls Never Sleep",
-          "type": "Official Webcast"
-        }
-      ],
-      "webcast_live": false,
-      "image": {
-        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193613.jpeg",
-        "credit": null
-      },
-      "probability": 75
-    },
     {
       "id": "a6421db3-7c8a-4cf7-a659-cec195140f7f",
       "name": "Long March 6A | Yaogan 50-04",
@@ -269,7 +217,7 @@
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
         "credit": "SpaceX"
       },
-      "probability": null
+      "probability": 60
     },
     {
       "id": "8b46d360-6b3b-423f-9036-d5568e485624",
@@ -1435,6 +1383,52 @@
       "image": {
         "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/spectrum_on_the_image_thumbnail_20250321072643.jpeg",
         "credit": "Isar Aerospace | Robin Brillert, Wingmen Media"
+      },
+      "probability": null
+    },
+    {
+      "id": "3b94ad50-3505-496e-8a95-b0bc4c0dadc6",
+      "name": "Themis Demonstrator | T1H-1",
+      "slug": "themis-demonstrator-t1h-1",
+      "net": "2026-12-31T00:00:00Z",
+      "window_start": "2026-12-31T00:00:00Z",
+      "window_end": "2026-12-31T00:00:00Z",
+      "status": {
+        "id": 2,
+        "name": "To Be Determined",
+        "abbrev": "TBD"
+      },
+      "net_precision": {
+        "abbrev": "Q4",
+        "name": "Quarter 4"
+      },
+      "provider": "European Space Agency",
+      "provider_abbrev": "ESA",
+      "vehicle": {
+        "name": "Themis Demonstrator",
+        "family": "generic",
+        "description": "Themis is an ESA rocket prototype – a flagship European demonstrator for low-cost rocket recovery and reuse technologies. Powered by the reusable, methane-fuelled engine Prometheus, it is developed with ArianeGroup as prime contractor and building on decades of European research and experience in rocketry and space operations, Themis is designed to launch, land vertically and live on for another mission.",
+        "length_m": 28.0,
+        "diameter_m": 3.5
+      },
+      "mission": {
+        "name": "T1H-1",
+        "type": "Test Flight",
+        "description": "First low-altitude hop test of a Themis demonstrator, with a targeted altitude up to 100 m.",
+        "orbit": "Suborbital",
+        "orbit_abbrev": "Sub"
+      },
+      "pad": {
+        "name": "Launch Complex 3B",
+        "location": "Esrange Space Center",
+        "country_code": "SE"
+      },
+      "vandenberg": false,
+      "webcasts": [],
+      "webcast_live": false,
+      "image": {
+        "url": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/themis_t1h_on_t_image_thumbnail_20250919095336.jpeg",
+        "credit": "ArianeGroup"
       },
       "probability": null
     }
